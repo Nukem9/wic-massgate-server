@@ -4,15 +4,40 @@
 
 namespace Database
 {
+	sqlite3 *db_handle;
+
 	bool Initialize()
 	{
-		// SSL is not needed
-		return curl_global_init(CURL_GLOBAL_WIN32) == CURLE_OK;
+		// Open a handle to the SQLite3 database file
+		int err = sqlite3_open("test.db", &db_handle);
+
+		if(err)
+		{
+			DatabaseLog("Can't open database: %s\n", sqlite3_errmsg(db_handle));
+			return false;
+		}
+
+		DatabaseLog("Opened a handle to 'test.db'");
+		return true;
 	}
 
 	void Unload()
 	{
-		curl_global_cleanup();
+		if(db_handle)
+			sqlite3_close(db_handle);
+
+		db_handle = nullptr;
+	}
+
+	int SQLCallback(void *userdata, int argc, char **argv, char **ColNames)
+	{
+		for(int i = 0; i < argc; i++)
+		{
+			printf("%s = %s\n", ColNames[i], argv[i] ? argv[i] : "NULL");
+		}
+
+		printf("\n");
+		return 0;
 	}
 
 	size_t JSONDataReceived(void *ptr, size_t size, size_t nmemb, void *userdata)

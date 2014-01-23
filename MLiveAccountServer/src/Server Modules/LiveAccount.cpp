@@ -29,29 +29,32 @@ void LiveAccount_Shutdown()
 
 void LiveAccount_ConnectionRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 {
-	// Enable non-blocking sockets
-	u_long sockMode = 1;
-	ioctlsocket(aSocket, FIONBIO, &sockMode);
-
 	// Find client by IP address
 	auto myClient = SvClientManager::ourInstance->FindClient(aAddr->sin_addr.s_addr);
 
-	if(myClient)
+	// IP wasn't found, add it
+	if(!myClient)
 	{
-		// Reset all client data since it's a new connection, but on the same address
-		SvClientManager::ourInstance->DisconnectClient(myClient);
+		LiveAccLog("Connecting a client on %s....", inet_ntoa(aAddr->sin_addr));
 
-		LiveAccLog("Disconnecting client on %s (already logged in)", inet_ntoa(aAddr->sin_addr));
+		if(!SvClientManager::ourInstance->ConnectClient(aAddr->sin_addr.s_addr, aSocket))
+			DebugLog(L_ERROR, "[LiveAcc]: Failed to connect client");
 	}
-
-	LiveAccLog("Connecting a client on %s....", inet_ntoa(aAddr->sin_addr));
-
-	if(!SvClientManager::ourInstance->ConnectClient(aAddr->sin_addr.s_addr, aSocket))
-		DebugLog(L_ERROR, "[LiveAcc]: Failed to connect client");
 }
 
-void LiveAccount_DataRecievedCallback(SvClient *aClient, PVOID aData, uint aDataLen)
+void LiveAccount_DataRecievedCallback(SvClient *aClient, PVOID aData, uint aDataLen, bool aError)
 {
+	if(aError)
+	{
+		SvClientManager::ourInstance->DisconnectClient(aClient);
+
+		in_addr addr;
+		addr.s_addr = aClient->GetIPAddress();
+
+		LiveAccLog("Disconnecting client on %s", inet_ntoa(addr));
+		return;
+	}
+
 	MN_ReadMessage message(8192);
 	if(!message.BuildMessage(aData, aDataLen))
 		return;
@@ -69,6 +72,7 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, PVOID aData, uint aData
 
 	switch(myType)
 	{
+		// Account
 		case MMG_ProtocolDelimiters::DELIM_ACCOUNT:
 		{
 			if(!MMG_AccountProtocol::ourInstance->HandleMessage(aClient, &message, delimiter))
@@ -79,6 +83,7 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, PVOID aData, uint aData
 		}
 		break;
 
+		// Message
 		case MMG_ProtocolDelimiters::DELIM_MESSAGE:
 		{
 			if(!aClient->IsLoggedIn())
@@ -95,6 +100,7 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, PVOID aData, uint aData
 		}
 		break;
 
+		// Dedicated Server
 		case MMG_ProtocolDelimiters::DELIM_MESSAGE_DS:
 		{
 			LiveAccLog("MMG_Messaging: Failed HandleMessage()");
@@ -102,6 +108,7 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, PVOID aData, uint aData
 		}
 		break;
 
+		// Server Tracker
 		case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_USER:
 		{
 			if(!MMG_ServerTracker::ourInstance->HandleMessage(aClient, &message, delimiter))

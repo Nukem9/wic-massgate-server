@@ -5,6 +5,7 @@
 #include "mongoose\mongoose.h"
 #include "curl\curl.h"
 #include "jansson\jansson.h"
+#include "sqlite\sqlite3.h"
 
-#pragma comment(lib, "Libraries\\curl\\curllib.lib")
+#pragma comment(lib, "libraries\\curl\\curllib.lib")
 /******************* External libraries *******************/

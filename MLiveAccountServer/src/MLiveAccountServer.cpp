@@ -13,7 +13,6 @@ void Winsock_Startup()
 void Winsock_Shutdown()
 {
 	int e_result = WSACleanup();
-	e_result = 0;
 
 	if(e_result != 0)
 		DebugLog(L_ERROR, "WSACleanup error: %s", WSAErrorToString(e_result));

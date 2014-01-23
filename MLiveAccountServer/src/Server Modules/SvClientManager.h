@@ -37,9 +37,12 @@ public:
 
 	MMG_Profile		*GetProfile		();
 	MMG_AuthToken	*GetToken		();
+
 	SOCKET			GetSocket		();
+	uint			GetIPAddress	();
 
 	void			Reset			();
+	bool			CanReadFrom		();
 
 private:
 };
@@ -47,7 +50,7 @@ private:
 CLASS_SINGLE(SvClientManager)
 {
 public:
-	typedef void (__cdecl * pfnDataReceivedCallback)(SvClient *aClient, PVOID aData, uint aDataLen);
+	typedef void (__cdecl * pfnDataReceivedCallback)(SvClient *aClient, PVOID aData, uint aDataLen, bool aError);
 
 private:
 	MT_Mutex	m_Mutex;
@@ -68,6 +71,7 @@ public:
 	void		SetCallback		(pfnDataReceivedCallback aCallback);
 
 	SvClient	*FindClient		(uint aIpAddr);
+
 	SvClient	*ConnectClient	(uint aIpAddr, SOCKET aSocket);
 	void		DisconnectClient(SvClient *aClient);
 

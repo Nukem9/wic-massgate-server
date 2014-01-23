@@ -2,8 +2,8 @@
 
 SvClient::SvClient()
 {
-	this->m_Profile = nullptr;
-	this->m_AuthToken = nullptr;
+	this->m_Profile		= nullptr;
+	this->m_AuthToken	= nullptr;
 
 	this->Reset();
 }
@@ -15,7 +15,7 @@ SvClient::~SvClient()
 
 void SvClient::UpdateActivity()
 {
-	InterlockedExchange((LONG *)&this->m_LastActiveTime, MI_Time::GetSystemTime());
+	InterlockedExchange((volatile LONG *)&this->m_LastActiveTime, MI_Time::GetSystemTime());
 }
 
 bool SvClient::IsActive()
@@ -30,7 +30,7 @@ bool SvClient::IsLoggedIn()
 
 void SvClient::SetTimeout(uint aTimeout)
 {
-	InterlockedExchange((LONG *)&this->m_TimeoutTime, aTimeout);
+	InterlockedExchange((volatile LONG *)&this->m_TimeoutTime, aTimeout);
 }
 
 void SvClient::SetLoginStatus(bool aStatus)
@@ -46,6 +46,16 @@ MMG_Profile *SvClient::GetProfile()
 MMG_AuthToken *SvClient::GetToken()
 {
 	return this->m_AuthToken;
+}
+
+SOCKET SvClient::GetSocket()
+{
+	return this->m_Socket;
+}
+
+uint SvClient::GetIPAddress()
+{
+	return this->m_IpAddress;
 }
 
 void SvClient::Reset()
@@ -91,9 +101,31 @@ void SvClient::Reset()
 	}
 }
 
-SOCKET SvClient::GetSocket()
+bool SvClient::CanReadFrom()
 {
-	return this->m_Socket;
+	// Timeout time of 10 milliseconds
+	static timeval waitd = {0, 10000};
+
+	// Check for an incoming connection
+	fd_set readFlags;
+
+	FD_ZERO(&readFlags);
+	FD_SET(this->m_Socket, &readFlags);
+
+	// Query the socket
+	int result = select(0, &readFlags, nullptr, nullptr, &waitd);
+
+	if(result < 0)
+		return false;
+
+	// Check if the socket can be read from
+	if(!FD_ISSET(this->m_Socket, &readFlags))
+		return false;
+
+	// Clear the read flag
+	FD_CLR(this->m_Socket, &readFlags);
+
+	return true;
 }
 
 SvClientManager::SvClientManager()
@@ -117,7 +149,7 @@ SvClientManager::~SvClientManager()
 
 	if(this->m_Clients)
 	{
-		VirtualFree(this->m_Clients, 0, MEM_FREE);
+		VirtualFree(this->m_Clients, 0, MEM_RELEASE);
 		this->m_Clients = nullptr;
 	}
 }
@@ -140,6 +172,7 @@ void SvClientManager::SetCallback(pfnDataReceivedCallback aCallback)
 SvClient *SvClientManager::FindClient(uint aIpAddr)
 {
 	this->m_Mutex.Lock();
+
 	for(uint i = 0; i < this->m_ClientMaxCount; i++)
 	{
 		SvClient *client = &this->m_Clients[i];
@@ -154,6 +187,7 @@ SvClient *SvClientManager::FindClient(uint aIpAddr)
 			return client;
 		}
 	}
+
 	this->m_Mutex.Unlock();
 
 	return nullptr;
@@ -161,23 +195,7 @@ SvClient *SvClientManager::FindClient(uint aIpAddr)
 
 SvClient *SvClientManager::ConnectClient(uint aIpAddr, SOCKET aSocket)
 {
-	SvClient *client = this->AddClient(aIpAddr, aSocket);
-
-	if(client)
-	{
-		client->m_Profile	= new MMG_Profile();
-		client->m_AuthToken	= new MMG_AuthToken();
-		client->m_Socket	= aSocket;
-
-		client->m_IpAddress = aIpAddr;
-
-		client->SetTimeout(WIC_DEFAULT_NET_TIMEOUT);
-		client->UpdateActivity();
-
-		client->m_Valid = true;
-	}
-
-	return client;
+	return this->AddClient(aIpAddr, aSocket);
 }
 
 void SvClientManager::DisconnectClient(SvClient *aClient)
@@ -195,7 +213,10 @@ uint SvClientManager::GetClientCount()
 
 SvClient *SvClientManager::AddClient(uint aIpAddr, SOCKET aSocket)
 {
+	SvClient *slot = nullptr;
+
 	this->m_Mutex.Lock();
+
 	for(uint i = 0; i < this->m_ClientMaxCount; i++)
 	{
 		SvClient *client = &this->m_Clients[i];
@@ -204,17 +225,35 @@ SvClient *SvClientManager::AddClient(uint aIpAddr, SOCKET aSocket)
 		if(!client->m_Valid)
 		{
 			client->m_Index = i;
+			slot = client;
 
-			// Update the total server client count
-			InterlockedIncrement((LONG *)&this->m_ClientCount);
-
-			this->m_Mutex.Unlock();
-			return client;
+			break;
 		}
 	}
+
+	if(slot)
+	{
+		slot->m_Profile		= new MMG_Profile();
+		slot->m_AuthToken	= new MMG_AuthToken();
+		slot->m_Socket		= aSocket;
+		slot->m_IpAddress	= aIpAddr;
+
+		// Automatically set it to non-blocking
+		u_long sockMode = 1;
+		ioctlsocket(aSocket, FIONBIO, &sockMode);
+
+		slot->SetTimeout(WIC_DEFAULT_NET_TIMEOUT);
+		slot->UpdateActivity();
+
+		slot->m_Valid = true;
+
+		// Update the total server client count
+		InterlockedIncrement((volatile LONG *)&this->m_ClientCount);
+	}
+
 	this->m_Mutex.Unlock();
 
-	return nullptr;
+	return slot;
 }
 
 void SvClientManager::RemoveClient(SvClient *aClient)
@@ -222,7 +261,7 @@ void SvClientManager::RemoveClient(SvClient *aClient)
 	this->m_Mutex.Lock();
 
 	// Decrement the total client count
-	InterlockedDecrement((LONG *)&this->m_ClientCount);
+	InterlockedDecrement((volatile LONG *)&this->m_ClientCount);
 
 	// Reset variables
 	aClient->Reset();
@@ -234,12 +273,15 @@ DWORD WINAPI SvClientManager::MainThread(LPVOID lpArg)
 {
 	SvClientManager *myManager = (SvClientManager *)lpArg;
 
+	// Data buffer
 	char recvBuffer[16384];
 	memset(recvBuffer, 0, sizeof(recvBuffer));
 
-	for(uint myDroppedClients = 0;; myDroppedClients = 0)
+	// Loop forever
+	for(uint droppedClients = 0;; droppedClients = 0)
 	{
 		myManager->m_Mutex.Lock();
+
 		for(uint i = 0; i < myManager->m_ClientMaxCount; i++)
 		{
 			SvClient *client = &myManager->m_Clients[i];
@@ -251,23 +293,28 @@ DWORD WINAPI SvClientManager::MainThread(LPVOID lpArg)
 			if(!client->IsActive())
 			{
 				myManager->RemoveClient(client);
-				myDroppedClients++;
+				droppedClients++;
 
 				continue;
 			}
 
-			int result = recv(client->GetSocket(), recvBuffer, sizeof(recvBuffer), 0);
-
-			if(result == 0 || result == SOCKET_ERROR)
+			if(!client->CanReadFrom())
 				continue;
 
+			// Read the buffer
+			int result = recv(client->GetSocket(), recvBuffer, sizeof(recvBuffer), 0);
+
+			// Check if an error occurred or the client disconnected
+			bool wasError = (result == SOCKET_ERROR || result == 0);
+
 			if(myManager->m_DataReceivedCallback)
-				myManager->m_DataReceivedCallback(client, recvBuffer, result);
+				myManager->m_DataReceivedCallback(client, recvBuffer, result, wasError);
 		}
+
 		myManager->m_Mutex.Unlock();
 
-		if(myDroppedClients > 0)
-			DebugLog(L_INFO, "%s(): Dropped %i client(s).", __FUNCTION__, myDroppedClients);
+		if(droppedClients > 0)
+			DebugLog(L_INFO, "%s(): Dropped %i client(s).", __FUNCTION__, droppedClients);
 
 		// Prevent 100% CPU usage
 		Sleep(10);

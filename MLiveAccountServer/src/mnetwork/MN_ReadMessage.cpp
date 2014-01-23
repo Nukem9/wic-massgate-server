@@ -76,6 +76,7 @@ bool MN_ReadMessage::ReadUInt(uint &aUInt)
 
 bool MN_ReadMessage::ReadULong(ulong &aULong)
 {
+	// Not implemented in the game network engine
 	return this->ReadUInt((uint &)aULong);
 }
 

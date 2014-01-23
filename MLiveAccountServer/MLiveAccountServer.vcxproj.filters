@@ -260,6 +260,9 @@
     <ClInclude Include="libraries\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="libraries\sqlite\sqlite3.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Server Modules\Database.cpp">
@@ -423,6 +426,9 @@
     </ClCompile>
     <ClCompile Include="libraries\zlib\zutil.c">
       <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="libraries\sqlite\sqlite3.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

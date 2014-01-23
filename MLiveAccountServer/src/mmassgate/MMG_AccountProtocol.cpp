@@ -9,7 +9,7 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 	if(!aMessage->ReadUShort(this->m_Protocol))
 		return false;
 
-	if(this->m_Protocol != WIC_PROTOCOL_VERSION)
+	if(this->m_Protocol != WIC_NEW_PROCOTOL_VERSION)
 	{
 		this->m_StatusCode = IncorrectProtocolVersion;
 		return true;
@@ -173,7 +173,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			case MMG_ProtocolDelimiters::ACCOUNT_AUTH_ACCOUNT_REQ:
 			{
 				// Query the database and determine if credentials were valid
-				uint accProfileId = Database::AuthUserAccount(myQuery.m_Authenticate.m_Email, myQuery.m_Authenticate.m_Password);
+				uint accProfileId = 0;//Database::AuthUserAccount(myQuery.m_Authenticate.m_Email, myQuery.m_Authenticate.m_Password);
 
 				DebugLog(L_INFO, "ACCOUNT_AUTH_ACCOUNT_RSP: Sending login response (id %i)", accProfileId);
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_AUTH_ACCOUNT_RSP;
@@ -192,13 +192,15 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					aClient->SetTimeout(WIC_LOGGEDIN_NET_TIMEOUT);
 
 					cryptMessage.WriteUChar(AuthSuccess);
-
 					cryptMessage.WriteUChar(1);	// auth.mySuccessFlag
 					cryptMessage.WriteUShort(0);// auth.myLatestVersion
 
 					// Query profile
-					if(!Database::QueryUserProfile(accProfileId, aClient->GetProfile()))
-						DebugLog(L_ERROR, "Failed to retrieve profile for valid account ");
+					//if(!Database::QueryUserProfile(accProfileId, aClient->GetProfile()))
+					//	DebugLog(L_ERROR, "Failed to retrieve profile for valid account ");
+					wcscpy_s(aClient->GetProfile()->m_Name, L"Nukem");
+					aClient->GetProfile()->m_OnlineStatus = 1;
+					aClient->GetProfile()->m_Rank = 18;
 
 					// Write the profile info stream
 					aClient->GetProfile()->ToStream(&cryptMessage);
@@ -271,11 +273,12 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 	// Write the main message header
 	MN_WriteMessage	responseMsg(1024);
 	responseMsg.WriteDelimiter(responseDelimiter);
-	responseMsg.WriteUShort(WIC_PROTOCOL_VERSION);
+	responseMsg.WriteUShort(WIC_NEW_PROCOTOL_VERSION);
 	responseMsg.WriteUChar(aClient->m_CipherIdentifier);
 	responseMsg.WriteUInt(aClient->m_EncryptionKeySequenceNumber);
 
 	// Encrypt and write the data to the main (outgoing) packet
+	// Packet buffer can be modified because it is no longer used
 	uint dataLength		= cryptMessage.GetDataLength();
 	PVOID dataStream	= cryptMessage.GetDataStream();
 

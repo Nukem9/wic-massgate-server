@@ -25,7 +25,7 @@ public:
 	void		Stop			();
 	void		SetCallback		(pfnConnectionReceivedCallback aCallback);
 
-	const char *GetLastError	();
+	const char	*GetLastError	();
 
 private:
 	MN_TcpServer(const char *aIP, uint aPort);
