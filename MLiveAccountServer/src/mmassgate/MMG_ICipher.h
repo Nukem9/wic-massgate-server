@@ -26,8 +26,8 @@ private:
 public:
 	MMG_ICipher();
 
-	virtual void Encrypt(uint *aData, uint aDataLength) = 0;
-	virtual void Decrypt(uint *aData, uint aDataLength) = 0;
+	virtual void Encrypt(char *aData, uint aDataLength) = 0;
+	virtual void Decrypt(char *aData, uint aDataLength) = 0;
 
 	virtual CipherIdentifier GetType();
 

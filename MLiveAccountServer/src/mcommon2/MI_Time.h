@@ -7,8 +7,10 @@ public:
 private:
 
 public:
-	static ULONGLONG GetTick();
-	static uint GetSystemTime();
+	static __int64	GetQPC			();
+	static __int64	GetTick			();
+	static __int64	GetRDTSC		();
+	static uint		GetSystemTime	();
 
 private:
 };

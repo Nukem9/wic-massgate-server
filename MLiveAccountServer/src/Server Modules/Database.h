@@ -22,6 +22,7 @@ namespace Database
 
 	bool	Initialize			();
 	void	Unload				();
+	bool	InitializeTables	();
 
 	size_t	JSONDataReceived	(void *ptr, size_t size, size_t nmemb, void *userdata);
 	bool	FetchJSONUrl		(const char *url, JSON *json);

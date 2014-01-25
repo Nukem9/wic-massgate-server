@@ -36,6 +36,12 @@ void Startup()
 	if(!Database::Initialize())
 		DebugLog(L_ERROR, "Failed to initialize database back end");
 
+	Database::InitializeTables();
+	Database::CreateUserAccount("TestUser@example.com", L"pass");
+	Database::CreateUserAccount("TestUser1@example.com", L"pass");
+	Database::CreateUserAccount("TestUser2@example.com", L"pass");
+	Database::CreateUserAccount("TestUser3@example.com", L"pass");
+
 	Winsock_Startup();
 	HTTPService_Startup();
 	LiveAccount_Startup();

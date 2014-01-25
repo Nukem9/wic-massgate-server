@@ -4,14 +4,24 @@
 
 namespace Database
 {
+	MT_Mutex m_Mutex;
+
 	sqlite3 *db_handle;
 
 	bool Initialize()
 	{
-		// Open a handle to the SQLite3 database file
-		int err = sqlite3_open("test.db", &db_handle);
+		// Set it to serialized multithreaded mode
+		if(sqlite3_config(SQLITE_CONFIG_SERIALIZED, 1) != SQLITE_OK)
+		{
+			DatabaseLog("Can't open database: Couldn't set multithreaded configuration");
+			return false;
+		}
 
-		if(err)
+		// Open a handle to the SQLite3 database file
+		// Also create if it does not exist
+		int err = sqlite3_open_v2("test.db", &db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
+
+		if(err != SQLITE_OK)
 		{
 			DatabaseLog("Can't open database: %s\n", sqlite3_errmsg(db_handle));
 			return false;
@@ -24,20 +34,23 @@ namespace Database
 	void Unload()
 	{
 		if(db_handle)
-			sqlite3_close(db_handle);
+			sqlite3_close_v2(db_handle);
 
 		db_handle = nullptr;
 	}
 
-	int SQLCallback(void *userdata, int argc, char **argv, char **ColNames)
+	bool InitializeTables()
 	{
-		for(int i = 0; i < argc; i++)
+		// Go through each table entry
+		for(int i = 0; i < ARRAYSIZE(TableValues); i++)
 		{
-			printf("%s = %s\n", ColNames[i], argv[i] ? argv[i] : "NULL");
+			SQLQuery query(db_handle, TableValues[i]);
+
+			if(query.Step() != SQLITE_OK)
+				return false;
 		}
 
-		printf("\n");
-		return 0;
+		return true;
 	}
 
 	size_t JSONDataReceived(void *ptr, size_t size, size_t nmemb, void *userdata)
@@ -144,25 +157,31 @@ namespace Database
 
 	uint CreateUserAccount(const char *email, const wchar_t *password)
 	{
-		JSON json;
-		if(!BackendQuery(&json, GAME_CREATE_ACCOUNT, email, password))
-			return WIC_INVALID_ACCOUNT;
+		char *sql = "INSERT INTO LiveAccUsers (Username, Email, Password, Experience, Rank, ClanID, RankInClan, ChatOptions, OnlineStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
-		int j_status;
-		if(!json.ReadInt("status", &j_status) || j_status == 0)
+		SQLQuery query(db_handle, sql);
+
+		query.Bind(1, "");									// Username
+		query.Bind(2, email);								// Email
+		query.BindBlob(3, (void*)password, wcslen(password) * 2);	// Password
+		query.Bind(4, 0);									// Experience
+		query.Bind(5, 0);									// Rank
+		query.Bind(6, 0);									// ClanID
+		query.Bind(7, 0);									// RankInClan
+		query.Bind(8, 0);									// ChatOptions
+		query.Bind(9, 0);									// OnlineStatus
+
+		for(;;)
 		{
-			DatabaseLog("CreateUserAccount: JSON status failed.");
-			return WIC_INVALID_ACCOUNT;
+			int result = query.Step();
+
+			if(result == SQLITE_DONE)
+				break;
+			else if(result != SQLITE_ROW)
+				return WIC_INVALID_ACCOUNT;
 		}
 
-		uint j_profileId;
-		if(!json.ReadUInt("profileId", &j_profileId))
-		{
-			DatabaseLog("Error: Server returned invalid profile ID.");
-			return WIC_INVALID_ACCOUNT;
-		}
-
-		return j_profileId;
+		return (uint)sqlite3_last_insert_rowid(db_handle);
 	}
 
 	uint AuthUserAccount(const char *email, const wchar_t *password)

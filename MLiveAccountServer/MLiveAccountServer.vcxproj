@@ -169,6 +169,7 @@
     <ClInclude Include="src\mnetwork\stdafx.h" />
     <ClInclude Include="src\Server Modules\Database.h" />
     <ClInclude Include="src\misc\debuglog.h" />
+    <ClInclude Include="src\Server Modules\DatabaseInfo.h" />
     <ClInclude Include="src\Server Modules\HTTPService.h" />
     <ClInclude Include="libraries\jansson\hashtable.h" />
     <ClInclude Include="libraries\jansson\jansson.h" />
@@ -202,6 +203,7 @@
     <ClInclude Include="libraries\mongoose\mongoose.h" />
     <ClInclude Include="src\mcommon2\MP_Pack.h" />
     <ClInclude Include="src\mcommon2\MT_Mutex.h" />
+    <ClInclude Include="src\Server Modules\SQLQuery.h" />
     <ClInclude Include="src\Server Modules\StatsService.h" />
     <ClInclude Include="src\Server Modules\stdafx.h" />
     <ClInclude Include="src\stdafx.h" />

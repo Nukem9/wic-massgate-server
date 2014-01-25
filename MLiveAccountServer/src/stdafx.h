@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <winsock.h>
 #include <assert.h>
+#include <intrin.h>
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winmm.lib")

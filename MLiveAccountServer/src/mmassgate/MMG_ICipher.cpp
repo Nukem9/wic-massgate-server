@@ -17,14 +17,14 @@ bool MMG_ICipher::DecryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint
 		case CIPHER_BLOCKTEA:
 		{
 			MMG_BlockTEA myCipher(aCipherKeys);
-			myCipher.Decrypt(aData, aDataLength);
+			myCipher.Decrypt((char *)aData, aDataLength);
 		}
 		return true;
 
 		case CIPHER_NULLCIPHER:
 		{
 			MMG_NullCipher myCipher;
-			myCipher.Decrypt(aData, aDataLength);
+			myCipher.Decrypt((char *)aData, aDataLength);
 		}
 		return true;
 	}
@@ -39,14 +39,14 @@ bool MMG_ICipher::EncryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint
 		case CIPHER_BLOCKTEA:
 		{
 			MMG_BlockTEA myCipher(aCipherKeys);
-			myCipher.Encrypt(aData, aDataLength);
+			myCipher.Encrypt((char *)aData, aDataLength);
 		}
 		return true;
 
 		case CIPHER_NULLCIPHER:
 		{
 			MMG_NullCipher myCipher;
-			myCipher.Encrypt(aData, aDataLength);
+			myCipher.Encrypt((char *)aData, aDataLength);
 		}
 		return true;
 	}

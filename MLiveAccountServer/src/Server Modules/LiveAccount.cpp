@@ -44,6 +44,7 @@ void LiveAccount_ConnectionRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 
 void LiveAccount_DataRecievedCallback(SvClient *aClient, PVOID aData, uint aDataLen, bool aError)
 {
+	// Check if the client should be disconnected
 	if(aError)
 	{
 		SvClientManager::ourInstance->DisconnectClient(aClient);
@@ -51,7 +52,7 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, PVOID aData, uint aData
 		in_addr addr;
 		addr.s_addr = aClient->GetIPAddress();
 
-		LiveAccLog("Disconnecting client on %s", inet_ntoa(addr));
+		LiveAccLog("Disconnecting client on %s...", inet_ntoa(addr));
 		return;
 	}
 
@@ -65,7 +66,7 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, PVOID aData, uint aData
 
 	auto myType = MMG_ProtocolDelimiters::GetType(delimiter);
 
-	LiveAccLog("Message from client: delimiter %i | type: %i", delimiter, myType);
+	LiveAccLog("Message from client: delimiter %i - type: %i", delimiter, myType);
 
 	// Each time a new request is sent, update the timeout limit
 	aClient->UpdateActivity();

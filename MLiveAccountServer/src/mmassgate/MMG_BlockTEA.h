@@ -14,9 +14,14 @@ public:
 
 	~MMG_BlockTEA();
 
-	void Encrypt(uint *aData, uint aDataLength);
-	void Decrypt(uint *aData, uint aDataLength);
+	template <typename T>
+	void Encrypter(T *aData, uint aDataLength);
+
+	template<typename T>
+	void Decrypter(T *aData, uint aDataLength);
+
+	void Encrypt(char *aData, uint aDataLength);
+	void Decrypt(char *aData, uint aDataLength);
 
 private:
-	uint GetDelta();
 };
