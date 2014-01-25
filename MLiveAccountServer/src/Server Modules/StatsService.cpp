@@ -25,7 +25,7 @@ void StatsService_Shutdown()
 
 void StatsService_ConnectionRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 {
-	SvClient *myClient = SvClientManager::ourInstance->FindClient(aAddr->sin_addr.s_addr);
+	SvClient *myClient = SvClientManager::ourInstance->FindClient(aAddr);
 
 	if(!myClient)
 	{

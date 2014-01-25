@@ -30,14 +30,14 @@ void LiveAccount_Shutdown()
 void LiveAccount_ConnectionRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 {
 	// Find client by IP address
-	auto myClient = SvClientManager::ourInstance->FindClient(aAddr->sin_addr.s_addr);
+	auto myClient = SvClientManager::ourInstance->FindClient(aAddr);
 
 	// IP wasn't found, add it
 	if(!myClient)
 	{
-		LiveAccLog("Connecting a client on %s....", inet_ntoa(aAddr->sin_addr));
+		LiveAccLog("Connecting a client on %s:%d....", inet_ntoa(aAddr->sin_addr), ntohs(aAddr->sin_port));
 
-		if(!SvClientManager::ourInstance->ConnectClient(aAddr->sin_addr.s_addr, aSocket))
+		if(!SvClientManager::ourInstance->ConnectClient(aSocket, aAddr))
 			DebugLog(L_ERROR, "[LiveAcc]: Failed to connect client");
 	}
 }

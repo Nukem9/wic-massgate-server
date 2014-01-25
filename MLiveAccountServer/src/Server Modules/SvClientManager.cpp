@@ -63,6 +63,11 @@ uint SvClient::GetIPAddress()
 	return this->m_IpAddress;
 }
 
+uint SvClient::GetPort()
+{
+	return this->m_Port;
+}
+
 void SvClient::Reset()
 {
 	// Invalidate to prevent any other lookups
@@ -81,7 +86,8 @@ void SvClient::Reset()
 		this->m_Socket = INVALID_SOCKET;
 	}
 
-	this->m_IpAddress = 0;
+	this->m_IpAddress	= 0;
+	this->m_Port		= 0;
 
 	// Reset encryption information
 	this->m_CipherIdentifier			= CIPHER_UNKNOWN;
@@ -174,8 +180,11 @@ void SvClientManager::SetCallback(pfnDataReceivedCallback aCallback)
 	this->m_DataReceivedCallback = aCallback;
 }
 
-SvClient *SvClientManager::FindClient(uint aIpAddr)
+SvClient *SvClientManager::FindClient(sockaddr_in *aAddr)
 {
+	uint ip		= ntohl(aAddr->sin_addr.s_addr);
+	uint port	= ntohs(aAddr->sin_port);
+
 	this->m_Mutex.Lock();
 
 	for(uint i = 0; i < this->m_ClientMaxCount; i++)
@@ -186,7 +195,7 @@ SvClient *SvClientManager::FindClient(uint aIpAddr)
 			continue;
 
 		// Found a client, compare address
-		if(client->m_IpAddress == aIpAddr)
+		if(client->m_IpAddress == ip && client->m_Port == port)
 		{
 			this->m_Mutex.Unlock();
 			return client;
@@ -198,9 +207,9 @@ SvClient *SvClientManager::FindClient(uint aIpAddr)
 	return nullptr;
 }
 
-SvClient *SvClientManager::ConnectClient(uint aIpAddr, SOCKET aSocket)
+SvClient *SvClientManager::ConnectClient(SOCKET aSocket, sockaddr_in *aAddr)
 {
-	return this->AddClient(aIpAddr, aSocket);
+	return this->AddClient(ntohl(aAddr->sin_addr.s_addr), ntohs(aAddr->sin_port), aSocket);
 }
 
 void SvClientManager::DisconnectClient(SvClient *aClient)
@@ -216,7 +225,7 @@ uint SvClientManager::GetClientCount()
 	return this->m_ClientCount;
 }
 
-SvClient *SvClientManager::AddClient(uint aIpAddr, SOCKET aSocket)
+SvClient *SvClientManager::AddClient(uint aIpAddr, uint aPort, SOCKET aSocket)
 {
 	SvClient *slot = nullptr;
 
@@ -242,6 +251,7 @@ SvClient *SvClientManager::AddClient(uint aIpAddr, SOCKET aSocket)
 		slot->m_AuthToken	= new MMG_AuthToken();
 		slot->m_Socket		= aSocket;
 		slot->m_IpAddress	= aIpAddr;
+		slot->m_Port		= aPort;
 
 		// Automatically set it to non-blocking
 		u_long sockMode = 1;

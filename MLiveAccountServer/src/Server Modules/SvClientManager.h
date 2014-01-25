@@ -18,6 +18,7 @@ private:
 
 	SOCKET				m_Socket;
 	uint				m_IpAddress;
+	uint				m_Port;
 
 	bool				m_LoggedIn;
 	MMG_Profile			*m_Profile;
@@ -42,6 +43,7 @@ public:
 
 	SOCKET			GetSocket		();
 	uint			GetIPAddress	();
+	uint			GetPort			();
 
 	void			Reset			();
 	bool			CanReadFrom		();
@@ -72,15 +74,15 @@ public:
 	bool		Start			();
 	void		SetCallback		(pfnDataReceivedCallback aCallback);
 
-	SvClient	*FindClient		(uint aIpAddr);
+	SvClient	*FindClient		(sockaddr_in *aAddr);
 
-	SvClient	*ConnectClient	(uint aIpAddr, SOCKET aSocket);
+	SvClient	*ConnectClient	(SOCKET aSocket, sockaddr_in *aAddr);
 	void		DisconnectClient(SvClient *aClient);
 
 	uint		GetClientCount	();
 
 private:
-	SvClient	*AddClient		(uint aIpAddr, SOCKET aSocket);
+	SvClient	*AddClient		(uint aIpAddr, uint aPort, SOCKET aSocket);
 	void		RemoveClient	(SvClient *aClient);
 
 	static DWORD WINAPI MainThread(LPVOID lpArg);
