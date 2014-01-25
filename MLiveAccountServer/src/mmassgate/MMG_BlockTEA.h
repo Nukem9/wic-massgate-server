@@ -15,13 +15,13 @@ public:
 	~MMG_BlockTEA();
 
 	template <typename T>
-	void Encrypter(T *aData, uint aDataLength);
+	void Encrypter(T *aData, sizeptr_t aDataLength);
 
 	template<typename T>
-	void Decrypter(T *aData, uint aDataLength);
+	void Decrypter(T *aData, sizeptr_t aDataLength);
 
-	void Encrypt(char *aData, uint aDataLength);
-	void Decrypt(char *aData, uint aDataLength);
+	void Encrypt(char *aData, sizeptr_t aDataLength);
+	void Decrypt(char *aData, sizeptr_t aDataLength);
 
 private:
 };

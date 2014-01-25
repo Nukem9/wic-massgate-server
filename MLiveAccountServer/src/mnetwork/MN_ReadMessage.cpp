@@ -1,6 +1,6 @@
 #include "../stdafx.h"
 
-bool MN_ReadMessage::BuildMessage(PVOID aData, uint aDataLen)
+bool MN_ReadMessage::BuildMessage(voidptr_t aData, sizeptr_t aDataLen)
 {
 	assert(this->m_PacketData && this->m_DataLen == 0 && aData && aDataLen < this->m_PacketMaxSize);
 
@@ -8,10 +8,14 @@ bool MN_ReadMessage::BuildMessage(PVOID aData, uint aDataLen)
 	ushort packetLen	= packetFlags & 0x3FFF;
 	uint addSize		= sizeof(ushort);
 
+	// Check the length
+	if(packetLen > MESSAGE_MAX_LENGTH)
+		return false;
+
 	// Decompress if needed
 	if(packetFlags & MESSAGE_FLAG_COMPRESSED)
 	{
-		uint usedBytes;
+		sizeptr_t usedBytes;
 		this->m_DataLen = MP_Pack::UnpackZip((voidptr_t)((uintptr_t)aData + addSize), (voidptr_t)this->m_PacketData, packetLen, this->m_PacketMaxSize, &usedBytes);
 
 		if(!this->m_DataLen || usedBytes != packetLen)
@@ -100,7 +104,7 @@ bool MN_ReadMessage::ReadFloat(float &aFloat)
 	return true;
 }
 
-bool MN_ReadMessage::ReadRawData(PVOID aBuffer, unsigned int aBufferSize, unsigned int *aTotalSize)
+bool MN_ReadMessage::ReadRawData(voidptr_t aBuffer, sizeptr_t aBufferSize, sizeptr_t *aTotalSize)
 {
 	assert((aBuffer && aBufferSize > 0) || aTotalSize);
 
@@ -130,12 +134,13 @@ bool MN_ReadMessage::ReadRawData(PVOID aBuffer, unsigned int aBufferSize, unsign
 	return true;
 }
 
-bool MN_ReadMessage::ReadString(char *aBuffer, uint aStringSize)
+bool MN_ReadMessage::ReadString(char *aBuffer, sizeptr_t aStringSize)
 {
 	assert(aBuffer && aStringSize > 0);
 
-	ushort bufferLength = aStringSize * sizeof(char);
-	ushort dataLength	= this->Read<ushort>() * sizeof(char);
+	// Packet will exceed bounds before it exceeds ushort
+	ushort bufferLength = (ushort)(aStringSize * sizeof(char));
+	ushort dataLength	= (ushort)(this->Read<ushort>() * sizeof(char));
 
 	this->CheckReadSize(dataLength);
 
@@ -154,12 +159,13 @@ bool MN_ReadMessage::ReadString(char *aBuffer, uint aStringSize)
 	return true;
 }
 
-bool MN_ReadMessage::ReadString(wchar_t *aBuffer, uint aStringSize)
+bool MN_ReadMessage::ReadString(wchar_t *aBuffer, sizeptr_t aStringSize)
 {
 	assert(aBuffer && aStringSize > 0);
 
-	ushort bufferLength = aStringSize * sizeof(wchar_t);
-	ushort dataLength	= this->Read<ushort>() * sizeof(wchar_t);
+	// Packet will exceed bounds before it exceeds ushort
+	ushort bufferLength = (ushort)(aStringSize * sizeof(wchar_t));
+	ushort dataLength	= (ushort)(this->Read<ushort>() * sizeof(wchar_t));
 
 	this->CheckReadSize(dataLength);
 
@@ -178,12 +184,12 @@ bool MN_ReadMessage::ReadString(wchar_t *aBuffer, uint aStringSize)
 	return true;
 }
 
-void MN_ReadMessage::CheckReadSize(uint aSize)
+void MN_ReadMessage::CheckReadSize(sizeptr_t aSize)
 {
-	assert((this->m_ReadPos + aSize) < this->m_PacketMaxSize && "Packet read exceeded bounds.");
+	assert((this->m_ReadPos + aSize) < this->m_PacketMaxSize && "Packet read would exceed bounds.");
 }
 
-void MN_ReadMessage::IncReadPos(uint aSize)
+void MN_ReadMessage::IncReadPos(sizeptr_t aSize)
 {
 	this->m_ReadPtr = this->m_ReadPtr + aSize;
 	this->m_ReadPos += aSize;

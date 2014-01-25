@@ -9,6 +9,6 @@ private:
 public:
 	MMG_NullCipher();
 
-	void Encrypt(char *aData, uint aDataLength);
-	void Decrypt(char *aData, uint aDataLength);
+	void Encrypt(char *aData, sizeptr_t aDataLength);
+	void Decrypt(char *aData, sizeptr_t aDataLength);
 };

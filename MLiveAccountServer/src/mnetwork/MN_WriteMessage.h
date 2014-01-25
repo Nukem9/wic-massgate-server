@@ -6,7 +6,7 @@ public:
 
 private:
 	uintptr_t	m_WritePtr;
-	uint		m_WritePos;
+	sizeptr_t	m_WritePos;
 
 public:
 	MN_WriteMessage(uint aMaxSize) : MN_Message(aMaxSize)
@@ -35,19 +35,19 @@ public:
 	void WriteULong		(ulong aULong);
 	void WriteUInt64	(uint64 aUInt64);
 	void WriteFloat		(float aFloat);
-	void WriteRawData	(PVOID aBuffer, uint aBufferSize);
+	void WriteRawData	(voidptr_t aBuffer, sizeptr_t aBufferSize);
 	void WriteString	(char *aBuffer);
-	void WriteString	(char *aBuffer, uint aStringSize);
+	void WriteString	(char *aBuffer, sizeptr_t aStringSize);
 	void WriteString	(wchar_t *aBuffer);
-	void WriteString	(wchar_t *aBuffer, uint aStringSize);
+	void WriteString	(wchar_t *aBuffer, sizeptr_t aStringSize);
 
 	bool SendMe			(SOCKET sock);
 	bool SendMe			(SOCKET sock, bool aClearData);
 
-	PVOID GetDataStream	();
-	uint GetDataLength	();
+	voidptr_t GetDataStream	();
+	sizeptr_t GetDataLength	();
 
 private:
-	void IncWritePos	(uint aSize);
-	void CheckWriteSize	(uint aSize);
+	void IncWritePos	(sizeptr_t aSize);
+	void CheckWriteSize	(sizeptr_t aSize);
 };

@@ -27,13 +27,13 @@ MMG_BlockTEA::~MMG_BlockTEA()
 }
 
 template <typename T>
-void MMG_BlockTEA::Encrypter(T *aData, uint aDataLength)
+void MMG_BlockTEA::Encrypter(T *aData, sizeptr_t aDataLength)
 {
 	static T delta = (T)(0x9E3779B9 >> (32 - (sizeof(T) * 8)));
 
 	if (aDataLength > 1)
 	{
-		uint rounds = 6 + (52 / aDataLength);
+		uint rounds = (T)(6 + (52 / aDataLength));
 		ulong e		= 0;
 		uint p		= 0;
 
@@ -62,19 +62,19 @@ void MMG_BlockTEA::Encrypter(T *aData, uint aDataLength)
 }
 
 template<typename T>
-void MMG_BlockTEA::Decrypter(T *aData, uint aDataLength)
+void MMG_BlockTEA::Decrypter(T *aData, sizeptr_t aDataLength)
 {
 	static T delta = (T)(0x9E3779B9 >> (32 - (sizeof(T) * 8)));
 
 	if (aDataLength > 1)
 	{
-		T rounds	= 6 + (52 / aDataLength);
-		T e			= 0;
-		uint p		= 0;
-		
-		T sum	= rounds * delta;
-		T y		= aData[0];
-		T z		= aData[aDataLength - 1];
+		T rounds	= (T)(6 + (52 / aDataLength));
+		T sum		= rounds * delta;
+
+		T			e = 0;
+		sizeptr_t	p = 0;
+		T			y = aData[0];
+		T			z = aData[aDataLength - 1];
 
 		// Size of each element in the key array
 		T keyPartSize = (sizeof(this->m_Keys) / sizeof(T)) - 1;
@@ -95,7 +95,7 @@ void MMG_BlockTEA::Decrypter(T *aData, uint aDataLength)
 	}
 }
 
-void MMG_BlockTEA::Encrypt(char *aData, uint aDataLength)
+void MMG_BlockTEA::Encrypt(char *aData, sizeptr_t aDataLength)
 {
 	// First pass, use sizeof(ulong) byte blocks
 	// Calculate the length in array elements of 'ulong' (rounded down to nearest multiple of 2)
@@ -106,7 +106,7 @@ void MMG_BlockTEA::Encrypt(char *aData, uint aDataLength)
 	Encrypter<uchar>((uchar *)&aData[aDataLength & 0xFFFFFFF8], aDataLength % 8);
 }
 
-void MMG_BlockTEA::Decrypt(char *aData, uint aDataLength)
+void MMG_BlockTEA::Decrypt(char *aData, sizeptr_t aDataLength)
 {
 	// First pass, use sizeof(ulong) byte blocks
 	// Calculate the length in array elements of 'ulong' (rounded down to nearest multiple of 2)

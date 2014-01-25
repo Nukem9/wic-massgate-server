@@ -67,7 +67,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if(!aMessage->ReadUInt(commOptions))
 				return false;
 
-			// Temporary
+			// TODO
 			MMG_Options myOptions;
 			myOptions.FromUInt(commOptions);
 		}
@@ -77,8 +77,28 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			this->SendIMSettings(aClient, &responseMessage);
 
-			// Temporary
+			// TODO
 			this->SendStartupSequenceComplete(aClient, &responseMessage);
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_CLAN_CREATE_REQUEST:
+		{
+			// TODO
+			wchar_t clanName[32];
+			wchar_t clanTag[8];
+			char displayTag[8];
+			uint zero;
+
+			aMessage->ReadString(clanName, ARRAYSIZE(clanName));
+			aMessage->ReadString(clanTag, ARRAYSIZE(clanTag));
+			aMessage->ReadString(displayTag, ARRAYSIZE(displayTag));
+			aMessage->ReadUInt(zero);
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_CREATE_RESPONSE);
+			responseMessage.WriteUChar(0);
+			responseMessage.WriteUInt(0);
+			aClient->SendData(&responseMessage);
 		}
 		break;
 
@@ -91,7 +111,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 		case MMG_ProtocolDelimiters::MESSAGING_OPTIONAL_CONTENT_RETRY_REQ:
 		{
-			// Ignored
+			// TODO
+			// Is this used?
+			// Retry
 			// this->SendOptionalContent(aClient, &responseMessage);
 		}
 		break;
@@ -109,7 +131,7 @@ bool MMG_Messaging::SendProfileName(SvClient *aClient, MN_WriteMessage	*aMessage
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 	aProfile->ToStream(aMessage);
 
-	return aMessage->SendMe(aClient->GetSocket(), true);
+	return aClient->SendData(aMessage);
 }
 
 bool MMG_Messaging::SendCommOptions(SvClient *aClient, MN_WriteMessage *aMessage)
@@ -120,7 +142,7 @@ bool MMG_Messaging::SendCommOptions(SvClient *aClient, MN_WriteMessage *aMessage
 	MMG_Options myOptions;
 	aMessage->WriteUInt(myOptions.ToUInt());
 
-	return aMessage->SendMe(aClient->GetSocket(), true);
+	return aClient->SendData(aMessage);
 }
 
 bool MMG_Messaging::SendIMSettings(SvClient *aClient, MN_WriteMessage *aMessage)
@@ -135,7 +157,7 @@ bool MMG_Messaging::SendIMSettings(SvClient *aClient, MN_WriteMessage *aMessage)
 	mySettings.m_Anyone = true;
 	mySettings.ToStream(aMessage);
 
-	return aMessage->SendMe(aClient->GetSocket(), true);
+	return aClient->SendData(aMessage);
 }
 
 bool MMG_Messaging::SendPingsPerSecond(SvClient *aClient, MN_WriteMessage *aMessage)
@@ -143,14 +165,14 @@ bool MMG_Messaging::SendPingsPerSecond(SvClient *aClient, MN_WriteMessage *aMess
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_PPS_SETTINGS_RSP);
 	aMessage->WriteUInt(WIC_CLIENT_PPS);
 
-	return aMessage->SendMe(aClient->GetSocket(), true);
+	return aClient->SendData(aMessage);
 }
 
 bool MMG_Messaging::SendStartupSequenceComplete(SvClient *aClient, MN_WriteMessage *aMessage)
 {
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_STARTUP_SEQUENCE_COMPLETE);
 
-	return aMessage->SendMe(aClient->GetSocket(), true);
+	return aClient->SendData(aMessage);
 }
 
 bool MMG_Messaging::SendOptionalContent(SvClient *aClient, MN_WriteMessage *aMessage)
@@ -158,7 +180,7 @@ bool MMG_Messaging::SendOptionalContent(SvClient *aClient, MN_WriteMessage *aMes
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_OPTIONAL_CONTENT_GET_RSP);
 
 	// Write the map info data stream
-	MMG_OptionalContentProtocol::ourInstance->ToStream(aMessage);
+	//MMG_OptionalContentProtocol::ourInstance->ToStream(aMessage);
 
-	return aMessage->SendMe(aClient->GetSocket(), true);
+	return aClient->SendData(aMessage);
 }

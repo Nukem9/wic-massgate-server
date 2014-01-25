@@ -53,14 +53,15 @@ void MN_WriteMessage::WriteFloat(float aFloat)
 	this->Write<float>(aFloat);
 }
 
-void MN_WriteMessage::WriteRawData(PVOID aBuffer, uint aBufferSize)
+void MN_WriteMessage::WriteRawData(voidptr_t aBuffer, sizeptr_t aBufferSize)
 {
 	assert(aBuffer && aBufferSize > 0);
 
 	if(this->m_TypeChecks)
 		this->Write<ushort>('RD');
 
-	this->WriteUShort(aBufferSize);
+	// Packet will exceed bounds before it exceeds ushort
+	this->WriteUShort((ushort)aBufferSize);
 	this->CheckWriteSize(aBufferSize);
 
 	memcpy((voidptr_t)this->m_WritePtr, aBuffer, aBufferSize);
@@ -73,13 +74,14 @@ void MN_WriteMessage::WriteString(char *aBuffer)
 	this->WriteString(aBuffer, strlen(aBuffer) + 1);
 }
 
-void MN_WriteMessage::WriteString(char *aBuffer, uint aStringSize)
+void MN_WriteMessage::WriteString(char *aBuffer, sizeptr_t aStringSize)
 {
 	assert(aBuffer && aStringSize > 0);
 
-	ushort bufferSize = aStringSize * sizeof(char);
+	// Packet will exceed bounds before it exceeds ushort
+	ushort bufferSize = (ushort)(aStringSize * sizeof(char));
 
-	this->WriteUShort(aStringSize);
+	this->WriteUShort((ushort)aStringSize);
 	this->CheckWriteSize(bufferSize);
 
 	memcpy((voidptr_t)this->m_WritePtr, aBuffer, bufferSize);
@@ -92,13 +94,14 @@ void MN_WriteMessage::WriteString(wchar_t *aBuffer)
 	this->WriteString(aBuffer, wcslen(aBuffer) + 1);
 }
 
-void MN_WriteMessage::WriteString(wchar_t *aBuffer, uint aStringSize)
+void MN_WriteMessage::WriteString(wchar_t *aBuffer, sizeptr_t aStringSize)
 {
 	assert(aBuffer && aStringSize > 0);
 
-	ushort bufferSize = aStringSize * sizeof(wchar_t);
+	// Packet will exceed bounds before it exceeds ushort
+	ushort bufferSize = (ushort)(aStringSize * sizeof(wchar_t));
 
-	this->WriteUShort(aStringSize);
+	this->WriteUShort((ushort)aStringSize);
 	this->CheckWriteSize(bufferSize);
 
 	memcpy((voidptr_t)this->m_WritePtr, aBuffer, bufferSize);
@@ -108,12 +111,16 @@ void MN_WriteMessage::WriteString(wchar_t *aBuffer, uint aStringSize)
 
 bool MN_WriteMessage::SendMe(SOCKET sock)
 {
-	return this->SendMe(sock, false);
+	return this->SendMe(sock, true);
 }
 
 bool MN_WriteMessage::SendMe(SOCKET sock, bool aClearData)
 {
-	bool retVal = send(sock, (const char *)this->m_PacketData, this->m_DataLen, 0) != SOCKET_ERROR;
+	// Windows sockets only supports int as the data size
+	if(this->m_DataLen >= INT_MAX)
+		return false;
+
+	bool retVal = send(sock, (const char *)this->m_PacketData, (int)this->m_DataLen, 0) != SOCKET_ERROR;
 
 	if(aClearData)
 	{
@@ -125,26 +132,27 @@ bool MN_WriteMessage::SendMe(SOCKET sock, bool aClearData)
 	return retVal;
 }
 
-PVOID MN_WriteMessage::GetDataStream()
+voidptr_t MN_WriteMessage::GetDataStream()
 {
-	return (PVOID)this->m_PacketData;
+	return (voidptr_t)this->m_PacketData;
 }
 
-uint MN_WriteMessage::GetDataLength()
+sizeptr_t MN_WriteMessage::GetDataLength()
 {
 	return this->m_DataLen;
 }
 
-void MN_WriteMessage::CheckWriteSize(uint aSize)
+void MN_WriteMessage::CheckWriteSize(sizeptr_t aSize)
 {
 	assert((this->m_DataLen + aSize) < this->m_PacketMaxSize && "Packet write exceeded bounds.");
 }
 
-void MN_WriteMessage::IncWritePos(uint aSize)
+void MN_WriteMessage::IncWritePos(sizeptr_t aSize)
 {
 	this->m_WritePtr	= this->m_WritePtr + aSize;
 	this->m_WritePos	+= aSize;
 	this->m_DataLen		+= aSize;
 
+	// Update the length of the packet (entry in packet data)
 	*(ushort *)this->m_PacketData = (ushort)(this->m_DataLen - sizeof(ushort));
 }

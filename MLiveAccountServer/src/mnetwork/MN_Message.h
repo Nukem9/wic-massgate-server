@@ -1,14 +1,5 @@
 #pragma once
 
-#define UC_Size sizeof(uchar)
-#define US_Size sizeof(ushort)
-#define UI_Size sizeof(uint)
-#define UL_Size sizeof(ulong)
-#define U6_Size sizeof(uint64)
-#define FL_Size sizeof(float)
-
-#define MESSAGE_FLAG_COMPRESSED 0x8000
-
 class MN_Message
 {
 public:
@@ -16,15 +7,21 @@ public:
 	friend class MN_WriteMessage;
 
 private:
-	uintptr_t	m_PacketData;
-	uint		m_PacketMaxSize;
+	// Limits
+	const static sizeptr_t MESSAGE_MAX_LENGTH = 0x3FFF;
+	
+	// Packet flags
+	const static sizeptr_t MESSAGE_FLAG_COMPRESSED = 0x8000;
 
-	uint		m_DataLen;
+	uintptr_t	m_PacketData;
+	sizeptr_t	m_PacketMaxSize;
+
+	sizeptr_t	m_DataLen;
 
 	bool		m_TypeChecks;
 
 public:
-	MN_Message			(uint aMaxSize);
+	MN_Message			(sizeptr_t aMaxSize);
 	~MN_Message			();
 
 private:

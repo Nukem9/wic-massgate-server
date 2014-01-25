@@ -26,11 +26,11 @@ private:
 public:
 	MMG_ICipher();
 
-	virtual void Encrypt(char *aData, uint aDataLength) = 0;
-	virtual void Decrypt(char *aData, uint aDataLength) = 0;
+	virtual void Encrypt(char *aData, sizeptr_t aDataLength) = 0;
+	virtual void Decrypt(char *aData, sizeptr_t aDataLength) = 0;
 
 	virtual CipherIdentifier GetType();
 
-	static bool DecryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint *aData, uint aDataLength);
-	static bool EncryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint *aData, uint aDataLength);
+	static bool DecryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint *aData, sizeptr_t aDataLength);
+	static bool EncryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint *aData, sizeptr_t aDataLength);
 };

@@ -1,6 +1,6 @@
 #pragma once
 
-// Versions
+// Game versions (Build numbers)
 enum WIC_REVISION_VER
 {
 	VER_1000 = 0,
@@ -17,9 +17,16 @@ enum WIC_REVISION_VER
 	VER_1011 = 134,
 };
 
+// Protocol versions
+enum WIC_PROTOCOL_VER
+{
+	PROTO_1011 = 140,
+	PROTO_1012 = 150, // 'Custom' version
+};
+
 // Limits
 #define WIC_NAME_MAX_LENGTH			25
-#define WIC_EMAIL_MAX_LENGTH		254
+#define WIC_EMAIL_MAX_LENGTH		128
 
 #define WIC_SERVER_MAX_CLIENTS		100
 
@@ -28,8 +35,8 @@ enum WIC_REVISION_VER
 #define WIC_DEFAULT_NET_TIMEOUT_S	(WIC_DEFAULT_NET_TIMEOUT / 1000)
 #define WIC_LOGGEDIN_NET_TIMEOUT	300000 /* milliseconds */
 #define WIC_LOGGEDIN_NET_TIMEOUT_S	(WIC_LOGGEDIN_NET_TIMEOUT / 1000)
-
-#define WIC_CREDAUTH_RESEND_S		270
+#define WIC_CREDAUTH_RESEND			270000 /* Credential request delay */
+#define WIC_CREDAUTH_RESEND_S		(WIC_CREDAUTH_RESEND / 1000)
 
 #define WIC_CLIENT_PPS				10 /* Pings per second (MMG_Messaging) */
 
@@ -38,10 +45,11 @@ enum WIC_REVISION_VER
 #define WIC_CLIENT_DISTRIBUTION		1
 #define WIC_DEBUG_DISTRIBUTION		2
 
-// Protocol and/or versions
-#define WIC_PROTOCOL_VERSION		140
-#define WIC_NEW_PROCOTOL_VERSION	150
+// Protocol and versions
+#define WIC_CURRENT_VERSION			VER_1011
+#define WIC_CURRENT_PROTOCOL		PROTO_1012
 
+// Account values
 #define WIC_INVALID_ACCOUNT			((uint)-1)
 
 // Ports

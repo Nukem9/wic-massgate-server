@@ -35,6 +35,8 @@ public:
 	void			SetSocket		(SOCKET aSocket);
 	void			SetLoginStatus	(bool aStatus);
 
+	bool			SendData		(MN_WriteMessage *aMessage);
+
 	MMG_Profile		*GetProfile		();
 	MMG_AuthToken	*GetToken		();
 
@@ -50,7 +52,7 @@ private:
 CLASS_SINGLE(SvClientManager)
 {
 public:
-	typedef void (__cdecl * pfnDataReceivedCallback)(SvClient *aClient, PVOID aData, uint aDataLen, bool aError);
+	typedef void (__cdecl * pfnDataReceivedCallback)(SvClient *aClient, voidptr_t aData, sizeptr_t aDataLen, bool aError);
 
 private:
 	MT_Mutex	m_Mutex;

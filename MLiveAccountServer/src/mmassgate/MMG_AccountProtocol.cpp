@@ -9,7 +9,7 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 	if(!aMessage->ReadUShort(this->m_Protocol))
 		return false;
 
-	if(this->m_Protocol != WIC_NEW_PROCOTOL_VERSION)
+	if(this->m_Protocol != WIC_CURRENT_PROTOCOL)
 	{
 		this->m_StatusCode = IncorrectProtocolVersion;
 		return true;
@@ -40,8 +40,8 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 		return false;
 
 	// Read encrypted data block and length
-	uint	dataLen;
-	char	dataBuffer[1024];
+	sizeptr_t	dataLen;
+	char		dataBuffer[1024];
 
 	if(!aMessage->ReadRawData(dataBuffer, sizeof(dataBuffer), &dataLen))
 		return false;
@@ -273,14 +273,14 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 	// Write the main message header
 	MN_WriteMessage	responseMsg(1024);
 	responseMsg.WriteDelimiter(responseDelimiter);
-	responseMsg.WriteUShort(WIC_NEW_PROCOTOL_VERSION);
+	responseMsg.WriteUShort(WIC_CURRENT_PROTOCOL);
 	responseMsg.WriteUChar(aClient->m_CipherIdentifier);
 	responseMsg.WriteUInt(aClient->m_EncryptionKeySequenceNumber);
 
 	// Encrypt and write the data to the main (outgoing) packet
 	// Packet buffer can be modified because it is no longer used
-	uint dataLength		= cryptMessage.GetDataLength();
-	PVOID dataStream	= cryptMessage.GetDataStream();
+	sizeptr_t dataLength = cryptMessage.GetDataLength();
+	voidptr_t dataStream = cryptMessage.GetDataStream();
 
 	if(!MMG_ICipher::EncryptWith(aClient->m_CipherIdentifier, aClient->m_CipherKeys, (uint *)dataStream, dataLength))
 		return false;
@@ -289,7 +289,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 	responseMsg.WriteRawData(dataStream, dataLength);
 
 	// Finally send the message
-	if(!responseMsg.SendMe(aClient->GetSocket()))
+	if(!aClient->SendData(&responseMsg))
 		return false;
 
 	return true;

@@ -19,13 +19,13 @@ bool MN_TcpServer::Start()
 
 	if(!this->Bind() || !this->Listen())
 	{
-		closesocket(this->m_Socket);
+		this->Stop();
 		return false;
 	}
 
 	this->m_ThreadHandle = CreateThread(nullptr, 0, ServerThread, this, 0, nullptr);
 
-	if(this->m_ThreadHandle == nullptr)
+	if(!this->m_ThreadHandle)
 	{
 		this->Stop();
 		return false;

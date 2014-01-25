@@ -122,7 +122,7 @@ public:
 			return false;
 
 		if(buffer)
-			MC_Misc::MultibyteToUnicode(json_string_value(obj), buffer, bufferSize / sizeof(wchar_t));
+			MC_Misc::MultibyteToUnicode(json_string_value(obj), buffer, (uint)(bufferSize / sizeof(wchar_t)));
 
 		return true;
 	}

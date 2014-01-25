@@ -6,7 +6,7 @@ public:
 
 private:
 	uintptr_t	m_ReadPtr;
-	uint		m_ReadPos;
+	sizeptr_t	m_ReadPos;
 
 public:
 	MN_ReadMessage(uint aMaxSize) : MN_Message(aMaxSize)
@@ -15,7 +15,7 @@ public:
 		this->m_ReadPos = 0;
 	}
 
-	bool BuildMessage	(PVOID aData, uint aDataLen);
+	bool BuildMessage	(voidptr_t aData, sizeptr_t aDataLen);
 
 	template<typename T> __declspec(noinline) T Read()
 	{
@@ -39,11 +39,11 @@ public:
 	bool ReadULong		(ulong &aULong);
 	bool ReadUInt64		(uint64 &aUInt64);
 	bool ReadFloat		(float &aFloat);
-	bool ReadRawData	(PVOID aBuffer, uint aBufferSize, uint *aTotalSize);
-	bool ReadString		(char *aBuffer, uint aStringSize);
-	bool ReadString		(wchar_t *aBuffer, uint aStringSize);
+	bool ReadRawData	(voidptr_t aBuffer, sizeptr_t aBufferSize, sizeptr_t *aTotalSize);
+	bool ReadString		(char *aBuffer, sizeptr_t aStringSize);
+	bool ReadString		(wchar_t *aBuffer, sizeptr_t aStringSize);
 
 private:
-	void IncReadPos		(uint aSize);
-	void CheckReadSize	(uint aSize);
+	void IncReadPos		(sizeptr_t aSize);
+	void CheckReadSize	(sizeptr_t aSize);
 };

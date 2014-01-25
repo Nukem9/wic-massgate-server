@@ -63,13 +63,7 @@ void Shutdown()
 
 int main(int argc, char **argv)
 {
-#ifdef _M_IX86
-	char *architecture_ver = "x86";
-#else
-	char *architecture_ver = "x86_64";
-#endif
-
-	printf("MassgateServer (%s) startup\n", architecture_ver);
+	printf("MassgateServer (%s) startup\n", SERVER_ARCHITECTURE);
 
 	Startup();
 

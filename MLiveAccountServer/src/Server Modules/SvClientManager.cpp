@@ -38,6 +38,11 @@ void SvClient::SetLoginStatus(bool aStatus)
 	this->m_LoggedIn = aStatus;
 }
 
+bool SvClient::SendData(MN_WriteMessage *aMessage)
+{
+	return aMessage->SendMe(this->m_Socket);
+}
+
 MMG_Profile *SvClient::GetProfile()
 {
 	return this->m_Profile;

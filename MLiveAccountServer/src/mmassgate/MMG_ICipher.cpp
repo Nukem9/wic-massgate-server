@@ -10,7 +10,7 @@ CipherIdentifier MMG_ICipher::GetType()
 	return this->m_Indentifier;
 }
 
-bool MMG_ICipher::DecryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint *aData, uint aDataLength)
+bool MMG_ICipher::DecryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint *aData, sizeptr_t aDataLength)
 {
 	switch(aCipher)
 	{
@@ -32,7 +32,7 @@ bool MMG_ICipher::DecryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint
 	return false;
 }
 
-bool MMG_ICipher::EncryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint *aData, uint aDataLength)
+bool MMG_ICipher::EncryptWith(CipherIdentifier aCipher, ulong *aCipherKeys, uint *aData, sizeptr_t aDataLength)
 {
 	switch(aCipher)
 	{

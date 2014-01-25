@@ -9,7 +9,7 @@ void StatsService_Startup()
 	if(!g_StatsServer)
 		g_StatsServer = MN_TcpServer::Create("127.0.0.1", WIC_STATS_PORT);
 
-//	g_StatsServer->SetCallback(StatsService_DataRecievedCallback);
+	g_StatsServer->SetCallback(StatsService_ConnectionRecievedCallback);
 	
 	if(!g_StatsServer->Start())
 		StatsLog("Error: Failed to start StatsService sever module");
@@ -23,7 +23,7 @@ void StatsService_Shutdown()
 		g_StatsServer->Stop();
 }
 
-void StatsService_DataRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr, PVOID aData, uint aDataLen)
+void StatsService_ConnectionRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 {
 	SvClient *myClient = SvClientManager::ourInstance->FindClient(aAddr->sin_addr.s_addr);
 

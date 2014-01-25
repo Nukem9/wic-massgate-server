@@ -1,6 +1,6 @@
 #include "../stdafx.h"
 
-MN_Message::MN_Message(uint aMaxSize)
+MN_Message::MN_Message(sizeptr_t aMaxSize)
 {
 	assert(aMaxSize > 0);
 
