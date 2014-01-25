@@ -176,33 +176,6 @@
     <ClInclude Include="src\misc\stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="libraries\curl\curl.h">
-      <Filter>Libraries\CURL</Filter>
-    </ClInclude>
-    <ClInclude Include="libraries\curl\curlbuild.h">
-      <Filter>Libraries\CURL</Filter>
-    </ClInclude>
-    <ClInclude Include="libraries\curl\curlrules.h">
-      <Filter>Libraries\CURL</Filter>
-    </ClInclude>
-    <ClInclude Include="libraries\curl\curlver.h">
-      <Filter>Libraries\CURL</Filter>
-    </ClInclude>
-    <ClInclude Include="libraries\curl\easy.h">
-      <Filter>Libraries\CURL</Filter>
-    </ClInclude>
-    <ClInclude Include="libraries\curl\mprintf.h">
-      <Filter>Libraries\CURL</Filter>
-    </ClInclude>
-    <ClInclude Include="libraries\curl\multi.h">
-      <Filter>Libraries\CURL</Filter>
-    </ClInclude>
-    <ClInclude Include="libraries\curl\stdcheaders.h">
-      <Filter>Libraries\CURL</Filter>
-    </ClInclude>
-    <ClInclude Include="libraries\curl\typecheck-gcc.h">
-      <Filter>Libraries\CURL</Filter>
-    </ClInclude>
     <ClInclude Include="libraries\jansson\hashtable.h">
       <Filter>Libraries\Jansson</Filter>
     </ClInclude>

@@ -43,12 +43,12 @@ public:
 
 	bool Bind(int Argument, const char *Value)
 	{
-		return sqlite3_bind_text(this->m_Statement, Argument, Value, strlen(Value), nullptr) == SQLITE_OK;
+		return sqlite3_bind_text(this->m_Statement, Argument, Value, (int)strlen(Value), nullptr) == SQLITE_OK;
 	}
 
 	bool Bind(int Argument, const wchar_t *Value)
 	{
-		return sqlite3_bind_text16(this->m_Statement, Argument, Value, wcslen(Value), nullptr) == SQLITE_OK;
+		return sqlite3_bind_text16(this->m_Statement, Argument, Value, (int)wcslen(Value), nullptr) == SQLITE_OK;
 	}
 
 	bool BindBlob(int Argument, voidptr_t Data, ulong Length)

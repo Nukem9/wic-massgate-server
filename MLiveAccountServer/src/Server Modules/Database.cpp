@@ -70,37 +70,7 @@ namespace Database
 
 	bool FetchJSONUrl(const char *url, JSON *json)
 	{
-		CURL *curl = curl_easy_init();
-
-		if(!curl)
-		{
-			DatabaseLog("Error: Failed to load CURL.");
-			return false;
-		}
-
-		curl_userdata userdata;
-		memset(&userdata, 0, sizeof(userdata));
-
-		curl_easy_setopt(curl, CURLOPT_URL, url);
-		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, JSONDataReceived);
-		curl_easy_setopt(curl, CURLOPT_WRITEDATA, &userdata);
-
-		CURLcode code = curl_easy_perform(curl);
-		curl_easy_cleanup(curl);
-
-		if(code != CURLE_OK)
-		{
-			DatabaseLog("Error: CURL returned an error: %i", code);
-			return false;
-		}
-
-		if(!json->LoadJSON(userdata.dataBuffer))
-		{
-			DatabaseLog("Error: Failed to load JSON parser. Check line %i\nData: %s\n", json->error.line, userdata.dataBuffer);
-			return false;
-		}
-
-		return true;
+		return false;
 	}
 
 	bool BackendQuery(JSON *json, PHPGameQueries queryType, ...)

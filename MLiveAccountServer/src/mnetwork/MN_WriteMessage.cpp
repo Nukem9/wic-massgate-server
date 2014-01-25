@@ -146,5 +146,5 @@ void MN_WriteMessage::IncWritePos(uint aSize)
 	this->m_WritePos	+= aSize;
 	this->m_DataLen		+= aSize;
 
-	*(ushort *)this->m_PacketData = this->m_DataLen - sizeof(ushort);
+	*(ushort *)this->m_PacketData = (ushort)(this->m_DataLen - sizeof(ushort));
 }
