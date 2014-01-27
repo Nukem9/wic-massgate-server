@@ -14,5 +14,5 @@ MN_Message::MN_Message(sizeptr_t aMaxSize)
 
 MN_Message::~MN_Message()
 {
-	VirtualFree((PVOID)this->m_PacketData, 0, MEM_FREE);
+	VirtualFree((PVOID)this->m_PacketData, 0, MEM_RELEASE);
 }

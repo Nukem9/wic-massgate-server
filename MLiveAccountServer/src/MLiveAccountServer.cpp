@@ -6,7 +6,7 @@ void Winsock_Startup()
 
 	int e_result = WSAStartup(MAKEWORD(2, 2), &wsaData);
 
-	if(e_result != 0)
+	if (e_result != 0)
 		DebugLog(L_ERROR, "WSAStartup error: %s", WSAErrorToString(e_result));
 }
 
@@ -14,7 +14,7 @@ void Winsock_Shutdown()
 {
 	int e_result = WSACleanup();
 
-	if(e_result != 0)
+	if (e_result != 0)
 		DebugLog(L_ERROR, "WSACleanup error: %s", WSAErrorToString(e_result));
 }
 
@@ -33,7 +33,7 @@ void Startup()
 {
 	CreateServices();
 
-	if(!Database::Initialize())
+	if (!Database::Initialize())
 		DebugLog(L_ERROR, "Failed to initialize database back end");
 
 	Database::InitializeTables();
@@ -47,7 +47,7 @@ void Startup()
 	LiveAccount_Startup();
 	//StatsService_Startup();
 
-	if(!SvClientManager::ourInstance->Start())
+	if (!SvClientManager::ourInstance->Start())
 		DebugLog(L_ERROR, "Failed to start Server Client Manager");
 }
 

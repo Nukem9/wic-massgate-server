@@ -11,7 +11,7 @@ public:
 
 	static T *Create()
 	{
-		if(ourInstance == nullptr)
+		if (ourInstance == nullptr)
 			ourInstance = new T();
 
 		return ourInstance;

@@ -33,13 +33,13 @@ void MMG_BlockTEA::Encrypter(T *aData, sizeptr_t aDataLength)
 
 	if (aDataLength > 1)
 	{
-		uint rounds = (T)(6 + (52 / aDataLength));
-		ulong e		= 0;
-		uint p		= 0;
+		T rounds	= (T)(6 + (52 / aDataLength));
+		T sum		= 0;
 
-		T sum	= 0;
-		T y		= 0;
-		T z		= aData[aDataLength - 1];
+		T			e = 0;
+		sizeptr_t	p = 0;
+		T			y = 0;
+		T			z = aData[aDataLength - 1];
 
 		// Size of each element in the key array
 		T keyPartSize = (sizeof(this->m_Keys) / sizeof(T)) - 1;

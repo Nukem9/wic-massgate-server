@@ -78,7 +78,7 @@ void SvClient::Reset()
 	this->m_TimeoutTime		= 0;
 
 	// Close the socket if it's open
-	if(this->m_Socket != INVALID_SOCKET)
+	if (this->m_Socket != INVALID_SOCKET)
 	{
 		shutdown(this->m_Socket, 2/*SD_BOTH*/);
 		closesocket(this->m_Socket);
@@ -98,14 +98,14 @@ void SvClient::Reset()
 	this->m_LoggedIn = false;
 
 	// Profile structure
-	if(this->m_Profile)
+	if (this->m_Profile)
 	{
 		delete this->m_Profile;
 		this->m_Profile = nullptr;
 	}
 
 	// Authorization token structure
-	if(this->m_AuthToken)
+	if (this->m_AuthToken)
 	{
 		delete this->m_AuthToken;
 		this->m_AuthToken = nullptr;
@@ -126,11 +126,11 @@ bool SvClient::CanReadFrom()
 	// Query the socket
 	int result = select(0, &readFlags, nullptr, nullptr, &waitd);
 
-	if(result < 0)
+	if (result < 0)
 		return false;
 
 	// Check if the socket can be read from
-	if(!FD_ISSET(this->m_Socket, &readFlags))
+	if (!FD_ISSET(this->m_Socket, &readFlags))
 		return false;
 
 	// Clear the read flag
@@ -150,7 +150,7 @@ SvClientManager::SvClientManager()
 
 SvClientManager::~SvClientManager()
 {
-	if(this->m_ThreadHandle)
+	if (this->m_ThreadHandle)
 	{
 		TerminateThread(this->m_ThreadHandle, 0);
 		CloseHandle(this->m_ThreadHandle);
@@ -158,7 +158,7 @@ SvClientManager::~SvClientManager()
 		this->m_ThreadHandle = nullptr;
 	}
 
-	if(this->m_Clients)
+	if (this->m_Clients)
 	{
 		VirtualFree(this->m_Clients, 0, MEM_RELEASE);
 		this->m_Clients = nullptr;
@@ -169,7 +169,7 @@ bool SvClientManager::Start()
 {
 	this->m_ThreadHandle = CreateThread(nullptr, 0, MainThread, this, 0, nullptr);
 
-	if(this->m_ThreadHandle == nullptr)
+	if (this->m_ThreadHandle == nullptr)
 		return false;
 
 	return true;
@@ -191,11 +191,11 @@ SvClient *SvClientManager::FindClient(sockaddr_in *aAddr)
 	{
 		SvClient *client = &this->m_Clients[i];
 
-		if(!client->m_Valid)
+		if (!client->m_Valid)
 			continue;
 
 		// Found a client, compare address
-		if(client->m_IpAddress == ip && client->m_Port == port)
+		if (client->m_IpAddress == ip && client->m_Port == port)
 		{
 			this->m_Mutex.Unlock();
 			return client;
@@ -214,7 +214,7 @@ SvClient *SvClientManager::ConnectClient(SOCKET aSocket, sockaddr_in *aAddr)
 
 void SvClientManager::DisconnectClient(SvClient *aClient)
 {
-	if(!aClient->m_Valid)
+	if (!aClient->m_Valid)
 		return;
 
 	this->RemoveClient(aClient);
@@ -236,7 +236,7 @@ SvClient *SvClientManager::AddClient(uint aIpAddr, uint aPort, SOCKET aSocket)
 		SvClient *client = &this->m_Clients[i];
 
 		// Found unused slot
-		if(!client->m_Valid)
+		if (!client->m_Valid)
 		{
 			client->m_Index = i;
 			slot = client;
@@ -245,7 +245,7 @@ SvClient *SvClientManager::AddClient(uint aIpAddr, uint aPort, SOCKET aSocket)
 		}
 	}
 
-	if(slot)
+	if (slot)
 	{
 		slot->m_Profile		= new MMG_Profile();
 		slot->m_AuthToken	= new MMG_AuthToken();
@@ -301,11 +301,11 @@ DWORD WINAPI SvClientManager::MainThread(LPVOID lpArg)
 		{
 			SvClient *client = &myManager->m_Clients[i];
 
-			if(!client->m_Valid)
+			if (!client->m_Valid)
 				continue;
 
 			// Check if the client timed out from the last response
-			if(!client->IsActive())
+			if (!client->IsActive())
 			{
 				myManager->RemoveClient(client);
 				droppedClients++;
@@ -313,7 +313,7 @@ DWORD WINAPI SvClientManager::MainThread(LPVOID lpArg)
 				continue;
 			}
 
-			if(!client->CanReadFrom())
+			if (!client->CanReadFrom())
 				continue;
 
 			// Read the buffer
@@ -322,13 +322,13 @@ DWORD WINAPI SvClientManager::MainThread(LPVOID lpArg)
 			// Check if an error occurred or the client disconnected
 			bool wasError = (result == SOCKET_ERROR || result == 0);
 
-			if(myManager->m_DataReceivedCallback)
+			if (myManager->m_DataReceivedCallback)
 				myManager->m_DataReceivedCallback(client, recvBuffer, result, wasError);
 		}
 
 		myManager->m_Mutex.Unlock();
 
-		if(droppedClients > 0)
+		if (droppedClients > 0)
 			DebugLog(L_INFO, "%s(): Dropped %i client(s).", __FUNCTION__, droppedClients);
 
 		// Prevent 100% CPU usage

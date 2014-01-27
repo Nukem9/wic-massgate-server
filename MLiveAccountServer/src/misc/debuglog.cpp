@@ -21,7 +21,7 @@ void DebugLog(LogLevel level, const char *format, ...)
 	fflush(stdout);
 	fflush(stderr);
 
-	if(level == L_ERROR)
+	if (level == L_ERROR)
 	{
 		printf("Unable to recover from error. Press enter to exit.\n");
 		getchar();

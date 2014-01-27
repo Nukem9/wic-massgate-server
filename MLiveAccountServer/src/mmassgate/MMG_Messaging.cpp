@@ -10,10 +10,10 @@ void MMG_Messaging::IM_Settings::ToStream(MN_WriteMessage *aMessage)
 
 bool MMG_Messaging::IM_Settings::FromStream(MN_ReadMessage *aMessage)
 {
-	if(!aMessage->ReadUChar(this->m_Friends) || !aMessage->ReadUChar(this->m_Clanmembers))
+	if (!aMessage->ReadUChar(this->m_Friends) || !aMessage->ReadUChar(this->m_Clanmembers))
 		return false;
 
-	if(!aMessage->ReadUChar(this->m_Acquaintances) || !aMessage->ReadUChar(this->m_Anyone))
+	if (!aMessage->ReadUChar(this->m_Acquaintances) || !aMessage->ReadUChar(this->m_Anyone))
 		return false;
 
 	return true;
@@ -38,18 +38,18 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			this->SendProfileName(aClient, &responseMessage, myProfile);
 			this->SendPingsPerSecond(aClient, &responseMessage);
 
-			if(myProfile->m_ClanId)
+			if (myProfile->m_ClanId)
 			{
 				MMG_ProtocolDelimiters::Delimiter delim;
-				if(!aMessage->ReadDelimiter((ushort &)delim))
+				if (!aMessage->ReadDelimiter((ushort &)delim))
 					return false;
 
 				uint clanId;
 				uint unkZero;
-				if(!aMessage->ReadUInt(clanId) || !aMessage->ReadUInt(unkZero))
+				if (!aMessage->ReadUInt(clanId) || !aMessage->ReadUInt(unkZero))
 					return false;
 
-				if(myProfile->m_ClanId != clanId || unkZero != 0)
+				if (myProfile->m_ClanId != clanId || unkZero != 0)
 					return false;
 
 				// TODO: Write clan information
@@ -64,7 +64,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			uint commOptions;
 
-			if(!aMessage->ReadUInt(commOptions))
+			if (!aMessage->ReadUInt(commOptions))
 				return false;
 
 			// TODO

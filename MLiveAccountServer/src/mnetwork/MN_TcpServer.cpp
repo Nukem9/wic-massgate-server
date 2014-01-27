@@ -14,10 +14,10 @@ bool MN_TcpServer::Start()
 {
 	this->m_Socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 
-	if(this->m_Socket == INVALID_SOCKET)
+	if (this->m_Socket == INVALID_SOCKET)
 		return false;
 
-	if(!this->Bind() || !this->Listen())
+	if (!this->Bind() || !this->Listen())
 	{
 		this->Stop();
 		return false;
@@ -25,7 +25,7 @@ bool MN_TcpServer::Start()
 
 	this->m_ThreadHandle = CreateThread(nullptr, 0, ServerThread, this, 0, nullptr);
 
-	if(!this->m_ThreadHandle)
+	if (!this->m_ThreadHandle)
 	{
 		this->Stop();
 		return false;
@@ -36,7 +36,7 @@ bool MN_TcpServer::Start()
 
 void MN_TcpServer::Stop()
 {
-	if(this->m_ThreadHandle)
+	if (this->m_ThreadHandle)
 	{
 		TerminateThread(this->m_ThreadHandle, 0);
 		CloseHandle(this->m_ThreadHandle);
@@ -44,7 +44,7 @@ void MN_TcpServer::Stop()
 		this->m_ThreadHandle = nullptr;
 	}
 
-	if(this->m_Socket)
+	if (this->m_Socket)
 	{
 		shutdown(this->m_Socket, 2 /*SD_BOTH*/);
 		closesocket(this->m_Socket);
@@ -122,13 +122,13 @@ DWORD WINAPI MN_TcpServer::ServerThread(LPVOID lpArg)
 	{
 		clSocket = myTcpServer->Accept(&clAddr);
 
-		if(clSocket == INVALID_SOCKET)
+		if (clSocket == INVALID_SOCKET)
 		{
 			DebugLog(L_ERROR, "Error: %s", myTcpServer->GetLastError());
 			continue;
 		}
 
-		if(myTcpServer->m_ConnectionReceivedCallback)
+		if (myTcpServer->m_ConnectionReceivedCallback)
 			myTcpServer->m_ConnectionReceivedCallback(clSocket, &clAddr);
 	}
 

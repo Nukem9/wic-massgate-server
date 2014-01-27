@@ -22,13 +22,13 @@ void MMG_Profile::ToStream(MN_WriteMessage *aMessage)
 
 bool MMG_Profile::FromStream(MN_ReadMessage *aMessage)
 {
-	if(!aMessage->ReadString(this->m_Name, ARRAYSIZE(this->m_Name)))
+	if (!aMessage->ReadString(this->m_Name, ARRAYSIZE(this->m_Name)))
 		return false;
 
-	if(!aMessage->ReadUInt(this->m_ProfileId) || !aMessage->ReadUInt(this->m_ClanId) || !aMessage->ReadUInt(this->m_OnlineStatus))
+	if (!aMessage->ReadUInt(this->m_ProfileId) || !aMessage->ReadUInt(this->m_ClanId) || !aMessage->ReadUInt(this->m_OnlineStatus))
 		return false;
 
-	if(aMessage->ReadUChar(this->m_Rank) || !aMessage->ReadUChar(this->m_RankInClan))
+	if (aMessage->ReadUChar(this->m_Rank) || !aMessage->ReadUChar(this->m_RankInClan))
 		return false;
 
 	return true;

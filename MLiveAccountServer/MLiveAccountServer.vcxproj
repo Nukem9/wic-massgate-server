@@ -156,6 +156,7 @@
     <ClInclude Include="libraries\stdafx.h" />
     <ClInclude Include="src\mcommon2\stdafx.h" />
     <ClInclude Include="src\misc\stdafx.h" />
+    <ClInclude Include="src\mmassgate\MMG_Protocols.h" />
     <ClInclude Include="src\mmassgate\stdafx.h" />
     <ClInclude Include="src\mnetwork\stdafx.h" />
     <ClInclude Include="src\Server Modules\Database.h" />

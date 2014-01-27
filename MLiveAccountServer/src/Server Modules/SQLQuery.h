@@ -12,7 +12,7 @@ public:
 
 		int result = sqlite3_prepare_v2(db, SQLText, -1, &m_Statement, nullptr);
 
-		if(result != SQLITE_OK)
+		if (result != SQLITE_OK)
 			DebugBreak();
 	}
 
@@ -68,7 +68,7 @@ public:
 
 	void Finalize()
 	{
-		if(this->m_Statement)
+		if (this->m_Statement)
 			sqlite3_finalize(this->m_Statement);
 
 		this->m_Statement = nullptr;

@@ -6,21 +6,21 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 	this->m_Delimiter = aDelimiter;
 
 	// Client game protocol version
-	if(!aMessage->ReadUShort(this->m_Protocol))
+	if (!aMessage->ReadUShort(this->m_Protocol))
 		return false;
 
-	if(this->m_Protocol != WIC_CURRENT_PROTOCOL)
+	if (this->m_Protocol != MassgateProtocolVersion)
 	{
 		this->m_StatusCode = IncorrectProtocolVersion;
 		return true;
 	}
 	
 	// Cipher type
-	if(!aMessage->ReadUChar((uchar &)this->m_CipherIdentifier))
+	if (!aMessage->ReadUChar((uchar &)this->m_CipherIdentifier))
 		return false;
 
 	// CDKey sequence
-	if(!aMessage->ReadUInt(this->m_EncryptionKeySequenceNumber))
+	if (!aMessage->ReadUInt(this->m_EncryptionKeySequenceNumber))
 		return false;
 
 	// Custom: read the encryption keys for BlockTEA
@@ -30,33 +30,33 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 	// without a database of keys (which Massgate owns)
 	for(int i = 0; i < ARRAYSIZE(this->m_CipherKeys); i++)
 	{
-		if(!aMessage->ReadULong(this->m_CipherKeys[i]))
+		if (!aMessage->ReadULong(this->m_CipherKeys[i]))
 			return false;
 	}
 
 	// "Dummy" encrypted data block length, but it's written AGAIN after this
 	ushort dummyLen;
-	if(!aMessage->ReadUShort(dummyLen))
+	if (!aMessage->ReadUShort(dummyLen))
 		return false;
 
 	// Read encrypted data block and length
 	sizeptr_t	dataLen;
 	char		dataBuffer[1024];
 
-	if(!aMessage->ReadRawData(dataBuffer, sizeof(dataBuffer), &dataLen))
+	if (!aMessage->ReadRawData(dataBuffer, sizeof(dataBuffer), &dataLen))
 		return false;
 
 	// Decrypt the data block
-	if(!MMG_ICipher::DecryptWith(this->m_CipherIdentifier, this->m_CipherKeys, (uint *)&dataBuffer, dataLen))
+	if (!MMG_ICipher::DecryptWith(this->m_CipherIdentifier, this->m_CipherKeys, (uint *)&dataBuffer, dataLen))
 		return false;
 
 	// Create a new message reader with a decrypted data block
 	MN_ReadMessage decryptedMsg(1024);
-	if(!decryptedMsg.BuildMessage(&dataBuffer, dataLen))
+	if (!decryptedMsg.BuildMessage(&dataBuffer, dataLen))
 		return false;
 
 	// Read client variables
-	if(!decryptedMsg.ReadUInt(this->m_RandomKey) || !decryptedMsg.ReadUInt(this->m_ProductId) || !decryptedMsg.ReadUInt(this->m_DistributionId))
+	if (!decryptedMsg.ReadUInt(this->m_RandomKey) || !decryptedMsg.ReadUInt(this->m_ProductId) || !decryptedMsg.ReadUInt(this->m_DistributionId))
 		return false;
 
 	switch(this->m_Delimiter)
@@ -66,24 +66,24 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 			uint fingerprintSeed;
 			uint fingerprintXor;
 
-			if(!decryptedMsg.ReadUInt(fingerprintSeed) || !decryptedMsg.ReadUInt(fingerprintXor))
+			if (!decryptedMsg.ReadUInt(fingerprintSeed) || !decryptedMsg.ReadUInt(fingerprintXor))
 				return false;
 
 			this->m_Authenticate.m_Fingerprint = fingerprintSeed ^ fingerprintXor;
 
 			// Email
-			if(!decryptedMsg.ReadString(this->m_Authenticate.m_Email, ARRAYSIZE(this->m_Authenticate.m_Email)))
+			if (!decryptedMsg.ReadString(this->m_Authenticate.m_Email, ARRAYSIZE(this->m_Authenticate.m_Email)))
 				return false;
 
 			// Password
-			if(!decryptedMsg.ReadString(this->m_Authenticate.m_Password, ARRAYSIZE(this->m_Authenticate.m_Password)))
+			if (!decryptedMsg.ReadString(this->m_Authenticate.m_Password, ARRAYSIZE(this->m_Authenticate.m_Password)))
 				return false;
 
 			// Old profile usage (credentials stored in a file)
-			if(!decryptedMsg.ReadUInt(this->m_Authenticate.m_UseProfile) || !decryptedMsg.ReadUChar(this->m_Authenticate.m_HasOldCredentials))
+			if (!decryptedMsg.ReadUInt(this->m_Authenticate.m_UseProfile) || !decryptedMsg.ReadUChar(this->m_Authenticate.m_HasOldCredentials))
 				return false;
 
-			if(this->m_Authenticate.m_HasOldCredentials)
+			if (this->m_Authenticate.m_HasOldCredentials)
 			{
 				//MMG_AuthToken::FromStream(aMessage);
 			}
@@ -94,7 +94,7 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 
 		case MMG_ProtocolDelimiters::ACCOUNT_NEW_CREDENTIALS_REQ:
 		{
-			if(!this->m_Authenticate.m_Credentials.FromStream(aMessage))
+			if (!this->m_Authenticate.m_Credentials.FromStream(aMessage))
 				return false;
 		}
 		break;
@@ -104,17 +104,17 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 			uint fingerprintSeed;
 			uint fingerprintXor;
 
-			if(!decryptedMsg.ReadUInt(fingerprintSeed) || !decryptedMsg.ReadUInt(fingerprintXor))
+			if (!decryptedMsg.ReadUInt(fingerprintSeed) || !decryptedMsg.ReadUInt(fingerprintXor))
 				return false;
 
 			this->m_RetrieveProfiles.m_Fingerprint = fingerprintSeed ^ fingerprintXor;
 
 			// Email
-			if(!decryptedMsg.ReadString(this->m_RetrieveProfiles.m_Email, ARRAYSIZE(this->m_RetrieveProfiles.m_Email)))
+			if (!decryptedMsg.ReadString(this->m_RetrieveProfiles.m_Email, ARRAYSIZE(this->m_RetrieveProfiles.m_Email)))
 				return false;
 
 			// Password
-			if(!decryptedMsg.ReadString(this->m_RetrieveProfiles.m_Password, ARRAYSIZE(this->m_RetrieveProfiles.m_Password)))
+			if (!decryptedMsg.ReadString(this->m_RetrieveProfiles.m_Password, ARRAYSIZE(this->m_RetrieveProfiles.m_Password)))
 				return false;
 		}
 		break;
@@ -135,7 +135,7 @@ MMG_AccountProtocol::MMG_AccountProtocol()
 bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter)
 {
 	Query myQuery;
-	if(!myQuery.FromStream(aDelimiter, aMessage))
+	if (!myQuery.FromStream(aDelimiter, aMessage))
 		return false;
 
 	// Copy over the data to the main client manager class
@@ -149,7 +149,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 	// Write the base identifier (random number, only a marker)
 	cryptMessage.WriteUInt(myQuery.m_RandomKey);
 
-	if(myQuery.m_StatusCode == IncorrectProtocolVersion || !myQuery.VerifyProductId())
+	if (myQuery.m_StatusCode == IncorrectProtocolVersion || !myQuery.VerifyProductId())
 	{
 		// Invalid game version
 		// This takes priority over maintenance due to potential protocol differences
@@ -158,7 +158,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 		this->WritePatchInformation(&cryptMessage, &myQuery);
 	}
-	else if(false)
+	else if (false)
 	{
 		// Massgate/Server maintenance notice
 		responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_NOT_CONNECTED;
@@ -178,7 +178,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				DebugLog(L_INFO, "ACCOUNT_AUTH_ACCOUNT_RSP: Sending login response (id %i)", accProfileId);
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_AUTH_ACCOUNT_RSP;
 
-				if(accProfileId == WIC_INVALID_ACCOUNT)
+				if (accProfileId == WIC_INVALID_ACCOUNT)
 				{
 					cryptMessage.WriteUChar(AuthFailed_BadCredentials);
 
@@ -196,7 +196,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					cryptMessage.WriteUShort(0);// auth.myLatestVersion
 
 					// Query profile
-					//if(!Database::QueryUserProfile(accProfileId, aClient->GetProfile()))
+					//if (!Database::QueryUserProfile(accProfileId, aClient->GetProfile()))
 					//	DebugLog(L_ERROR, "Failed to retrieve profile for valid account ");
 					wcscpy_s(aClient->GetProfile()->m_Name, L"Nukem");
 					aClient->GetProfile()->m_OnlineStatus = 1;
@@ -206,6 +206,8 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					aClient->GetProfile()->ToStream(&cryptMessage);
 
 					MMG_AuthToken *myAuthToken = aClient->GetToken();
+
+					// TigerMD5 of ...? (possibly crypt keys)
 					myAuthToken->m_Hash.m_Hash[0] = 0x558C0A1C;
 					myAuthToken->m_Hash.m_Hash[1] = 0xA59C9FCA;
 					myAuthToken->m_Hash.m_Hash[2] = 0x6566857D;
@@ -273,7 +275,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 	// Write the main message header
 	MN_WriteMessage	responseMsg(1024);
 	responseMsg.WriteDelimiter(responseDelimiter);
-	responseMsg.WriteUShort(WIC_CURRENT_PROTOCOL);
+	responseMsg.WriteUShort(MassgateProtocolVersion);
 	responseMsg.WriteUChar(aClient->m_CipherIdentifier);
 	responseMsg.WriteUInt(aClient->m_EncryptionKeySequenceNumber);
 
@@ -282,14 +284,14 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 	sizeptr_t dataLength = cryptMessage.GetDataLength();
 	voidptr_t dataStream = cryptMessage.GetDataStream();
 
-	if(!MMG_ICipher::EncryptWith(aClient->m_CipherIdentifier, aClient->m_CipherKeys, (uint *)dataStream, dataLength))
+	if (!MMG_ICipher::EncryptWith(aClient->m_CipherIdentifier, aClient->m_CipherKeys, (uint *)dataStream, dataLength))
 		return false;
 
 	responseMsg.WriteUShort(dataLength);
 	responseMsg.WriteRawData(dataStream, dataLength);
 
 	// Finally send the message
-	if(!aClient->SendData(&responseMsg))
+	if (!aClient->SendData(&responseMsg))
 		return false;
 
 	return true;

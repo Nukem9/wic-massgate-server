@@ -11,7 +11,7 @@ namespace Database
 	bool Initialize()
 	{
 		// Set it to serialized multithreaded mode
-		if(sqlite3_config(SQLITE_CONFIG_SERIALIZED, 1) != SQLITE_OK)
+		if (sqlite3_config(SQLITE_CONFIG_SERIALIZED, 1) != SQLITE_OK)
 		{
 			DatabaseLog("Can't open database: Couldn't set multithreaded configuration");
 			return false;
@@ -21,7 +21,7 @@ namespace Database
 		// Also create if it does not exist
 		int err = sqlite3_open_v2("test.db", &db_handle, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
 
-		if(err != SQLITE_OK)
+		if (err != SQLITE_OK)
 		{
 			DatabaseLog("Can't open database: %s\n", sqlite3_errmsg(db_handle));
 			return false;
@@ -33,7 +33,7 @@ namespace Database
 
 	void Unload()
 	{
-		if(db_handle)
+		if (db_handle)
 			sqlite3_close_v2(db_handle);
 
 		db_handle = nullptr;
@@ -46,7 +46,7 @@ namespace Database
 		{
 			SQLQuery query(db_handle, TableValues[i]);
 
-			if(query.Step() != SQLITE_OK)
+			if (query.Step() != SQLITE_OK)
 				return false;
 		}
 
@@ -60,7 +60,7 @@ namespace Database
 		size_t maxSize = sizeof(c_userdata->dataBuffer);
 		size_t dataSize = size * nmemb;
 
-		if((strlen(c_userdata->dataBuffer) + dataSize) > maxSize)
+		if ((strlen(c_userdata->dataBuffer) + dataSize) > maxSize)
 			return dataSize;
 
 		strncat_s(c_userdata->dataBuffer, maxSize, (const char *)ptr, dataSize);
@@ -145,9 +145,9 @@ namespace Database
 		{
 			int result = query.Step();
 
-			if(result == SQLITE_DONE)
+			if (result == SQLITE_DONE)
 				break;
-			else if(result != SQLITE_ROW)
+			else if (result != SQLITE_ROW)
 				return WIC_INVALID_ACCOUNT;
 		}
 
@@ -157,18 +157,18 @@ namespace Database
 	uint AuthUserAccount(const char *email, const wchar_t *password)
 	{
 		JSON json;
-		if(!BackendQuery(&json, GAME_AUTH_ACCOUNT, email, password))
+		if (!BackendQuery(&json, GAME_AUTH_ACCOUNT, email, password))
 			return WIC_INVALID_ACCOUNT;
 
 		int j_status;
-		if(!json.ReadInt("status", &j_status) || j_status == 0)
+		if (!json.ReadInt("status", &j_status) || j_status == 0)
 		{
 			DatabaseLog("CreateUserAccount: JSON status failed.");
 			return WIC_INVALID_ACCOUNT;
 		}
 
 		uint j_profileId;
-		if(!json.ReadUInt("profileId", &j_profileId))
+		if (!json.ReadUInt("profileId", &j_profileId))
 		{
 			DatabaseLog("Error: Server returned invalid profile ID.");
 			return WIC_INVALID_ACCOUNT;
@@ -180,11 +180,11 @@ namespace Database
 	bool QueryUserProfile(const wchar_t *name, MMG_Profile *profile)
 	{
 		JSON json;
-		if(!BackendQuery(&json, GAME_GET_PROFILE_NAME, name))
+		if (!BackendQuery(&json, GAME_GET_PROFILE_NAME, name))
 			return false;
 
 		int j_status;
-		if(!json.ReadInt("status", &j_status) || j_status == 0)
+		if (!json.ReadInt("status", &j_status) || j_status == 0)
 		{
 			DatabaseLog("QueryUserProfile: JSON status failed.");
 			return false;
@@ -197,7 +197,7 @@ namespace Database
 		bResult = bResult && json.ReadUChar("rank", &profile->m_Rank);
 		bResult = bResult && json.ReadUChar("clanRank", &profile->m_RankInClan);
 
-		if(!bResult)
+		if (!bResult)
 		{
 			DatabaseLog("Error: Server returned invalid profile fields.");
 			return false;
@@ -209,11 +209,11 @@ namespace Database
 	bool QueryUserProfile(uint profileId, MMG_Profile *profile)
 	{
 		JSON json;
-		if(!BackendQuery(&json, GAME_GET_PROFILE, profileId))
+		if (!BackendQuery(&json, GAME_GET_PROFILE, profileId))
 			return false;
 
 		int j_status;
-		if(!json.ReadInt("status", &j_status) || j_status == 0)
+		if (!json.ReadInt("status", &j_status) || j_status == 0)
 		{
 			DatabaseLog("QueryUserProfile: JSON status failed.");
 			return false;
@@ -226,7 +226,7 @@ namespace Database
 		bResult = bResult && json.ReadUChar("rank", &profile->m_Rank);
 		bResult = bResult && json.ReadUChar("clanRank", &profile->m_RankInClan);
 
-		if(!bResult)
+		if (!bResult)
 		{
 			DatabaseLog("Error: Server returned invalid profile fields.");
 			return false;
@@ -242,11 +242,11 @@ namespace Database
 
 		JSON json;
 
-		if(!BackendQuery(&json, GAME_GET_PROFILE, profileId))
+		if (!BackendQuery(&json, GAME_GET_PROFILE, profileId))
 			return false;
 
 		int j_status;
-		if(!json.ReadInt("status", &j_status) || j_status == 0)
+		if (!json.ReadInt("status", &j_status) || j_status == 0)
 		{
 			DatabaseLog("QueryUserOptions: JSON status failed.");
 			return false;

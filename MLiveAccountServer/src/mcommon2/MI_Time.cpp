@@ -4,10 +4,10 @@ __int64 MI_Time::GetQPC()
 {
 	LARGE_INTEGER li;
 
-	//if(!QueryPerformanceFrequency(&li))
+	//if (!QueryPerformanceFrequency(&li))
 	//	DebugBreak();
 
-	if(!QueryPerformanceCounter(&li))
+	if (!QueryPerformanceCounter(&li))
 		DebugBreak();
 
 	return li.QuadPart;

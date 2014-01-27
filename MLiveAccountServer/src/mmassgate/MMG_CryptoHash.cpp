@@ -9,12 +9,12 @@ void MMG_CryptoHash::ToStream(MN_WriteMessage *aMessage)
 
 bool MMG_CryptoHash::FromStream(MN_ReadMessage *aMessage)
 {
-	if(!aMessage->ReadUChar((uchar &)this->m_HashLength) || !aMessage->ReadUChar((uchar &)this->m_GeneratedFromHashAlgorithm))
+	if (!aMessage->ReadUChar((uchar &)this->m_HashLength) || !aMessage->ReadUChar((uchar &)this->m_GeneratedFromHashAlgorithm))
 		return false;
 
 	uint dataSize = (this->m_HashLength > sizeof(this->m_Hash)) ? sizeof(this->m_Hash) : this->m_HashLength;
 
-	if(dataSize > 0 && !aMessage->ReadRawData(this->m_Hash, dataSize, NULL))
+	if (dataSize > 0 && !aMessage->ReadRawData(this->m_Hash, dataSize, nullptr))
 		return false;
 
 	return true;

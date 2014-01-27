@@ -2,7 +2,7 @@
 
 uint MMG_Options::ToUInt()
 {
-	#define BIT_SET(var, offset) if(var){ aRetVal |= (1 << offset); }
+	#define BIT_SET(var, offset) if (var){ aRetVal |= (1 << offset); }
 
 	uint aRetVal = 0;
 

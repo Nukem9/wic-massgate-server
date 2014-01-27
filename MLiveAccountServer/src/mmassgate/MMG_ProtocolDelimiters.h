@@ -291,25 +291,25 @@ namespace MMG_ProtocolDelimiters
 
 	static DelimiterType GetType(Delimiter aDelimiter)
 	{
-		if(aDelimiter > ACCOUNT_START && aDelimiter < ACCOUNT_END)
+		if (aDelimiter > ACCOUNT_START && aDelimiter < ACCOUNT_END)
 			return DELIM_ACCOUNT;
 
-		if(aDelimiter > MESSAGING_START && aDelimiter < MESSAGING_END)
+		if (aDelimiter > MESSAGING_START && aDelimiter < MESSAGING_END)
 			return DELIM_MESSAGE;
 
-		if(aDelimiter > MESSAGING_DS_START && aDelimiter < MESSAGING_DS_END)
+		if (aDelimiter > MESSAGING_DS_START && aDelimiter < MESSAGING_DS_END)
 			return DELIM_MESSAGE_DS;
 
-		if(aDelimiter > SERVERTRACKER_USER_START && aDelimiter < SERVERTRACKER_USER_END)
+		if (aDelimiter > SERVERTRACKER_USER_START && aDelimiter < SERVERTRACKER_USER_END)
 			return DELIM_SERVERTRACKER_USER;
 
-		if(aDelimiter > SERVERTRACKER_SERVER_START && aDelimiter < SERVERTRACKER_SERVER_END)
+		if (aDelimiter > SERVERTRACKER_SERVER_START && aDelimiter < SERVERTRACKER_SERVER_END)
 			return DELIM_SERVERTRACKER_SERVER;
 
-		if(aDelimiter > CHAT_START && aDelimiter < CHAT_END)
+		if (aDelimiter > CHAT_START && aDelimiter < CHAT_END)
 			return DELIM_CHAT;
 
-		if(aDelimiter > NATNEG_START && aDelimiter < NATNEG_END)
+		if (aDelimiter > NATNEG_START && aDelimiter < NATNEG_END)
 			return DELIM_NATNEG;
 
 		return DELIM_UNKNOWN;

@@ -2,7 +2,7 @@
 
 void MN_WriteMessage::WriteDelimiter(ushort aDelimiter)
 {
-	if(this->m_TypeChecks)
+	if (this->m_TypeChecks)
 		this->Write<ushort>('DL');
 
 	this->Write<ushort>(aDelimiter);
@@ -10,7 +10,7 @@ void MN_WriteMessage::WriteDelimiter(ushort aDelimiter)
 
 void MN_WriteMessage::WriteUChar(uchar aUChar)
 {
-	if(this->m_TypeChecks)
+	if (this->m_TypeChecks)
 		this->Write<ushort>('UC');
 
 	this->Write<uchar>(aUChar);
@@ -18,7 +18,7 @@ void MN_WriteMessage::WriteUChar(uchar aUChar)
 
 void MN_WriteMessage::WriteUShort(ushort aUShort)
 {
-	if(this->m_TypeChecks)
+	if (this->m_TypeChecks)
 		this->Write<ushort>('US');
 
 	this->Write<ushort>(aUShort);
@@ -26,7 +26,7 @@ void MN_WriteMessage::WriteUShort(ushort aUShort)
 
 void MN_WriteMessage::WriteUInt(uint aUInt)
 {
-	if(this->m_TypeChecks)
+	if (this->m_TypeChecks)
 		this->Write<ushort>('UI');
 
 	this->Write<uint>(aUInt);
@@ -39,7 +39,7 @@ void MN_WriteMessage::WriteULong(ulong aULong)
 
 void MN_WriteMessage::WriteUInt64(uint64 aUInt64)
 {
-	if(this->m_TypeChecks)
+	if (this->m_TypeChecks)
 		this->Write<ushort>('U6');
 
 	this->Write<uint64>(aUInt64);
@@ -47,7 +47,7 @@ void MN_WriteMessage::WriteUInt64(uint64 aUInt64)
 
 void MN_WriteMessage::WriteFloat(float aFloat)
 {
-	if(this->m_TypeChecks)
+	if (this->m_TypeChecks)
 		this->Write<ushort>('FL');
 
 	this->Write<float>(aFloat);
@@ -57,7 +57,7 @@ void MN_WriteMessage::WriteRawData(voidptr_t aBuffer, sizeptr_t aBufferSize)
 {
 	assert(aBuffer && aBufferSize > 0);
 
-	if(this->m_TypeChecks)
+	if (this->m_TypeChecks)
 		this->Write<ushort>('RD');
 
 	// Packet will exceed bounds before it exceeds ushort
@@ -117,12 +117,12 @@ bool MN_WriteMessage::SendMe(SOCKET sock)
 bool MN_WriteMessage::SendMe(SOCKET sock, bool aClearData)
 {
 	// Windows sockets only supports int as the data size
-	if(this->m_DataLen >= INT_MAX)
+	if (this->m_DataLen >= INT_MAX)
 		return false;
 
 	bool retVal = send(sock, (const char *)this->m_PacketData, (int)this->m_DataLen, 0) != SOCKET_ERROR;
 
-	if(aClearData)
+	if (aClearData)
 	{
 		this->m_WritePtr	= this->m_PacketData + sizeof(ushort);
 		this->m_WritePos	= 0;

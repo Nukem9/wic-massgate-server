@@ -23,7 +23,7 @@ void HTTPService_Startup()
 
 	g_MongooseContext = mg_start(&callbacks, nullptr, options);
 
-	if(!g_MongooseContext)
+	if (!g_MongooseContext)
 		DebugLog(L_ERROR, "[Http]: Error: Failed to start sever module");
 	else
 		HTTPLog("Service started");
@@ -31,7 +31,7 @@ void HTTPService_Startup()
 
 void HTTPService_Shutdown()
 {
-	if(g_MongooseContext)
+	if (g_MongooseContext)
 		mg_stop(g_MongooseContext);
 
 	g_MongooseContext = nullptr;
@@ -43,10 +43,10 @@ int HTTPService_HandleRequest(mg_connection *conn)
 
 	HTTPLog("Url: %s?%s", request_info->uri, request_info->query_string);
 
-	if(request_info->query_string && strstr(request_info->uri, "/texts/gettext"))
+	if (request_info->query_string && strstr(request_info->uri, "/texts/gettext"))
 		return HTTPService_HandleGettext(conn, request_info);
 
-	if(strstr(request_info->uri, "/massgatebutton/"))
+	if (strstr(request_info->uri, "/massgatebutton/"))
 		return HTTPService_HandleButton(conn, request_info);
 
 	return 0;
@@ -66,12 +66,12 @@ int HTTPService_HandleGettext(mg_connection *conn, const mg_request_info *reques
 	// Final data to be written
 	char *textData = nullptr;
 
-	if(strstr(request_info->query_string, "type=welcome"))
+	if (strstr(request_info->query_string, "type=welcome"))
 	{
 		textData =
 			"<INSERT WELCOME MESSGAE HERE>\r\n";
 	}
-	else if(strstr(request_info->query_string, "type=news"))
+	else if (strstr(request_info->query_string, "type=news"))
 	{
 		textData =
 			"WORLD IN CONFLICT - NEWS UPDATE JANUARY 22\r\n"
@@ -87,7 +87,7 @@ int HTTPService_HandleGettext(mg_connection *conn, const mg_request_info *reques
 
 int HTTPService_HandleButton(mg_connection *conn, const mg_request_info *request_info)
 {
-	if(strstr(request_info->uri, "button_url_"))
+	if (strstr(request_info->uri, "button_url_"))
 	{
 		mg_printf(conn, "HTTP/1.1 200 OK\r\nConnection: Close\r\nContent-Type: text/plain\r\n\r\n");
 
@@ -95,7 +95,7 @@ int HTTPService_HandleButton(mg_connection *conn, const mg_request_info *request
 		return 1;
 	}
 	
-	if(strstr(request_info->uri, "button_image_"))
+	if (strstr(request_info->uri, "button_image_"))
 	{
 		char directoryBuffer[MAX_PATH];
 		GetCurrentDirectory(sizeof(directoryBuffer), directoryBuffer);

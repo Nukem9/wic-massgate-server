@@ -6,7 +6,7 @@ MN_TcpServer *g_LiveAccountServer = nullptr;
 
 void LiveAccount_Startup()
 {
-	if(!g_LiveAccountServer)
+	if (!g_LiveAccountServer)
 		g_LiveAccountServer = MN_TcpServer::Create("127.0.0.1", WIC_LIVEACCOUNT_PORT);
 
 	// Callback for when a client requests a connection
@@ -15,7 +15,7 @@ void LiveAccount_Startup()
 	// Set the callback for when data is received
 	SvClientManager::ourInstance->SetCallback(LiveAccount_DataRecievedCallback);
 	
-	if(!g_LiveAccountServer->Start())
+	if (!g_LiveAccountServer->Start())
 		DebugLog(L_ERROR, "[LiveAcc]: Failed to start sever module");
 	else
 		LiveAccLog("Service started");
@@ -23,7 +23,7 @@ void LiveAccount_Startup()
 
 void LiveAccount_Shutdown()
 {
-	if(g_LiveAccountServer)
+	if (g_LiveAccountServer)
 		g_LiveAccountServer->Stop();
 }
 
@@ -33,11 +33,11 @@ void LiveAccount_ConnectionRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 	auto myClient = SvClientManager::ourInstance->FindClient(aAddr);
 
 	// IP wasn't found, add it
-	if(!myClient)
+	if (!myClient)
 	{
 		LiveAccLog("Connecting a client on %s:%d....", inet_ntoa(aAddr->sin_addr), ntohs(aAddr->sin_port));
 
-		if(!SvClientManager::ourInstance->ConnectClient(aSocket, aAddr))
+		if (!SvClientManager::ourInstance->ConnectClient(aSocket, aAddr))
 			DebugLog(L_ERROR, "[LiveAcc]: Failed to connect client");
 	}
 }
@@ -45,7 +45,7 @@ void LiveAccount_ConnectionRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizeptr_t aDataLen, bool aError)
 {
 	// Check if the client should be disconnected
-	if(aError)
+	if (aError)
 	{
 		SvClientManager::ourInstance->DisconnectClient(aClient);
 
@@ -57,11 +57,11 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 	}
 
 	MN_ReadMessage message(8192);
-	if(!message.BuildMessage(aData, aDataLen))
+	if (!message.BuildMessage(aData, aDataLen))
 		return;
 
 	MMG_ProtocolDelimiters::Delimiter delimiter;
-	if(!message.ReadDelimiter((ushort &)delimiter))
+	if (!message.ReadDelimiter((ushort &)delimiter))
 		return;
 
 	auto myType = MMG_ProtocolDelimiters::GetType(delimiter);
@@ -76,7 +76,7 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 		// Account
 		case MMG_ProtocolDelimiters::DELIM_ACCOUNT:
 		{
-			if(!MMG_AccountProtocol::ourInstance->HandleMessage(aClient, &message, delimiter))
+			if (!MMG_AccountProtocol::ourInstance->HandleMessage(aClient, &message, delimiter))
 			{
 				LiveAccLog("MMG_AccountProtocol: Failed HandleMessage()");
 				return;
@@ -87,13 +87,13 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 		// Message
 		case MMG_ProtocolDelimiters::DELIM_MESSAGE:
 		{
-			if(!aClient->IsLoggedIn())
+			if (!aClient->IsLoggedIn())
 			{
 				LiveAccLog("MMG_Messaging: User not logged in");
 				return;
 			}
 
-			if(!MMG_Messaging::ourInstance->HandleMessage(aClient, &message, delimiter))
+			if (!MMG_Messaging::ourInstance->HandleMessage(aClient, &message, delimiter))
 			{
 				LiveAccLog("MMG_Messaging: Failed HandleMessage()");
 				return;
@@ -112,7 +112,7 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 		// Server Tracker
 		case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_USER:
 		{
-			if(!MMG_ServerTracker::ourInstance->HandleMessage(aClient, &message, delimiter))
+			if (!MMG_ServerTracker::ourInstance->HandleMessage(aClient, &message, delimiter))
 			{
 				LiveAccLog("MMG_ServerTracker: Failed HandleMessage()");
 				return;

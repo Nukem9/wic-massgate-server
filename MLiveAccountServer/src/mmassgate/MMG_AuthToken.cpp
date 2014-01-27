@@ -12,16 +12,16 @@ void MMG_AuthToken::ToStream(MN_WriteMessage *aMessage)
 
 bool MMG_AuthToken::FromStream(MN_ReadMessage *aMessage)
 {
-	if(!this->m_Hash.FromStream(aMessage))
+	if (!this->m_Hash.FromStream(aMessage))
 		return false;
 
-	if(!aMessage->ReadUInt(this->m_AccountId) || !aMessage->ReadUInt(this->m_ProfileId))
+	if (!aMessage->ReadUInt(this->m_AccountId) || !aMessage->ReadUInt(this->m_ProfileId))
 		return false;
 
-	if(!aMessage->ReadUInt(this->m_TokenId) || !aMessage->ReadUInt(this->m_CDkeyId))
+	if (!aMessage->ReadUInt(this->m_TokenId) || !aMessage->ReadUInt(this->m_CDkeyId))
 		return false;
 
-	if(!aMessage->ReadUInt(this->m_GroupMemberships.m_Code))
+	if (!aMessage->ReadUInt(this->m_GroupMemberships.m_Code))
 		return false;
 
 	return true;

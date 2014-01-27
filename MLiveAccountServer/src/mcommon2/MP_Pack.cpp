@@ -12,23 +12,23 @@ sizeptr_t MP_Pack::PackZip(voidptr_t aSource, voidptr_t aDestination, sizeptr_t 
 	stream.zfree		= Z_NULL;
 	stream.opaque		= Z_NULL;
 
-	if(deflateInit(&stream, Z_BEST_SPEED))
+	if (deflateInit(&stream, Z_BEST_SPEED))
 		return 0;
 
-	if(deflate(&stream, Z_FINISH) != Z_STREAM_END)
+	if (deflate(&stream, Z_FINISH) != Z_STREAM_END)
 	{
 		deflateEnd(&stream);
 
-		if(numBytesConsumed)
+		if (numBytesConsumed)
 			*numBytesConsumed = aSourceLength;
 
 		return 0;
 	}
 
-	if(deflateEnd(&stream) != Z_OK)
+	if (deflateEnd(&stream) != Z_OK)
 		return 0;
 
-	if(numBytesConsumed)
+	if (numBytesConsumed)
 		*numBytesConsumed = stream.total_in;
 
 	return stream.total_out;
@@ -46,23 +46,23 @@ sizeptr_t MP_Pack::UnpackZip(voidptr_t aSource, voidptr_t aDestination, sizeptr_
 	stream.zfree		= Z_NULL;
 	stream.opaque		= Z_NULL;
 
-	if(inflateInit(&stream))
+	if (inflateInit(&stream))
 		return 0;
 
-	if(inflate(&stream, Z_FINISH) != Z_STREAM_END)
+	if (inflate(&stream, Z_FINISH) != Z_STREAM_END)
 	{
 		inflateEnd(&stream);
 
-		if(numBytesConsumed)
+		if (numBytesConsumed)
 			*numBytesConsumed = aSourceLength;
 
 		return 0;
 	}
 
-	if(inflateEnd(&stream) != Z_OK)
+	if (inflateEnd(&stream) != Z_OK)
 		return 0;
 
-	if(numBytesConsumed)
+	if (numBytesConsumed)
 		*numBytesConsumed = stream.total_in;
 
 	return stream.total_out;

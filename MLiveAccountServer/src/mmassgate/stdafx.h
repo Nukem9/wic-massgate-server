@@ -5,6 +5,7 @@ class SvClient;
 
 #include "MMG_Constants.h"
 #include "MMG_ProtocolDelimiters.h"
+#include "MMG_Protocols.h"
 #include "MMG_GroupMemberships.h"
 #include "MMG_IStreamable.h"
 #include "MMG_ICipher.h"

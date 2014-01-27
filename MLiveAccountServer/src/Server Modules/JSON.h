@@ -16,7 +16,7 @@ public:
 
 	~JSON()
 	{
-		if(this->root)
+		if (this->root)
 			json_decref(root);
 	}
 
@@ -36,10 +36,10 @@ public:
 	{
 		uint _ui_val = 0;
 
-		if(!this->ReadUInt(element, &_ui_val))
+		if (!this->ReadUInt(element, &_ui_val))
 			return false;
 
-		if(value)
+		if (value)
 			*value = _ui_val & 0xFF;
 
 		return true;
@@ -54,10 +54,10 @@ public:
 	{
 		long long _ll_val = 0;
 
-		if(!this->ReadLongLong(element, &_ll_val))
+		if (!this->ReadLongLong(element, &_ll_val))
 			return false;
 
-		if(value)
+		if (value)
 			*value = _ll_val & 0xFFFFFFFF;
 
 		return true;
@@ -67,13 +67,13 @@ public:
 	{
 		json_t *obj = json_object_get(this->root, element);
 
-		if(!obj)
+		if (!obj)
 			return false;
 
-		if(!json_is_integer(obj))
+		if (!json_is_integer(obj))
 			return false;
 
-		if(value)
+		if (value)
 			*value = json_integer_value(obj);
 
 		return true;
@@ -83,13 +83,13 @@ public:
 	{
 		json_t *obj = json_object_get(this->root, element);
 
-		if(!obj)
+		if (!obj)
 			return false;
 
-		if(!json_is_real(obj))
+		if (!json_is_real(obj))
 			return false;
 
-		if(value)
+		if (value)
 			*value = json_real_value(obj);
 
 		return true;
@@ -99,13 +99,13 @@ public:
 	{
 		json_t *obj = json_object_get(this->root, element);
 
-		if(!obj)
+		if (!obj)
 			return false;
 
-		if(!json_is_string(obj))
+		if (!json_is_string(obj))
 			return false;
 
-		if(buffer)
+		if (buffer)
 			strcpy_s(buffer, bufferSize, json_string_value(obj));
 
 		return true;
@@ -115,13 +115,13 @@ public:
 	{
 		json_t *obj = json_object_get(this->root, element);
 
-		if(!obj)
+		if (!obj)
 			return false;
 
-		if(!json_is_string(obj))
+		if (!json_is_string(obj))
 			return false;
 
-		if(buffer)
+		if (buffer)
 			MC_Misc::MultibyteToUnicode(json_string_value(obj), buffer, (uint)(bufferSize / sizeof(wchar_t)));
 
 		return true;

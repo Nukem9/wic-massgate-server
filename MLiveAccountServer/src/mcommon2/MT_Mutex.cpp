@@ -3,7 +3,7 @@
 MT_Mutex::MT_Mutex()
 {
 	InitializeCriticalSection(&this->m_CriticalSection);
-	InterlockedExchange((LONG *)&this->m_LockCount, 0);
+	InterlockedExchange((volatile LONG *)&this->m_LockCount, 0);
 }
 
 MT_Mutex::~MT_Mutex()
@@ -16,11 +16,11 @@ MT_Mutex::~MT_Mutex()
 void MT_Mutex::Lock()
 {
 	EnterCriticalSection(&this->m_CriticalSection);
-	InterlockedIncrement((LONG *)&this->m_LockCount);
+	InterlockedIncrement((volatile LONG *)&this->m_LockCount);
 }
 
 void MT_Mutex::Unlock()
 {
 	LeaveCriticalSection(&this->m_CriticalSection);
-	InterlockedDecrement((LONG *)&this->m_LockCount);
+	InterlockedDecrement((volatile LONG *)&this->m_LockCount);
 }
