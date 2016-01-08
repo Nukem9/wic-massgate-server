@@ -74,7 +74,7 @@ int HTTPService_HandleGettext(mg_connection *conn, const mg_request_info *reques
 	else if (strstr(request_info->query_string, "type=news"))
 	{
 		textData =
-			"WORLD IN CONFLICT - NEWS UPDATE JANUARY 22\r\n"
+			"WORLD IN CONFLICT - NEWS UPDATE " __DATE__ "\r\n"
 			"-----------------------\r\n"
 			"\r\n"
 			"- Test message\r\n";

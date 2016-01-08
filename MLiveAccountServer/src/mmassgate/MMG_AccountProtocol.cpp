@@ -208,12 +208,14 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					MMG_AuthToken *myAuthToken = aClient->GetToken();
 
 					// TigerMD5 of ...? (possibly crypt keys)
-					myAuthToken->m_Hash.m_Hash[0] = 0x558C0A1C;
+					/*myAuthToken->m_Hash.m_Hash[0] = 0x558C0A1C;
 					myAuthToken->m_Hash.m_Hash[1] = 0xA59C9FCA;
 					myAuthToken->m_Hash.m_Hash[2] = 0x6566857D;
 					myAuthToken->m_Hash.m_Hash[3] = 0x8A3FF551;
 					myAuthToken->m_Hash.m_Hash[4] = 0xB69D17E5;
-					myAuthToken->m_Hash.m_Hash[5] = 0xD7BBF74D;
+					myAuthToken->m_Hash.m_Hash[5] = 0xD7BBF74D;*/
+					memset(&myAuthToken->m_Hash.m_Hash, 0, 6 * sizeof(ulong));
+
 					myAuthToken->m_Hash.m_HashLength = 6 * sizeof(ulong);
 					myAuthToken->m_Hash.m_GeneratedFromHashAlgorithm = HASH_ALGORITHM_TIGER;
 					myAuthToken->ToStream(&cryptMessage);// Write the authorization token info stream
