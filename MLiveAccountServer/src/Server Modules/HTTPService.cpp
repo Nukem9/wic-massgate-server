@@ -64,7 +64,7 @@ int HTTPService_HandleGettext(mg_connection *conn, const mg_request_info *reques
 	mg_printf(conn, "HTTP/1.1 200 OK\r\nConnection: Close\r\nContent-Type: text/plain\r\n\r\n");
 
 	// Final data to be written
-	char *textData = nullptr;
+	char *textData = "";
 
 	if (strstr(request_info->query_string, "type=welcome"))
 	{
