@@ -92,6 +92,34 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 		}
 		break;
 
+		case MMG_ProtocolDelimiters::ACCOUNT_CREATE_ACCOUNT_REQ:
+		{
+			// Email
+			if (!decryptedMsg.ReadString(this->m_Create.m_Email, ARRAYSIZE(this->m_Create.m_Email)))
+				return false;
+
+			// Password
+			if (!decryptedMsg.ReadString(this->m_Create.m_Password, ARRAYSIZE(this->m_Create.m_Password)))
+				return false;
+
+			// Country code
+			if (!decryptedMsg.ReadString(this->m_Create.m_Country, ARRAYSIZE(this->m_Create.m_Country)))
+				return false;
+
+			// Email-related information
+			if (!decryptedMsg.ReadUChar(this->m_Create.m_EmailMeGameRelated) || !decryptedMsg.ReadUChar(this->m_Create.m_AcceptsEmail))
+				return false;
+
+			DebugLog(L_INFO, "ACCOUNT_CREATE_ACCOUNT_REQ: %s %ws", this->m_Create.m_Email, this->m_Create.m_Password);
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::ACCOUNT_PREPARE_CREATE_ACCOUNT_REQ:
+		{
+			/* Nothing */
+		}
+		break;
+
 		case MMG_ProtocolDelimiters::ACCOUNT_NEW_CREDENTIALS_REQ:
 		{
 			if (!this->m_Authenticate.m_Credentials.FromStream(aMessage))
@@ -224,6 +252,32 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					cryptMessage.WriteUInt(0);						// myLeaseTimeLeft (Limited access key)
 					cryptMessage.WriteUInt(45523626);				// myAntiSpoofToken (Random number)
 				}
+			}
+			break;
+
+			// Client request to create a new account
+			case MMG_ProtocolDelimiters::ACCOUNT_CREATE_ACCOUNT_REQ:
+			{
+				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_CREATE_ACCOUNT_RSP;
+
+				/* TODO: Account creation logic */
+
+				cryptMessage.WriteUChar(CreateSuccess);		// Otherwise CreateFailed_*
+				cryptMessage.WriteUChar(1);					// mySuccessFlag
+			}
+			break;
+
+			// Prepare (sent before ACCOUNT_CREATE_ACCOUNT_REQ) authorization for cd-key
+			case MMG_ProtocolDelimiters::ACCOUNT_PREPARE_CREATE_ACCOUNT_REQ:
+			{
+				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_PREPARE_CREATE_ACCOUNT_RSP;
+
+				char country[5];							// Guessed by IPv4 geolocation information
+				strcpy_s(country, "US");
+
+				cryptMessage.WriteUChar(AuthSuccess);	// Otherwise AuthFailed_CdKeyExpired
+				cryptMessage.WriteUChar(1);				// mySuccessFlag
+				cryptMessage.WriteString(country);		// yourCountry
 			}
 			break;
 

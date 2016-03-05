@@ -69,6 +69,26 @@ public:
 			}
 		};
 
+		class Create
+		{
+		public:
+			char			m_Email[64];
+			wchar_t			m_Password[16];
+			char			m_Country[5];
+			uchar			m_EmailMeGameRelated;
+			uchar			m_AcceptsEmail;
+
+		public:
+			Create()
+			{
+				memset(this->m_Email, 0, sizeof(this->m_Email));
+				memset(this->m_Password, 0, sizeof(this->m_Password));
+				memset(this->m_Country, 0, sizeof(this->m_Country));
+				this->m_EmailMeGameRelated	= 0;
+				this->m_AcceptsEmail		= 0;
+			}
+		};
+
 		class RetrieveProfiles
 		{
 		public:
@@ -99,6 +119,7 @@ public:
 		uint				m_DistributionId;
 
 		Authenticate		m_Authenticate;
+		Create				m_Create;
 		RetrieveProfiles	m_RetrieveProfiles;
 
 	private:
