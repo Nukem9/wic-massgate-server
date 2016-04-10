@@ -29,6 +29,7 @@ public:
 	}
 
 	void WriteDelimiter	(ushort aDelimiter);
+	void WriteBool      (bool aBool);
 	void WriteUChar		(uchar aUChar);
 	void WriteUShort	(ushort aUShort);
 	void WriteUInt		(uint aUInt);

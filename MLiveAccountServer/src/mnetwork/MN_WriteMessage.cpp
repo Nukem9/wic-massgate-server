@@ -8,6 +8,14 @@ void MN_WriteMessage::WriteDelimiter(ushort aDelimiter)
 	this->Write<ushort>(aDelimiter);
 }
 
+void MN_WriteMessage::WriteBool(bool aBool)
+{
+	if (this->m_TypeChecks)
+		this->Write<ushort>('BL');
+
+	this->Write<bool>(aBool);
+}
+
 void MN_WriteMessage::WriteUChar(uchar aUChar)
 {
 	if (this->m_TypeChecks)

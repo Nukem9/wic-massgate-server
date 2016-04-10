@@ -11,6 +11,7 @@ private:
 	const static sizeptr_t MESSAGE_MAX_LENGTH = 0x3FFF;
 	
 	// Packet flags
+	const static sizeptr_t MESSAGE_FLAG_TYPECHECKS = 0x4000;
 	const static sizeptr_t MESSAGE_FLAG_COMPRESSED = 0x8000;
 
 	uintptr_t	m_PacketData;

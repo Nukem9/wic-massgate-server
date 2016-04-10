@@ -12,6 +12,10 @@ bool MN_ReadMessage::BuildMessage(voidptr_t aData, sizeptr_t aDataLen)
 	if (packetLen > MESSAGE_MAX_LENGTH)
 		return false;
 
+	// Determine if type checks should be enabled
+	if (packetFlags & MESSAGE_FLAG_TYPECHECKS)
+		this->m_TypeChecks = true;
+
 	// Decompress if needed
 	if (packetFlags & MESSAGE_FLAG_COMPRESSED)
 	{
@@ -44,6 +48,16 @@ bool MN_ReadMessage::ReadDelimiter(ushort &aDelimiter)
 		return false;
 
 	aDelimiter = this->Read<ushort>();
+
+	return true;
+}
+
+bool MN_ReadMessage::ReadBool(bool &aBool)
+{
+	if (!this->TypeCheck('BL'))
+		return false;
+
+	aBool = this->Read<bool>();
 
 	return true;
 }

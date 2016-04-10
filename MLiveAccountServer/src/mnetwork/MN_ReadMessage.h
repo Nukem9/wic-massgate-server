@@ -33,6 +33,7 @@ public:
 
 	bool TypeCheck		(ushort aType);
 	bool ReadDelimiter	(ushort &aDelimiter);
+	bool ReadBool		(bool &aBool);
 	bool ReadUChar		(uchar &aUChar);
 	bool ReadUShort		(ushort &aUShort);
 	bool ReadUInt		(uint &aUInt);
