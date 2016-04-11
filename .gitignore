@@ -1,4 +1,9 @@
 #################
+## Dont commit mysql settings
+#################
+settings.ini
+
+#################
 ## Eclipse
 #################
 
