@@ -8,6 +8,7 @@
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winmm.lib")
+#pragma comment(lib, "libmysql.lib")
 
 /***** Constants & type definitions *****/
 #define VAR_STRING(a) #a

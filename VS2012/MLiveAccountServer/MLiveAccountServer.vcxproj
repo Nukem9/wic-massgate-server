@@ -1,0 +1,212 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{2A8D976B-DDF1-4E64-BC88-02360B5AE308}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>MLiveAccountServer</RootNamespace>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v110</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <LinkIncremental>true</LinkIncremental>
+    <IntDir>$(SolutionDir)..\MLiveAccountServer\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)..\MLiveAccountServer\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <LinkIncremental>false</LinkIncremental>
+    <OutDir>$(SolutionDir)..\MLiveAccountServer\</OutDir>
+    <IntDir>$(SolutionDir)..\MLiveAccountServer\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <AdditionalIncludeDirectories>..\..\MLiveAccountServer\libraries\mysql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>..\..\MLiveAccountServer\libraries\mysql;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalIncludeDirectories>..\..\MLiveAccountServer\libraries\mysql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Console</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>..\..\MLiveAccountServer\libraries\mysql;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\hashtable.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\jansson.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\jansson_config.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\jansson_private.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\strbuffer.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\utf.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\mongoose\mongoose.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\sqlite\sqlite3.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\stdafx.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\crc32.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\deflate.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\gzguts.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\inffast.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\inffixed.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\inflate.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\inftrees.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\trees.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\zconf.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\zlib.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\zutil.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_Misc.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_Singleton.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MI_Time.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MP_Pack.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MT_Mutex.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\stdafx.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\misc\debuglog.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\misc\stdafx.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\misc\wsaerror.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Constants.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_GroupMemberships.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ICipher.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_IStreamable.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Messaging.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_NullCipher.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_OptionalContentProtocol.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Options.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Profile.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProtocolDelimiters.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Protocols.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\stdafx.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\MN_Message.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\MN_ReadMessage.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\MN_TcpServer.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\MN_WriteMessage.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\stdafx.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\Database.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\DatabaseInfo.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\HTTPService.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\JSON.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\LiveAccount.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabase.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabaseInfo.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLQuery.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\SQLQuery.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\StatsService.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\stdafx.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\SvClientManager.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\stdafx.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\dump.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\error.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\hashtable.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\load.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\memory.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\pack_unpack.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\strbuffer.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\strconv.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\utf.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\value.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\mongoose\mongoose.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\sqlite\sqlite3.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\adler32.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\compress.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\crc32.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\deflate.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\gzclose.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\gzlib.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\gzread.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\gzwrite.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\infback.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\inffast.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\inflate.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\inftrees.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\trees.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\uncompr.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\zutil.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MC_Misc.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MI_Time.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MP_Pack.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MT_Mutex.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\misc\debuglog.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\misc\wsaerror.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\MLiveAccountServer.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ICipher.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Messaging.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_NullCipher.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_OptionalContentProtocol.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Options.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Profile.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_Message.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_ReadMessage.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_TcpServer.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_WriteMessage.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\Database.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\HTTPService.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\LiveAccount.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabase.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\StatsService.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\SvClientManager.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\stdafx.cpp" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
