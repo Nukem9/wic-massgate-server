@@ -16,7 +16,7 @@ void LiveAccount_Startup()
 	SvClientManager::ourInstance->SetCallback(LiveAccount_DataRecievedCallback);
 	
 	if (!g_LiveAccountServer->Start())
-		DebugLog(L_ERROR, "[LiveAcc]: Failed to start sever module");
+		DebugLog(L_ERROR, "[LiveAcc]: Failed to start server module");
 	else
 		LiveAccLog("Service started");
 }
@@ -104,8 +104,11 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 		// Dedicated Server
 		case MMG_ProtocolDelimiters::DELIM_MESSAGE_DS:
 		{
-			LiveAccLog("MMG_Messaging: Failed HandleMessage()");
-			return;
+			if (!MMG_Messaging::ourInstance->HandleMessage(aClient, &message, delimiter))
+			{
+				LiveAccLog("MMG_Messaging: Failed HandleMessage()");
+				return;
+			}
 		}
 		break;
 
@@ -115,6 +118,28 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 			if (!MMG_ServerTracker::ourInstance->HandleMessage(aClient, &message, delimiter))
 			{
 				LiveAccLog("MMG_ServerTracker: Failed HandleMessage()");
+				return;
+			}
+		}
+		break;
+
+		// Dedicated Server tracker?
+		case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_SERVER:
+		{
+			if (!MMG_TrackableServer::ourInstance->HandleMessage(aClient, &message, delimiter))
+			{
+				LiveAccLog("MMG_TrackableServer: Failed HandleMessage()");
+				return;
+			}
+		}
+		break;
+
+		// Chat
+		case MMG_ProtocolDelimiters::DELIM_CHAT:
+		{
+			if (!MMG_Chat::ourInstance->HandleMessage(aClient, &message, delimiter))
+			{
+				LiveAccLog("MMG_Chat: Failed HandleMessage()");
 				return;
 			}
 		}

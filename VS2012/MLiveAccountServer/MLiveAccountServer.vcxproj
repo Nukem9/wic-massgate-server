@@ -115,6 +115,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Constants.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_GroupMemberships.h" />
@@ -128,6 +129,11 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProtocolDelimiters.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Protocols.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerBriefInfo.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerFullInfo.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerHeartbeat.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\stdafx.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\MN_Message.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\MN_ReadMessage.h" />
@@ -187,6 +193,7 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ICipher.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Messaging.cpp" />
@@ -195,6 +202,11 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Options.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Profile.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerBriefInfo.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerFullInfo.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerHeartbeat.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_Message.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_ReadMessage.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_TcpServer.cpp" />

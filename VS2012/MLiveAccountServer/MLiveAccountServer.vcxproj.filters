@@ -255,6 +255,24 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\GeoIP.h">
       <Filter>Header Files\Server Modules</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerBriefInfo.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerFullInfo.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerHeartbeat.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\dump.c">
@@ -427,6 +445,24 @@
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\GeoIP.cpp">
       <Filter>Source Files\Server Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerBriefInfo.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerFullInfo.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerHeartbeat.cpp">
+      <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

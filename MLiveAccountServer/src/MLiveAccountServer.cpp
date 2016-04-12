@@ -27,6 +27,8 @@ void CreateServices()
 	MMG_Messaging::Create();
 	MMG_OptionalContentProtocol::Create();
 	MMG_ServerTracker::Create();
+	MMG_TrackableServer::Create();
+	MMG_Chat::Create();
 }
 
 void Startup()
