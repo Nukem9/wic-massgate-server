@@ -14,4 +14,6 @@
 #include "MySQLQuery.h"
 #include "MySQLDatabaseInfo.h"
 #include "MySQLDatabase.h"
+
+#include "GeoIP.h"
 /******************* Server modules *******************/

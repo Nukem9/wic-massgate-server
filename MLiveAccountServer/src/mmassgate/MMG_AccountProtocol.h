@@ -89,6 +89,28 @@ public:
 			}
 		};
 
+		class ModifyProfile
+		{
+		public:
+			char			m_Email[64];
+			wchar_t			m_Password[16];
+			wchar_t			m_Name[25];
+			uint			m_Operation;
+			uint			m_ProfileId;
+			uint			m_Fingerprint;
+
+		public:
+			ModifyProfile()
+			{
+				memset(this->m_Email, 0, sizeof(this->m_Email));
+				memset(this->m_Password, 0, sizeof(this->m_Password));
+				memset(this->m_Name, 0, sizeof(this->m_Name));
+				this->m_Operation			= 0;
+				this->m_ProfileId			= 0;
+				this->m_Fingerprint			= 0;
+			}
+		};
+
 		class RetrieveProfiles
 		{
 		public:
@@ -120,12 +142,13 @@ public:
 
 		Authenticate		m_Authenticate;
 		Create				m_Create;
+		ModifyProfile		m_ModifyProfile;
 		RetrieveProfiles	m_RetrieveProfiles;
 
 	private:
 
 	public:
-		Query() : m_Authenticate(), m_RetrieveProfiles()
+		Query() : m_Authenticate(), m_Create(), m_ModifyProfile(), m_RetrieveProfiles()
 		{
 			this->m_StatusCode					= NoStatus;
 

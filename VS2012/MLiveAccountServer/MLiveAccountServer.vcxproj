@@ -136,6 +136,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\stdafx.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\Database.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\DatabaseInfo.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\GeoIP.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\HTTPService.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\JSON.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\LiveAccount.h" />
@@ -199,6 +200,7 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_TcpServer.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_WriteMessage.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\Database.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\GeoIP.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\HTTPService.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\LiveAccount.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabase.cpp" />
