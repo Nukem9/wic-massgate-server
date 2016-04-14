@@ -96,12 +96,55 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			aMessage->ReadUInt(zero);
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_CREATE_RESPONSE);
-			responseMessage.WriteUChar(0);
-			responseMessage.WriteUInt(0);
+			responseMessage.WriteUChar(1); // successflag
+			responseMessage.WriteUInt(1); // clan id
 			aClient->SendData(&responseMessage);
 		}
 		break;
 
+		case MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_REQUEST:
+		{
+			// TODO
+			wchar_t clanName[32];
+			wchar_t clanTag[11];
+			wchar_t clanMotto[256];
+			wchar_t clanMessageOfTheDay[256];
+			wchar_t clanHomepage[256];
+			uint clanNumberOfPlayers = 0;
+			uint clanPlayerId[512];
+			uint clanLeaderId = 0, clanPlayerOfTheWeekId = 0;
+			memset(clanName, 0, sizeof(clanName));
+			memset(clanTag, 0, sizeof(clanTag));
+			memset(clanMotto, 0, sizeof(clanMotto));
+			memset(clanMessageOfTheDay, 0, sizeof(clanMessageOfTheDay));
+			memset(clanHomepage, 0, sizeof(clanHomepage));
+			
+			uchar messagecontent[500];
+			for (int i = 0; i < 500; i++)
+				aMessage->ReadUChar(messagecontent[i]);
+
+			wcscpy(clanName, L"Developers & Moderators");
+			wcscpy(clanTag, L"devs^");
+			wcscpy(clanMotto, L"Today is a good day for clan wars!");
+			wcscpy(clanMessageOfTheDay, L"Welcome clanmembers!");
+			wcscpy(clanHomepage, L"massgate.org");
+			
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_RESPONSE);
+			responseMessage.WriteString(clanName);
+			responseMessage.WriteString(clanTag);
+			responseMessage.WriteString(clanMotto);
+			responseMessage.WriteString(clanMessageOfTheDay);
+			responseMessage.WriteString(clanHomepage);
+			
+			responseMessage.WriteUInt(1);	// number of players
+			responseMessage.WriteUInt(74);	// player list
+			responseMessage.WriteUInt(74);	// clan leader
+			responseMessage.WriteUInt(74);	// player of the week
+			
+			aClient->SendData(&responseMessage);
+		}
+		break;
+		
 		case MMG_ProtocolDelimiters::MESSAGING_OPTIONAL_CONTENT_GET_REQ:
 		{
 			// Optional content (I.E maps)
@@ -118,6 +161,124 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 
+		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GET_EDITABLES_REQ: Sending information");
+
+			// to do: read strings from profile (or profile related) database
+
+			MMG_ProfileEditableVariablesProtocol myProfileEditableVariables;
+			wcscpy(myProfileEditableVariables.m_Motto, L"Hi to everyone");
+			wcscpy(myProfileEditableVariables.m_Homepage, L"GL & HF");
+			
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_RSP);
+			
+			myProfileEditableVariables.ToStream(&responseMessage);
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_SET_EDITABLES_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_PROFILE_SET_EDITABLES_REQ: Sending information");
+
+			// to do: save strings to profile (or profile related) database
+
+			// to do: read freshly saved strings from profile (or profile related) database
+
+			MMG_ProfileEditableVariablesProtocol myProfileEditableVariables;
+			wcscpy(myProfileEditableVariables.m_Motto, L"Hello!");
+			wcscpy(myProfileEditableVariables.m_Homepage, L"Bye!");
+			
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_RSP);
+			
+			myProfileEditableVariables.ToStream(&responseMessage);
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_POST_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_POST_REQ: Sending information");
+
+			//18:00:76:00:4a:00:00:00:01:00:00:00:02:00:00:00:04:00:68:00:69:00:21:00:00:00 for text "hi!" 180076004a000000010000000200000004006800690021000000
+			
+			uint RequestId = 0, ProfileId = 0, MessageId = 0;
+			wchar_t GuestBookMessage[128];
+
+			aMessage->ReadUInt(ProfileId);
+			aMessage->ReadUInt(RequestId);
+			aMessage->ReadUInt(MessageId);
+			aMessage->ReadString(GuestBookMessage, ARRAYSIZE(GuestBookMessage));
+			
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
+			
+			//currentEditables->ToStream(&responseMessage);
+
+			//if (!aClient->SendData(&responseMessage))
+			//	return false;
+		}
+		break;
+		
+		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_GET_REQ: Sending information");
+
+			//0a:00:77:00:01:00:00:00:4a:00:00:00
+
+			MN_WriteMessage	responseMessage1(8192);
+
+			uint RequestId = 0, ProfileId = 0;
+			aMessage->ReadUInt(RequestId);
+			aMessage->ReadUInt(ProfileId);
+			
+			MMG_ProfileGuestBookProtocol myProfileGuestBook;
+
+			myProfileGuestBook.m_RequestId = RequestId;
+			myProfileGuestBook.m_IgnoresGettingProfile = 0;
+			myProfileGuestBook.m_Count = 1;
+			myProfileGuestBook.m_MaxSize = 8192;
+			
+			const int guestbooklength = 1;
+			MMG_ProfileGuestBookEntry myGuestBookEntry[guestbooklength];
+			for (int i = 0; i < guestbooklength; i++)
+			{
+				wcscpy(myGuestBookEntry[i].m_GuestBookMessage, L"Sup b1tches");
+				myGuestBookEntry[i].m_TimeStamp = 6060 * i;
+				myGuestBookEntry[i].m_ProfileId = ProfileId;
+				myGuestBookEntry[i].m_MessageId = 1;
+				
+				myProfileGuestBook.m_GuestBookEntry[i] = myGuestBookEntry[i];
+			}
+			
+			myProfileGuestBook.m_Data = sizeof(myProfileGuestBook.m_GuestBookEntry);
+			
+			responseMessage1.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
+			
+			myProfileGuestBook.ToStream(&responseMessage1);
+
+			//if (!aClient->SendData(&responseMessage))
+			//	return false;
+		}
+		break;
+		
+		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_DELETE_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_DELETE_REQ: Sending information");
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
+			
+			//currentEditables->ToStream(&responseMessage);
+
+			//if (!aClient->SendData(&responseMessage))
+			//	return false;
+		}
+		break;
+		
 		default:
 			DebugLog(L_WARN, "Unknown delimiter %i", aDelimiter);
 		return false;
