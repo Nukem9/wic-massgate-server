@@ -273,6 +273,18 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerHeartbeat.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_PlayerStats.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileEditableVariablesProtocol.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookEntry.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookProtocol.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\dump.c">
@@ -462,6 +474,18 @@
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerHeartbeat.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookProtocol.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_PlayerStats.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookEntry.cpp">
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
   </ItemGroup>

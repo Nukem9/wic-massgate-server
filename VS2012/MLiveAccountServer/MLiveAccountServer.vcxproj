@@ -125,7 +125,11 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_NullCipher.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_OptionalContentProtocol.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Options.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_PlayerStats.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Profile.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileEditableVariablesProtocol.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookEntry.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookProtocol.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProtocolDelimiters.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Protocols.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.h" />
@@ -200,7 +204,11 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_NullCipher.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_OptionalContentProtocol.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Options.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_PlayerStats.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Profile.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookEntry.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookProtocol.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.cpp" />
