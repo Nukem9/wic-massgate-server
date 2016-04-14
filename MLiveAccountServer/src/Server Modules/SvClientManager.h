@@ -15,12 +15,14 @@ private:
 
 	uint				m_LastActiveTime;
 	uint				m_TimeoutTime;
+	bool				m_LoggedIn;
+	bool				m_IsPlayer;
+	bool				m_IsServer;
 
 	SOCKET				m_Socket;
 	uint				m_IpAddress;
 	uint				m_Port;
 
-	bool				m_LoggedIn;
 	MMG_Profile			*m_Profile;
 	MMG_AuthToken		*m_AuthToken;
 
@@ -35,6 +37,8 @@ public:
 	void			SetTimeout		(uint aTimeout);
 	void			SetSocket		(SOCKET aSocket);
 	void			SetLoginStatus	(bool aStatus);
+	void			SetIsPlayer		(bool aIsPlayer);
+	void			SetIsServer		(bool aIsServer);
 
 	bool			SendData		(MN_WriteMessage *aMessage);
 

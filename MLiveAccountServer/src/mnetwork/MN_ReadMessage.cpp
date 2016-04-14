@@ -2,7 +2,8 @@
 
 bool MN_ReadMessage::BuildMessage(voidptr_t aData, sizeptr_t aDataLen)
 {
-	assert(this->m_PacketData && this->m_DataLen == 0 && aData && aDataLen < this->m_PacketMaxSize);
+	assert(this->m_PacketData && this->m_DataLen == 0);
+	assert(aData && aDataLen < this->m_PacketMaxSize);
 
 	ushort packetFlags	= *(ushort *)aData;
 	ushort packetLen	= packetFlags & 0x3FFF;

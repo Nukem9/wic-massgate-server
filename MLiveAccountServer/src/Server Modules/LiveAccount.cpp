@@ -12,7 +12,7 @@ void LiveAccount_Startup()
 	// Callback for when a client requests a connection
 	g_LiveAccountServer->SetCallback(LiveAccount_ConnectionRecievedCallback);
 
-	// Set the callback for when data is received
+	// Callback for when data is received
 	SvClientManager::ourInstance->SetCallback(LiveAccount_DataRecievedCallback);
 	
 	if (!g_LiveAccountServer->Start())
@@ -25,6 +25,8 @@ void LiveAccount_Shutdown()
 {
 	if (g_LiveAccountServer)
 		g_LiveAccountServer->Stop();
+
+	g_LiveAccountServer = nullptr;
 }
 
 void LiveAccount_ConnectionRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr)
@@ -51,6 +53,9 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 
 		in_addr addr;
 		addr.s_addr = aClient->GetIPAddress();
+
+		// TODO: Notify MMG_AccountProxy
+		// TODO: Notify MMG_ServerTracker
 
 		LiveAccLog("Disconnecting client on %s...", inet_ntoa(addr));
 		return;
@@ -112,7 +117,7 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 		}
 		break;
 
-		// Server Tracker
+		// Server Tracker (Server list queries)
 		case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_USER:
 		{
 			if (!MMG_ServerTracker::ourInstance->HandleMessage(aClient, &message, delimiter))
@@ -123,7 +128,7 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 		}
 		break;
 
-		// Dedicated Server tracker?
+		// Server Tracker (Dedicated server manager)
 		case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_SERVER:
 		{
 			if (!MMG_TrackableServer::ourInstance->HandleMessage(aClient, &message, delimiter))
