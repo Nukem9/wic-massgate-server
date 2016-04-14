@@ -86,6 +86,7 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 			if (this->m_Authenticate.m_HasOldCredentials)
 			{
 				//MMG_AuthToken::FromStream(aMessage);
+				this->m_Authenticate.m_Credentials.FromStream(&decryptedMsg);
 			}
 
 			DebugLog(L_INFO, "ACCOUNT_AUTH_ACCOUNT_REQ: %s %ws", this->m_Authenticate.m_Email, this->m_Authenticate.m_Password);
@@ -117,6 +118,7 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 		case MMG_ProtocolDelimiters::ACCOUNT_PREPARE_CREATE_ACCOUNT_REQ:
 		{
 			/* Nothing */
+			DebugLog(L_INFO, "ACCOUNT_PREPARE_CREATE_ACCOUNT_REQ:");
 		}
 		break;
 
@@ -124,6 +126,8 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 		{
 			if (!this->m_Authenticate.m_Credentials.FromStream(aMessage))
 				return false;
+
+			DebugLog(L_INFO, "ACCOUNT_NEW_CREDENTIALS_REQ:");
 		}
 		break;
 
@@ -144,6 +148,46 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 			// Password
 			if (!decryptedMsg.ReadString(this->m_RetrieveProfiles.m_Password, ARRAYSIZE(this->m_RetrieveProfiles.m_Password)))
 				return false;
+
+			DebugLog(L_INFO, "ACCOUNT_RETRIEVE_PROFILES_REQ: %s %ws", this->m_RetrieveProfiles.m_Email, this->m_RetrieveProfiles.m_Password);
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::ACCOUNT_MODIFY_PROFILE_REQ:
+		{
+			//operations: add		6382692
+			//			  delete	6579564
+			if (!decryptedMsg.ReadUInt(this->m_ModifyProfile.m_Operation))
+				return false;
+
+			// profile id - used for delete
+			if (!decryptedMsg.ReadUInt(this->m_ModifyProfile.m_ProfileId))
+				return false;
+
+			// profile name - used for add
+			if (!decryptedMsg.ReadString(this->m_ModifyProfile.m_Name, ARRAYSIZE(this->m_ModifyProfile.m_Name)))
+				return false;
+
+			uint fingerprintSeed;
+			uint fingerprintXor;
+
+			if (!decryptedMsg.ReadUInt(fingerprintSeed) || !decryptedMsg.ReadUInt(fingerprintXor))
+				return false;
+			
+			this->m_ModifyProfile.m_Fingerprint = fingerprintSeed ^ fingerprintXor;
+
+			// email used for both add and delete
+			if (!decryptedMsg.ReadString(this->m_ModifyProfile.m_Email, ARRAYSIZE(this->m_ModifyProfile.m_Email)))
+				return false;
+
+			// password used for both add and delete
+			if (!decryptedMsg.ReadString(this->m_ModifyProfile.m_Password, ARRAYSIZE(this->m_ModifyProfile.m_Password)))
+				return false;
+
+			if(this->m_ModifyProfile.m_Operation == MODIFY_PROFILE_ADD)
+				DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_REQ: (ADD) %ws %s", this->m_ModifyProfile.m_Name, this->m_ModifyProfile.m_Email);
+			else
+				DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_REQ: (DELETE) %d %s", this->m_ModifyProfile.m_ProfileId, this->m_ModifyProfile.m_Email);
 		}
 		break;
 	}
@@ -252,28 +296,206 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					cryptMessage.WriteUInt(0);						// myLeaseTimeLeft (Limited access key)
 					cryptMessage.WriteUInt(45523626);				// myAntiSpoofToken (Random number)
 				}
+				
+				/*
+				//DebugLog(L_INFO, "ACCOUNT_AUTH_ACCOUNT_RSP: Sending login response (id %i)", AccountId);
+				DebugLog(L_INFO, "ACCOUNT_AUTH_ACCOUNT_RSP:");
+				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_AUTH_ACCOUNT_RSP;
+
+				MMG_AuthToken *myAuthToken = aClient->GetToken();
+				MMG_Profile *myProfile = aClient->GetProfile();
+
+				//password check should be done by massgate server, not by database
+				wchar_t myPassword[16];
+				memset(myPassword, 0, sizeof(myPassword));
+
+				uchar isBanned = 0;
+
+				int myStatusCode = 0;
+				int mySuccessFlag = 0;
+
+				// Query the database
+				bool AuthQueryOK = MySQLDatabase::AuthUserAccount(myQuery.m_Authenticate.m_Email, myPassword, &isBanned, myAuthToken);
+
+				//determine if credentials were valid
+				if(myAuthToken->m_AccountId == 0 && AuthQueryOK)		//account doesnt exist
+				{
+					myStatusCode = AuthFailed_NoSuchAccount;
+					mySuccessFlag = 0;
+				}
+				else if(wcscmp(myQuery.m_Authenticate.m_Password, myPassword) != 0 && AuthQueryOK)	//wrong password
+				{
+					myStatusCode = AuthFailed_BadCredentials;
+					mySuccessFlag = 0;
+				}
+				else if(isBanned && AuthQueryOK)						//account has been banned
+				{
+					myStatusCode = AuthFailed_AccountBanned;
+					mySuccessFlag = 0;
+				}
+				
+				//this shouldnt be here//
+				else if(myAuthToken->m_ProfileId == 0 && AuthQueryOK)	//no profiles exist. bring up add profile box
+				{
+					myStatusCode = AuthFailed_RequestedProfileNotFound;
+					mySuccessFlag = 0;
+				}
+				//this shouldnt be here//
+
+				else if(!AuthQueryOK)									// something went wrong executing the query
+				{
+					myStatusCode = AuthFailed_General; //ServerError
+					mySuccessFlag = 0;
+				}
+				else													//should be ok to retrieve a profile
+				{
+					bool ProfileQueryOK;
+
+					
+					//AuthFailed_AccountInUse, AuthFailed_ProfileInUse, AuthFailed_CdKeyInUse, AuthFailed_IllegalCDKey(not using)
+					
+
+					//profile selection box was used
+					if(myQuery.m_Authenticate.m_UseProfile)
+					{
+						ProfileQueryOK = MySQLDatabase::QueryUserProfile(myAuthToken->m_AccountId, myQuery.m_Authenticate.m_UseProfile, myProfile);
+
+						//if(myQuery.m_Authenticate.m_UseProfile > 0 && ProfileQueryOK)
+						if(ProfileQueryOK)											//ok to login, set active profile
+						{
+							myAuthToken->m_ProfileId = myProfile->m_ProfileId;
+							myStatusCode = AuthSuccess;
+							mySuccessFlag = 1;
+						}
+						else //!ProfileQueryOK										// something went wrong executing the query
+						{
+							myStatusCode = AuthFailed_General; //ServerError
+							mySuccessFlag = 0;
+						}
+					}
+
+					//login button was used
+					else
+					{
+						//if(myQuery.m_Authenticate.m_HasOldCredentials)
+						//myQuery.m_Authenticate.m_Credentials, myQuery.m_Authenticate.m_Profile, myQuery.m_Authenticate.m_UseProfile
+						//myAuthToken, myProfile
+
+						ProfileQueryOK = MySQLDatabase::QueryUserProfile(myAuthToken->m_AccountId, myAuthToken->m_ProfileId, myProfile);
+
+						if(myAuthToken->m_ProfileId > 0 && ProfileQueryOK)			// ok to login, set active profile
+						{
+							myAuthToken->m_ProfileId = myProfile->m_ProfileId;
+							myStatusCode = AuthSuccess;
+							mySuccessFlag = 1;
+						}
+						else //!ProfileQueryOK										// something went wrong executing the query
+						{
+							myStatusCode = AuthFailed_General; //ServerError
+							mySuccessFlag = 0;
+						}
+					}
+
+					//TODO: use SetLoginStatus() + SetTimeout(), we need
+					//a way to determine if a profile or account is currently in use
+
+					// Update the maximum client timeout
+					aClient->SetLoginStatus(true);
+					aClient->SetTimeout(WIC_LOGGEDIN_NET_TIMEOUT);
+				}
+
+				//write response message to the stream;
+				cryptMessage.WriteUChar(myStatusCode);
+				cryptMessage.WriteUChar(mySuccessFlag);	// auth.mySuccessFlag
+				cryptMessage.WriteUShort(0);			// auth.myLatestVersion
+
+				// Write the profile info stream
+				myProfile->ToStream(&cryptMessage);
+
+				// TigerMD5 of ...? (possibly crypt keys)
+				//myAuthToken->m_Hash.m_Hash[0] = 0x558C0A1C;
+				//myAuthToken->m_Hash.m_Hash[1] = 0xA59C9FCA;
+				//myAuthToken->m_Hash.m_Hash[2] = 0x6566857D;
+				//myAuthToken->m_Hash.m_Hash[3] = 0x8A3FF551;
+				//myAuthToken->m_Hash.m_Hash[4] = 0xB69D17E5;
+				//myAuthToken->m_Hash.m_Hash[5] = 0xD7BBF74D;
+				//memset(&myAuthToken->m_Hash.m_Hash, 0, 6 * sizeof(ulong));
+
+				myAuthToken->m_Hash.m_HashLength = 6 * sizeof(ulong);
+				myAuthToken->m_Hash.m_GeneratedFromHashAlgorithm = HASH_ALGORITHM_TIGER;
+
+				// Write the authorization token info stream
+				myAuthToken->ToStream(&cryptMessage);
+
+				cryptMessage.WriteUInt(WIC_CREDAUTH_RESEND_S);	// periodicityOfCredentialsRequests (How long until the first is sent)
+				cryptMessage.WriteUInt(0);						// myLeaseTimeLeft (Limited access key)
+				cryptMessage.WriteUInt(45523626);				// myAntiSpoofToken (Random number)
+				*/
 			}
 			break;
 
 			// Client request to create a new account
 			case MMG_ProtocolDelimiters::ACCOUNT_CREATE_ACCOUNT_REQ:
 			{
+				DebugLog(L_INFO, "ACCOUNT_CREATE_ACCOUNT_RSP:");
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_CREATE_ACCOUNT_RSP;
 
-				/* TODO: Account creation logic */
+				uint myId=0, myId2=0;
 
-				cryptMessage.WriteUChar(CreateSuccess);		// Otherwise CreateFailed_*
-				cryptMessage.WriteUChar(1);					// mySuccessFlag
+				int myStatusCode = 0;
+				int mySuccessFlag = 0;
+
+				bool CheckEmailQueryOK = MySQLDatabase::CheckIfEmailExists(myQuery.m_Create.m_Email, &myId);
+				bool CheckCDKeyQueryOK = MySQLDatabase::CheckIfCDKeyExists(&myId2);	//todo
+
+				if (myId > 0 && CheckEmailQueryOK)			//account exists with that email
+				{
+					myStatusCode = CreateFailed_EmailExists;
+					mySuccessFlag = 0;
+				}
+				else if(myId2 > 0 && CheckCDKeyQueryOK)		//an account has already been created with this cdkey
+				{
+					myStatusCode = CreateFailed_CdKeyExhausted;
+					mySuccessFlag = 0;
+				}
+				else if(!CheckEmailQueryOK || !CheckCDKeyQueryOK)
+				{
+					myStatusCode = CreateFailed_General; //ServerError
+					mySuccessFlag = 0;
+				}
+				else							//should be ok to create account
+				{
+					bool CreateQueryOK = MySQLDatabase::CreateUserAccount(myQuery.m_Create.m_Email, myQuery.m_Create.m_Password, 
+						myQuery.m_Create.m_Country, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail);
+
+					if(CreateQueryOK)			//create user account succeeded
+					{
+						myStatusCode = CreateSuccess;
+						mySuccessFlag = 1;
+					}
+					else //!CreateQueryOK		// something went wrong executing the query
+					{
+						myStatusCode = CreateFailed_General; //ServerError
+						mySuccessFlag = 0;
+					}
+				}
+
+				cryptMessage.WriteUChar(myStatusCode);
+				cryptMessage.WriteUChar(mySuccessFlag);					// mySuccessFlag
 			}
 			break;
 
 			// Prepare (sent before ACCOUNT_CREATE_ACCOUNT_REQ) authorization for cd-key
 			case MMG_ProtocolDelimiters::ACCOUNT_PREPARE_CREATE_ACCOUNT_REQ:
 			{
+				DebugLog(L_INFO, "ACCOUNT_PREPARE_CREATE_ACCOUNT_RSP:");
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_PREPARE_CREATE_ACCOUNT_RSP;
 
 				char country[5];							// Guessed by IPv4 geolocation information
 				strcpy_s(country, "US");
+
+				//char* countrycode = GeoIP::ClientLocateIP(aClient->GetIPAddress());
+				//strcpy_s(country, countrycode);
 
 				cryptMessage.WriteUChar(AuthSuccess);	// Otherwise AuthFailed_CdKeyExpired
 				cryptMessage.WriteUChar(1);				// mySuccessFlag
@@ -284,7 +506,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			// Client requests a session update to prevent dropping
 			case MMG_ProtocolDelimiters::ACCOUNT_NEW_CREDENTIALS_REQ:
 			{
-				DebugLog(L_INFO, "ACCOUNT_NEW_CREDENTIALS_REQ");
+				DebugLog(L_INFO, "ACCOUNT_NEW_CREDENTIALS_RSP:");
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_NEW_CREDENTIALS_RSP;
 
 				// Default to success until it's actually implemented (if ever)
@@ -301,7 +523,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			// Retrieve account profiles list (maximum 5)
 			case MMG_ProtocolDelimiters::ACCOUNT_RETRIEVE_PROFILES_REQ:
 			{
-				DebugLog(L_INFO, "ACCOUNT_RETRIEVE_PROFILES_REQ");
+				DebugLog(L_INFO, "ACCOUNT_RETRIEVE_PROFILES_RSP: getting profiles for %s", myQuery.m_RetrieveProfiles.m_Email);
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_RETRIEVE_PROFILES_RSP;
 
 				cryptMessage.WriteUChar(AuthSuccess);
@@ -319,6 +541,197 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				// Write the profile info stream
 				myProfile->ToStream(&cryptMessage);
+
+				/*
+				MMG_AuthToken *myAuthToken = aClient->GetToken();
+				MMG_Profile *myProfiles;
+
+				wchar_t myPassword[16];
+				memset(myPassword, 0, sizeof(myPassword));
+
+				uchar isBanned = 0;
+				ulong num_profiles = 0;
+				uint lastUsedId = 0;
+
+				int myStatusCode = 0;
+				int mySuccessFlag = 0;
+
+				bool AuthQueryOK = MySQLDatabase::AuthUserAccount(myQuery.m_RetrieveProfiles.m_Email, myPassword, &isBanned, myAuthToken);
+
+				//determine if credentials were valid
+				if(myAuthToken->m_AccountId == 0 && AuthQueryOK)		//account doesnt exist
+				{
+					myStatusCode = AuthFailed_BadCredentials;	//AuthFailed_NoSuchAccount
+					mySuccessFlag = 0;
+				}
+				else if(wcscmp(myQuery.m_RetrieveProfiles.m_Password, myPassword) != 0 && AuthQueryOK)	//wrong password
+				{
+					myStatusCode = AuthFailed_BadCredentials;
+					mySuccessFlag = 0;
+				}
+				else if(isBanned && AuthQueryOK)						//account has been banned
+				{
+					myStatusCode = AuthFailed_AccountBanned;
+					mySuccessFlag = 0;
+				}
+				else if(!AuthQueryOK)									// something went wrong executing the query
+				{
+					myStatusCode = AuthFailed_General; //ServerError
+					mySuccessFlag = 0;
+				}
+				else													//should be ok to retrieve profile list
+				{
+					bool RetrieveProfilesQueryOK = MySQLDatabase::RetrieveUserProfiles(myQuery.m_RetrieveProfiles.m_Email, myQuery.m_RetrieveProfiles.m_Password, &num_profiles, &myProfiles);
+
+					if(RetrieveProfilesQueryOK)
+					{
+						myStatusCode = AuthSuccess;
+						mySuccessFlag = 1;
+
+						if (num_profiles < 1)
+							lastUsedId = myProfiles->m_ProfileId;
+						else
+							lastUsedId = myProfiles[0].m_ProfileId;	//myAuthToken->m_ProfileId
+					}
+					else
+					{
+						myStatusCode = AuthFailed_General; //ServerError
+						mySuccessFlag = 0;
+						
+						num_profiles = 0;
+						lastUsedId = 0;
+					}
+				}
+
+				cryptMessage.WriteUChar(myStatusCode);
+				cryptMessage.WriteUChar(mySuccessFlag);	// mySuccessFlag
+				cryptMessage.WriteUInt(num_profiles);	// numUserProfiles
+				cryptMessage.WriteUInt(lastUsedId);	// lastUsedProfileId
+
+				//write profile/s to stream
+				for(uint i=0; i < num_profiles; i++)
+				{
+					myProfiles[i].ToStream(&cryptMessage);
+				}
+
+				if(num_profiles > 0)
+					delete [] myProfiles;
+
+				myProfiles = nullptr;
+
+				*/
+			}
+			break;
+
+			case MMG_ProtocolDelimiters::ACCOUNT_MODIFY_PROFILE_REQ:
+			{
+				//DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: modify profiles");
+				//responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_MODIFY_PROFILE_RSP;
+				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_RETRIEVE_PROFILES_RSP;
+
+				MMG_AuthToken *myAuthToken = aClient->GetToken();
+				MMG_Profile *myProfiles;
+
+				wchar_t myPassword[16];
+				memset(myPassword, 0, sizeof(myPassword));
+
+				uchar isBanned = 0;
+				ulong num_profiles = 0;
+				uint lastUsedId = 0;
+
+				uint myId = 0;
+
+				int myStatusCode = 0;
+				int mySuccessFlag = 0;
+
+				if (myQuery.m_ModifyProfile.m_Operation == MODIFY_PROFILE_ADD)
+				{
+					DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: add profile %ws for %s", myQuery.m_ModifyProfile.m_Name, myQuery.m_ModifyProfile.m_Email);
+					
+					bool CheckProfileQueryOK = MySQLDatabase::CheckIfProfileExists(myQuery.m_ModifyProfile.m_Name, &myId);
+					
+					if (myId > 0 && CheckProfileQueryOK)			//profile exists with that name
+					{
+						myStatusCode = ModifyFailed_ProfileNameTaken;
+						mySuccessFlag = 1;
+					}
+					else if (!CheckProfileQueryOK)
+					{
+						myStatusCode = ModifyFailed_General;		//server / database error
+						mySuccessFlag = 1;
+					}
+					else							//should be ok to create profile
+					{
+						bool CreateProfileQueryOK = MySQLDatabase::CreateUserProfile(myAuthToken->m_AccountId, myQuery.m_ModifyProfile.m_Name, myQuery.m_ModifyProfile.m_Email);
+					
+						if(CreateProfileQueryOK)			//create profile success
+						{
+							myStatusCode = ModifySuccess;
+							mySuccessFlag = 1;
+						}
+						else //!CreateProfileQueryOK		// something went wrong executing the query
+						{
+							myStatusCode = ModifyFailed_General; //ServerError
+							mySuccessFlag = 1;
+						}
+					}
+				}
+				else if (myQuery.m_ModifyProfile.m_Operation == MODIFY_PROFILE_DELETE)
+				{
+					DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: delete profile %d for %s", myQuery.m_ModifyProfile.m_ProfileId, myQuery.m_ModifyProfile.m_Email);
+
+					bool DeleteProfileQueryOK = MySQLDatabase::DeleteUserProfile(myAuthToken->m_AccountId, myQuery.m_ModifyProfile.m_ProfileId, myQuery.m_ModifyProfile.m_Email);
+					
+					if(DeleteProfileQueryOK)			//delete profile success
+					{
+						myStatusCode = ModifySuccess;
+						mySuccessFlag = 1;
+					}
+					else //!DeleteProfileQueryOK		// something went wrong executing the query
+					{
+						myStatusCode = ModifyFailed_General; //ServerError
+						mySuccessFlag = 1;
+					}
+				}
+				else
+				{
+					DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: unknown operation");
+				}
+				
+				// retrieve and send profile list
+				bool RetrieveProfilesQueryOK = MySQLDatabase::RetrieveUserProfiles(myQuery.m_ModifyProfile.m_Email, myQuery.m_ModifyProfile.m_Password, &num_profiles, &myProfiles);
+
+				if (RetrieveProfilesQueryOK && mySuccessFlag)
+				{
+					if (num_profiles < 1)
+						lastUsedId = myProfiles->m_ProfileId;
+					else
+						lastUsedId = myProfiles[0].m_ProfileId;	//myAuthToken->m_ProfileId
+				}
+				else
+				{
+					myStatusCode = ModifyFailed_General; //ServerError
+					mySuccessFlag = 0;
+				
+					num_profiles = 0;
+					lastUsedId = 0;
+				}
+				
+				cryptMessage.WriteUChar(myStatusCode);
+				cryptMessage.WriteUChar(mySuccessFlag);	// mySuccessFlag
+				cryptMessage.WriteUInt(num_profiles);	// numUserProfiles
+				cryptMessage.WriteUInt(lastUsedId);		// lastUsedProfileId
+
+				//write profile/s to stream
+				for(uint i=0; i < num_profiles; i++)
+				{
+					myProfiles[i].ToStream(&cryptMessage);
+				}
+
+				if(num_profiles > 0)
+					delete [] myProfiles;
+
+				myProfiles = nullptr;
 			}
 			break;
 

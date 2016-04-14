@@ -44,6 +44,10 @@ enum WIC_REVISION_VER
 // Account values
 #define WIC_INVALID_ACCOUNT			((uint)-1)
 
+// modify profile operation values
+#define MODIFY_PROFILE_ADD			6382692
+#define MODIFY_PROFILE_DELETE		6579564
+
 // Ports
 #define WIC_HTTP_PORT				80
 

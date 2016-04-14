@@ -27,20 +27,24 @@ void CreateServices()
 	MMG_Messaging::Create();
 	MMG_OptionalContentProtocol::Create();
 	MMG_ServerTracker::Create();
+	MMG_TrackableServer::Create();
+	MMG_Chat::Create();
 }
 
 void Startup()
 {
 	CreateServices();
 
-	if (!Database::Initialize())
-		DebugLog(L_ERROR, "Failed to initialize database back end");
+	//if (!MySQLDatabase::Initialize())
+	//	DebugLog(L_ERROR, "Failed to initialize database back end");
 
-	Database::InitializeTables();
-	Database::CreateUserAccount("TestUser@example.com", L"pass");
-	Database::CreateUserAccount("TestUser1@example.com", L"pass");
-	Database::CreateUserAccount("TestUser2@example.com", L"pass");
-	Database::CreateUserAccount("TestUser3@example.com", L"pass");
+	//only run once to create the tables, todo: move the database schema to an .sql file
+	//if(!MySQLDatabase::InitializeSchema())
+	//	DebugLog(L_ERROR, "Failed to create database tables");
+
+	/* GeoIP init*/
+	//if (!GeoIP::Initialize())
+	//	DebugLog(L_ERROR, "Failed to initialize GeoIP database");
 
 	Winsock_Startup();
 	HTTPService_Startup();
@@ -58,7 +62,8 @@ void Shutdown()
 	HTTPService_Shutdown();
 	Winsock_Shutdown();
 
-	Database::Unload();
+	GeoIP::Unload();
+	MySQLDatabase::Unload();
 }
 
 int main(int argc, char **argv)

@@ -10,4 +10,10 @@
 #include "LiveAccount.h"
 #include "StatsService.h"
 #include "HTTPService.h"
+
+#include "MySQLQuery.h"
+#include "MySQLDatabaseInfo.h"
+#include "MySQLDatabase.h"
+
+#include "GeoIP.h"
 /******************* Server modules *******************/

@@ -1,0 +1,468 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Libraries">
+      <UniqueIdentifier>{c9977758-4ca1-46f1-8fec-3bdb34b4c226}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries\jansson">
+      <UniqueIdentifier>{8e38c025-acfb-4828-a6d3-609677fc5df8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries\mongoose">
+      <UniqueIdentifier>{bf7cb26f-d4f1-43b4-9607-10c33654fd0b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries\sqlite">
+      <UniqueIdentifier>{81114524-21a1-4577-ad03-578cf59218ab}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Libraries\zlib">
+      <UniqueIdentifier>{9493705c-07d6-48de-aed4-d13952a0c4a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mcommon2">
+      <UniqueIdentifier>{808e8538-039b-4df4-8f4f-de772e15830b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\mcommon2">
+      <UniqueIdentifier>{21bcc802-85f8-4cd9-84f9-6fd50786d27c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\misc">
+      <UniqueIdentifier>{f090823a-7104-4d76-bf8c-a15cc4df840d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\misc">
+      <UniqueIdentifier>{c7b730a6-a919-4982-806b-57a2efd60c07}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mmassgate">
+      <UniqueIdentifier>{6335c287-af3e-40be-a004-48ca72fb7d71}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\mnetwork">
+      <UniqueIdentifier>{f917e979-adef-490c-a6b4-f17b30a4ecd1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Server Modules">
+      <UniqueIdentifier>{357e1bb1-606f-4432-8c80-c715f460693f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\mmassgate">
+      <UniqueIdentifier>{71e0ca9e-7070-4f63-a1d4-76e3b216e3f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\mnetwork">
+      <UniqueIdentifier>{1d331307-d54f-4240-b1e2-9ee13e55d33f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Server Modules">
+      <UniqueIdentifier>{9d67ddbf-ca5f-4951-b02f-6e94a777b15f}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\stdafx.h">
+      <Filter>Libraries</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\hashtable.h">
+      <Filter>Libraries\jansson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\jansson.h">
+      <Filter>Libraries\jansson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\jansson_config.h">
+      <Filter>Libraries\jansson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\jansson_private.h">
+      <Filter>Libraries\jansson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\strbuffer.h">
+      <Filter>Libraries\jansson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\utf.h">
+      <Filter>Libraries\jansson</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\mongoose\mongoose.h">
+      <Filter>Libraries\mongoose</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\sqlite\sqlite3.h">
+      <Filter>Libraries\sqlite</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\crc32.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\deflate.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\gzguts.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\inffast.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\inffixed.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\inflate.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\inftrees.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\trees.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\zconf.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\zlib.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\zutil.h">
+      <Filter>Libraries\zlib</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_Misc.h">
+      <Filter>Header Files\mcommon2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_Singleton.h">
+      <Filter>Header Files\mcommon2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MI_Time.h">
+      <Filter>Header Files\mcommon2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MP_Pack.h">
+      <Filter>Header Files\mcommon2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MT_Mutex.h">
+      <Filter>Header Files\mcommon2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\stdafx.h">
+      <Filter>Header Files\mcommon2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\misc\debuglog.h">
+      <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\misc\stdafx.h">
+      <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\misc\wsaerror.h">
+      <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_GroupMemberships.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ICipher.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_IStreamable.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Messaging.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_NullCipher.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_OptionalContentProtocol.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Options.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Profile.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProtocolDelimiters.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Protocols.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\stdafx.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Constants.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\MN_Message.h">
+      <Filter>Header Files\mnetwork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\MN_ReadMessage.h">
+      <Filter>Header Files\mnetwork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\MN_TcpServer.h">
+      <Filter>Header Files\mnetwork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\MN_WriteMessage.h">
+      <Filter>Header Files\mnetwork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mnetwork\stdafx.h">
+      <Filter>Header Files\mnetwork</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\LiveAccount.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\StatsService.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\stdafx.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\SvClientManager.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\Database.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\DatabaseInfo.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\HTTPService.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\JSON.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\SQLQuery.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabase.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabaseInfo.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLQuery.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\GeoIP.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerBriefInfo.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerFullInfo.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerHeartbeat.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\dump.c">
+      <Filter>Libraries\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\error.c">
+      <Filter>Libraries\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\hashtable.c">
+      <Filter>Libraries\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\load.c">
+      <Filter>Libraries\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\memory.c">
+      <Filter>Libraries\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\pack_unpack.c">
+      <Filter>Libraries\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\strbuffer.c">
+      <Filter>Libraries\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\strconv.c">
+      <Filter>Libraries\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\utf.c">
+      <Filter>Libraries\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\value.c">
+      <Filter>Libraries\jansson</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\mongoose\mongoose.c">
+      <Filter>Libraries\mongoose</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\sqlite\sqlite3.c">
+      <Filter>Libraries\sqlite</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\adler32.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\compress.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\crc32.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\deflate.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\gzclose.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\gzlib.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\gzread.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\gzwrite.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\infback.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\inffast.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\inflate.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\inftrees.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\trees.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\uncompr.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\zutil.c">
+      <Filter>Libraries\zlib</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MC_Misc.cpp">
+      <Filter>Source Files\mcommon2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MI_Time.cpp">
+      <Filter>Source Files\mcommon2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MP_Pack.cpp">
+      <Filter>Source Files\mcommon2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MT_Mutex.cpp">
+      <Filter>Source Files\mcommon2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\misc\wsaerror.cpp">
+      <Filter>Source Files\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\misc\debuglog.cpp">
+      <Filter>Source Files\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ICipher.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Messaging.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_NullCipher.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_OptionalContentProtocol.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Options.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Profile.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_Message.cpp">
+      <Filter>Source Files\mnetwork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_ReadMessage.cpp">
+      <Filter>Source Files\mnetwork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_TcpServer.cpp">
+      <Filter>Source Files\mnetwork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mnetwork\MN_WriteMessage.cpp">
+      <Filter>Source Files\mnetwork</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\LiveAccount.cpp">
+      <Filter>Source Files\Server Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\StatsService.cpp">
+      <Filter>Source Files\Server Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\SvClientManager.cpp">
+      <Filter>Source Files\Server Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\MLiveAccountServer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\Database.cpp">
+      <Filter>Source Files\Server Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\HTTPService.cpp">
+      <Filter>Source Files\Server Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabase.cpp">
+      <Filter>Source Files\Server Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\GeoIP.cpp">
+      <Filter>Source Files\Server Modules</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerBriefInfo.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerFullInfo.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerHeartbeat.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
