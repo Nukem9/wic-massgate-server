@@ -65,89 +65,111 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 	if (!message.BuildMessage(aData, aDataLen))
 		return;
 
-	MMG_ProtocolDelimiters::Delimiter delimiter;
-	if (!message.ReadDelimiter((ushort &)delimiter))
-		return;
+	while (true)
+	{
+		MMG_ProtocolDelimiters::Delimiter delimiter;
+		if (!message.ReadDelimiter((ushort &)delimiter))
+			break;
 
-	auto myType = MMG_ProtocolDelimiters::GetType(delimiter);
+		if (!LiveAccount_ConsumeMessage(aClient, &message, delimiter))
+			break;
 
-	LiveAccLog("Message from client: delimiter %i - type: %i", delimiter, myType);
+		if (!message.DeriveMessage())
+			break;
+	}
+}
 
+bool LiveAccount_ConsumeMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter)
+{
+	//
 	// Each time a new request is sent, update the timeout limit
+	//
 	aClient->UpdateActivity();
 
-	switch(myType)
+	//
+	// Log delimiter types to console
+	//
+	auto myType = MMG_ProtocolDelimiters::GetType(aDelimiter);
+
+	LiveAccLog("Message from client: delimiter %i - type: %i", aDelimiter, myType);
+
+	//
+	// Handle all delimiter types
+	//
+	switch (myType)
 	{
-		// Account
-		case MMG_ProtocolDelimiters::DELIM_ACCOUNT:
+	// Account
+	case MMG_ProtocolDelimiters::DELIM_ACCOUNT:
+	{
+		if (!MMG_AccountProtocol::ourInstance->HandleMessage(aClient, aMessage, aDelimiter))
 		{
-			if (!MMG_AccountProtocol::ourInstance->HandleMessage(aClient, &message, delimiter))
-			{
-				LiveAccLog("MMG_AccountProtocol: Failed HandleMessage()");
-				return;
-			}
+			LiveAccLog("MMG_AccountProtocol: Failed HandleMessage()");
+			return false;
 		}
-		break;
-
-		// Message
-		case MMG_ProtocolDelimiters::DELIM_MESSAGE:
-		{
-			if (!aClient->IsLoggedIn())
-			{
-				LiveAccLog("MMG_Messaging: User not logged in");
-				return;
-			}
-
-			if (!MMG_Messaging::ourInstance->HandleMessage(aClient, &message, delimiter))
-			{
-				LiveAccLog("MMG_Messaging: Failed HandleMessage()");
-				return;
-			}
-		}
-		break;
-
-		// Dedicated Server
-		case MMG_ProtocolDelimiters::DELIM_MESSAGE_DS:
-		{
-			if (!MMG_Messaging::ourInstance->HandleMessage(aClient, &message, delimiter))
-			{
-				LiveAccLog("MMG_Messaging: Failed HandleMessage()");
-				return;
-			}
-		}
-		break;
-
-		// Server Tracker (Server list queries)
-		case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_USER:
-		{
-			if (!MMG_ServerTracker::ourInstance->HandleMessage(aClient, &message, delimiter))
-			{
-				LiveAccLog("MMG_ServerTracker: Failed HandleMessage()");
-				return;
-			}
-		}
-		break;
-
-		// Server Tracker (Dedicated server manager)
-		case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_SERVER:
-		{
-			if (!MMG_TrackableServer::ourInstance->HandleMessage(aClient, &message, delimiter))
-			{
-				LiveAccLog("MMG_TrackableServer: Failed HandleMessage()");
-				return;
-			}
-		}
-		break;
-
-		// Chat
-		case MMG_ProtocolDelimiters::DELIM_CHAT:
-		{
-			if (!MMG_Chat::ourInstance->HandleMessage(aClient, &message, delimiter))
-			{
-				LiveAccLog("MMG_Chat: Failed HandleMessage()");
-				return;
-			}
-		}
-		break;
 	}
+	break;
+
+	// Messaging
+	case MMG_ProtocolDelimiters::DELIM_MESSAGE:
+	{
+		if (!aClient->IsLoggedIn())
+		{
+			LiveAccLog("MMG_Messaging: User not logged in");
+			return false;
+		}
+
+		if (!MMG_Messaging::ourInstance->HandleMessage(aClient, aMessage, aDelimiter))
+		{
+			LiveAccLog("MMG_Messaging: Failed HandleMessage()");
+			return false;
+		}
+	}
+	break;
+
+	// Dedicated Server
+	case MMG_ProtocolDelimiters::DELIM_MESSAGE_DS:
+	{
+		if (!MMG_Messaging::ourInstance->HandleMessage(aClient, aMessage, aDelimiter))
+		{
+			LiveAccLog("MMG_Messaging: Failed HandleMessage()");
+			return false;
+		}
+	}
+	break;
+
+	// Server Tracker (Server list queries)
+	case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_USER:
+	{
+		if (!MMG_ServerTracker::ourInstance->HandleMessage(aClient, aMessage, aDelimiter))
+		{
+			LiveAccLog("MMG_ServerTracker: Failed HandleMessage()");
+			return false;
+		}
+	}
+	break;
+
+	// Server Tracker (Dedicated server manager)
+	case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_SERVER:
+	{
+		if (!MMG_TrackableServer::ourInstance->HandleMessage(aClient, aMessage, aDelimiter))
+		{
+			LiveAccLog("MMG_TrackableServer: Failed HandleMessage()");
+			return false;
+		}
+	}
+	break;
+
+	// Chat
+	case MMG_ProtocolDelimiters::DELIM_CHAT:
+	{
+		if (!MMG_Chat::ourInstance->HandleMessage(aClient, aMessage, aDelimiter))
+		{
+			LiveAccLog("MMG_Chat: Failed HandleMessage()");
+			return false;
+		}
+	}
+	break;
+	}
+
+	return true;
 }

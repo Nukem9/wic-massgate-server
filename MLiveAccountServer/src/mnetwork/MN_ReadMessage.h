@@ -2,8 +2,6 @@
 
 class MN_ReadMessage : public MN_Message
 {
-public:
-
 private:
 	uintptr_t	m_ReadPtr;
 	sizeptr_t	m_ReadPos;
@@ -14,8 +12,6 @@ public:
 		this->m_ReadPtr = this->m_PacketData;
 		this->m_ReadPos = 0;
 	}
-
-	bool BuildMessage	(voidptr_t aData, sizeptr_t aDataLen);
 
 	template<typename T> __declspec(noinline) T Read()
 	{
@@ -43,6 +39,9 @@ public:
 	bool ReadRawData	(voidptr_t aBuffer, sizeptr_t aBufferSize, sizeptr_t *aTotalSize);
 	bool ReadString		(char *aBuffer, sizeptr_t aStringSize);
 	bool ReadString		(wchar_t *aBuffer, sizeptr_t aStringSize);
+
+	bool BuildMessage	(voidptr_t aData, sizeptr_t aDataLen);
+	bool DeriveMessage	();
 
 private:
 	void IncReadPos		(sizeptr_t aSize);
