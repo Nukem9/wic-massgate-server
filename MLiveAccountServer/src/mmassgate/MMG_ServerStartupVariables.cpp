@@ -37,11 +37,11 @@ void MMG_ServerStartupVariables::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUShort(this->m_ServerReliablePort);
 	aMessage->WriteUShort(this->m_MassgateCommPort);
 	aMessage->WriteString(this->m_ServerName);
-	aMessage->WriteUChar(this->somebits.bitfield1);
-	aMessage->WriteUChar(this->somebits.bitfield2);
-	aMessage->WriteUChar(this->somebits.bitfield5);
-	aMessage->WriteUChar(this->somebits.bitfield3);
-	aMessage->WriteUChar(this->somebits.bitfield4);
+	aMessage->WriteUChar(this->somebits.bitfield1);		// Maximum number of players
+	aMessage->WriteUChar(this->somebits.bitfield2);		// Password required
+	aMessage->WriteUChar(this->somebits.bitfield5);		// ?
+	aMessage->WriteUChar(this->somebits.bitfield3);		// ?
+	aMessage->WriteUChar(this->somebits.bitfield4);		// Ranked
 	aMessage->WriteUChar(this->m_ServerType);
 	aMessage->WriteUInt64(this->m_CurrentMapHash);
 	aMessage->WriteString(this->m_PublicIp);

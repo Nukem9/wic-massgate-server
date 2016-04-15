@@ -73,7 +73,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			if (!startupVars.FromStream(aMessage))
 				return false;
 
-			DebugLog(L_INFO, "test: %ws %s %d %d", startupVars.m_ServerName, startupVars.m_PublicIp, (int)startupVars.somebits.bitfield1, (int)startupVars.somebits.bitfield2);
+			DebugLog(L_INFO, "test: %ws %s %X %d", startupVars.m_ServerName, startupVars.m_PublicIp, startupVars.m_Ip, startupVars.m_MassgateCommPort);
 		}
 		break;
 
