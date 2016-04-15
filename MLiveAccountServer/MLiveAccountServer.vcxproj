@@ -167,6 +167,7 @@
     <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookEntry.h" />
     <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookProtocol.h" />
     <ClInclude Include="src\mmassgate\MMG_Protocols.h" />
+    <ClInclude Include="src\mmassgate\MMG_ServerStartupVariables.h" />
     <ClInclude Include="src\mmassgate\MMG_TrackablePlayerVariables.h" />
     <ClInclude Include="src\mmassgate\MMG_TrackableServer.h" />
     <ClInclude Include="src\mmassgate\MMG_TrackableServerBriefInfo.h" />
@@ -240,6 +241,7 @@
     <ClCompile Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookEntry.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookProtocol.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_ServerStartupVariables.cpp" />
     <ClCompile Include="src\mmassgate\MMG_TrackablePlayerVariables.cpp" />
     <ClCompile Include="src\mmassgate\MMG_TrackableServer.cpp" />
     <ClCompile Include="src\mmassgate\MMG_TrackableServerBriefInfo.cpp" />

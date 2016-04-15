@@ -67,6 +67,13 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		case MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_STARTED:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_SERVER_STARTED:");
+
+			MMG_ServerStartupVariables startupVars;
+
+			if (!startupVars.FromStream(aMessage))
+				return false;
+
+			DebugLog(L_INFO, "test: %ws %s %d %d", startupVars.m_ServerName, startupVars.m_PublicIp, (int)startupVars.somebits.bitfield1, (int)startupVars.somebits.bitfield2);
 		}
 		break;
 

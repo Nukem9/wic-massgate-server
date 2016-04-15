@@ -287,6 +287,9 @@
     <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookProtocol.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\mmassgate\MMG_ServerStartupVariables.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Server Modules\Database.cpp">
@@ -488,6 +491,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookProtocol.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mmassgate\MMG_ServerStartupVariables.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
