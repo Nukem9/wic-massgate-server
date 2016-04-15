@@ -147,6 +147,11 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		
 		case MMG_ProtocolDelimiters::MESSAGING_OPTIONAL_CONTENT_GET_REQ:
 		{
+			char langCode[3]; // "EN"
+			aMessage->ReadString(langCode, ARRAYSIZE(langCode));
+
+			DebugLog(L_INFO, "MESSAGING_OPTIONAL_CONTENT_GET_REQ: %s", langCode);
+
 			// Optional content (I.E maps)
 			this->SendOptionalContent(aClient, &responseMessage);
 		}
