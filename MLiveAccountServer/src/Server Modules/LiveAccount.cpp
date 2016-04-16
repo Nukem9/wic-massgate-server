@@ -126,17 +126,6 @@ bool LiveAccount_ConsumeMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG
 	}
 	break;
 
-	// Dedicated Server
-	case MMG_ProtocolDelimiters::DELIM_MESSAGE_DS:
-	{
-		if (!MMG_Messaging::ourInstance->HandleMessage(aClient, aMessage, aDelimiter))
-		{
-			LiveAccLog("MMG_Messaging: Failed HandleMessage()");
-			return false;
-		}
-	}
-	break;
-
 	// Server Tracker (Server list queries)
 	case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_USER:
 	{
