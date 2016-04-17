@@ -2,8 +2,6 @@
 
 class MN_WriteMessage : public MN_Message
 {
-public:
-
 private:
 	uintptr_t	m_WritePtr;
 	sizeptr_t	m_WritePos;

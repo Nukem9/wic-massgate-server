@@ -71,6 +71,8 @@
     <LinkIncremental>true</LinkIncremental>
     <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <RunCodeAnalysis>false</RunCodeAnalysis>
+    <IncludePath>$(ProjectDir)libraries\mysql;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)libraries\mysql;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -79,9 +81,12 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(ProjectDir)libraries\mysql;$(VC_IncludePath);$(WindowsSDK_IncludePath);</IncludePath>
+    <LibraryPath>$(ProjectDir)libraries\mysql;$(VC_LibraryPath_x86);$(WindowsSDK_LibraryPath_x86);</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -156,12 +161,24 @@
     <ClInclude Include="libraries\stdafx.h" />
     <ClInclude Include="src\mcommon2\stdafx.h" />
     <ClInclude Include="src\misc\stdafx.h" />
+    <ClInclude Include="src\mmassgate\MMG_Chat.h" />
+    <ClInclude Include="src\mmassgate\MMG_PlayerStats.h" />
+    <ClInclude Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.h" />
+    <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookEntry.h" />
+    <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookProtocol.h" />
     <ClInclude Include="src\mmassgate\MMG_Protocols.h" />
+    <ClInclude Include="src\mmassgate\MMG_ServerStartupVariables.h" />
+    <ClInclude Include="src\mmassgate\MMG_TrackablePlayerVariables.h" />
+    <ClInclude Include="src\mmassgate\MMG_TrackableServer.h" />
+    <ClInclude Include="src\mmassgate\MMG_TrackableServerBriefInfo.h" />
+    <ClInclude Include="src\mmassgate\MMG_TrackableServerFullInfo.h" />
+    <ClInclude Include="src\mmassgate\MMG_TrackableServerHeartbeat.h" />
     <ClInclude Include="src\mmassgate\stdafx.h" />
     <ClInclude Include="src\mnetwork\stdafx.h" />
     <ClInclude Include="src\Server Modules\Database.h" />
     <ClInclude Include="src\misc\debuglog.h" />
     <ClInclude Include="src\Server Modules\DatabaseInfo.h" />
+    <ClInclude Include="src\Server Modules\GeoIP.h" />
     <ClInclude Include="src\Server Modules\HTTPService.h" />
     <ClInclude Include="libraries\jansson\hashtable.h" />
     <ClInclude Include="libraries\jansson\jansson.h" />
@@ -195,6 +212,9 @@
     <ClInclude Include="libraries\mongoose\mongoose.h" />
     <ClInclude Include="src\mcommon2\MP_Pack.h" />
     <ClInclude Include="src\mcommon2\MT_Mutex.h" />
+    <ClInclude Include="src\Server Modules\MySQLDatabase.h" />
+    <ClInclude Include="src\Server Modules\MySQLDatabaseInfo.h" />
+    <ClInclude Include="src\Server Modules\MySQLQuery.h" />
     <ClInclude Include="src\Server Modules\SQLQuery.h" />
     <ClInclude Include="src\Server Modules\StatsService.h" />
     <ClInclude Include="src\Server Modules\stdafx.h" />
@@ -216,12 +236,24 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="libraries\sqlite\sqlite3.c" />
+    <ClCompile Include="src\mmassgate\MMG_Chat.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_PlayerStats.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookEntry.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookProtocol.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_ServerStartupVariables.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_TrackablePlayerVariables.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_TrackableServer.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_TrackableServerBriefInfo.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_TrackableServerFullInfo.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_TrackableServerHeartbeat.cpp" />
     <ClCompile Include="src\Server Modules\Database.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\misc\debuglog.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Server Modules\GeoIP.cpp" />
     <ClCompile Include="src\Server Modules\HTTPService.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -332,6 +364,7 @@
     <ClCompile Include="src\mcommon2\MT_Mutex.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="src\Server Modules\MySQLDatabase.cpp" />
     <ClCompile Include="src\Server Modules\StatsService.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>

@@ -102,13 +102,20 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			// to do: replace with actual header parts
 			
 			//aMessage->ReadString(messageheader1, ARRAYSIZE(messageheader1));
-			for (i = 0; i < 4; i++)					// according to IDA, this is actually a string
+			/*for (i = 0; i < 4; i++)					// according to IDA, this is actually a string
 			{										// constant value of 35, 0, 0, 0 during message analysis
 				aMessage->ReadUChar(messageheader[i]);
 				ranked = messageheader[i];
 				ranked = ranked;
 			}
 			aMessage->ReadUInt(messageheader2);		// according to IDA, this must be an int, constant value of 126 (0x7E) during message analysis
+			*/
+
+			uint gameVersion;
+			aMessage->ReadUInt(gameVersion);
+
+			uint protocolVersion;
+			aMessage->ReadUInt(protocolVersion);
 
 			aMessage->ReadUShort(activefilters);
 			/* active filters information flag order

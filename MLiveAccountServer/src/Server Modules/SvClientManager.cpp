@@ -1,5 +1,8 @@
 #include "../stdafx.h"
 
+//
+// Begin SvClient
+//
 SvClient::SvClient()
 {
 	this->m_Profile		= nullptr;
@@ -36,6 +39,16 @@ void SvClient::SetTimeout(uint aTimeout)
 void SvClient::SetLoginStatus(bool aStatus)
 {
 	this->m_LoggedIn = aStatus;
+}
+
+void SvClient::SetIsPlayer(bool aIsPlayer)
+{
+	this->m_IsPlayer = aIsPlayer;
+}
+
+void SvClient::SetIsServer(bool aIsServer)
+{
+	this->m_IsServer = aIsServer;
 }
 
 bool SvClient::SendData(MN_WriteMessage *aMessage)
@@ -76,6 +89,9 @@ void SvClient::Reset()
 
 	this->m_LastActiveTime	= 0;
 	this->m_TimeoutTime		= 0;
+	this->m_LoggedIn		= false;
+	this->m_IsPlayer		= false;
+	this->m_IsServer		= false;
 
 	// Close the socket if it's open
 	if (this->m_Socket != INVALID_SOCKET)
@@ -93,9 +109,6 @@ void SvClient::Reset()
 	this->m_CipherIdentifier			= CIPHER_UNKNOWN;
 	this->m_EncryptionKeySequenceNumber = 0;
 	memset(this->m_CipherKeys, 0, sizeof(this->m_CipherKeys));
-
-	// Client is no longer logged in
-	this->m_LoggedIn = false;
 
 	// Profile structure
 	if (this->m_Profile)
@@ -139,11 +152,14 @@ bool SvClient::CanReadFrom()
 	return true;
 }
 
+//
+// Begin SvClientManager
+//
 SvClientManager::SvClientManager()
 {
 	this->m_ThreadHandle			= nullptr;
 	this->m_DataReceivedCallback	= nullptr;
-	this->m_Clients					= (SvClient *)VirtualAlloc(nullptr, WIC_SERVER_MAX_CLIENTS * sizeof(SvClient), MEM_COMMIT, PAGE_READWRITE);
+	this->m_Clients					= nullptr;
 	this->m_ClientCount				= 0;
 	this->m_ClientMaxCount			= WIC_SERVER_MAX_CLIENTS;
 }
@@ -167,6 +183,13 @@ SvClientManager::~SvClientManager()
 
 bool SvClientManager::Start()
 {
+	// Allocate an array for all clients
+	this->m_Clients = (SvClient *)VirtualAlloc(nullptr, this->m_ClientMaxCount * sizeof(SvClient), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+
+	if (!this->m_Clients)
+		return false;
+
+	// Create the network handler thread
 	this->m_ThreadHandle = CreateThread(nullptr, 0, MainThread, this, 0, nullptr);
 
 	if (this->m_ThreadHandle == nullptr)
@@ -194,7 +217,7 @@ SvClient *SvClientManager::FindClient(sockaddr_in *aAddr)
 		if (!client->m_Valid)
 			continue;
 
-		// Found a client, compare address
+		// Found a valid client, compare addresses
 		if (client->m_IpAddress == ip && client->m_Port == port)
 		{
 			this->m_Mutex.Unlock();

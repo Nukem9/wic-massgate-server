@@ -124,7 +124,7 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 
 		case MMG_ProtocolDelimiters::ACCOUNT_NEW_CREDENTIALS_REQ:
 		{
-			if (!this->m_Authenticate.m_Credentials.FromStream(aMessage))
+			if (!this->m_Authenticate.m_Credentials.FromStream(&decryptedMsg))
 				return false;
 
 			DebugLog(L_INFO, "ACCOUNT_NEW_CREDENTIALS_REQ:");
