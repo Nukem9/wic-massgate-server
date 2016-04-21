@@ -21,7 +21,7 @@ void MMG_TrackableServerBriefInfo::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUShort(this->m_MassgateCommPort);
 	aMessage->WriteUInt64(this->m_CycleHash);
 	aMessage->WriteUChar(this->m_ServerType);
-	aMessage->WriteUChar(this->m_IsRankBalanced);
+	aMessage->WriteBool(this->m_IsRankBalanced);
 }
 
 bool MMG_TrackableServerBriefInfo::FromStream(MN_ReadMessage *aMessage)
@@ -38,7 +38,10 @@ bool MMG_TrackableServerBriefInfo::FromStream(MN_ReadMessage *aMessage)
 	if(!aMessage->ReadUInt64(this->m_CycleHash))
 		return false;
 
-	if(!aMessage->ReadUChar(this->m_ServerType) || !aMessage->ReadUChar(this->m_IsRankBalanced))
+	if(!aMessage->ReadUChar(this->m_ServerType))
+		return false;
+
+	if(!aMessage->ReadBool(this->m_IsRankBalanced))
 		return false;
 
 	return true;

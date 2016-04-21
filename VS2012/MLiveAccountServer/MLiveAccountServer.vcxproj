@@ -132,6 +132,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookProtocol.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProtocolDelimiters.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Protocols.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerStartupVariables.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.h" />
@@ -209,6 +210,7 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookEntry.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookProtocol.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerStartupVariables.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.cpp" />

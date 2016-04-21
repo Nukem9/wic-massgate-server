@@ -9,8 +9,8 @@ public:
 	uint m_ServerId;
 	ushort m_MassgateCommPort;
 	uint64 m_CycleHash;
-	uchar m_ServerType;	//uint
-	uchar m_IsRankBalanced;
+	uchar m_ServerType;
+	bool m_IsRankBalanced;
 
 private:
 

@@ -96,14 +96,18 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			aMessage->ReadUInt(zero);
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_CREATE_RESPONSE);
-			responseMessage.WriteUChar(1); // successflag
-			responseMessage.WriteUInt(1); // clan id
+			//responseMessage.WriteUChar(1); // successflag
+			//responseMessage.WriteUInt(1); // clan id
+			responseMessage.WriteUChar(0);
+			responseMessage.WriteUInt(0);
 			aClient->SendData(&responseMessage);
 		}
 		break;
 
 		case MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_REQUEST:
 		{
+			DebugLog(L_INFO, "MESSAGING_CLAN_FULL_INFO_REQUEST:");
+
 			// TODO
 			wchar_t clanName[32];
 			wchar_t clanTag[11];
@@ -275,7 +279,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_DELETE_REQ: Sending information");
 
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
+			//responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
 			
 			//currentEditables->ToStream(&responseMessage);
 

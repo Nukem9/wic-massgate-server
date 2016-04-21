@@ -85,8 +85,8 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 
 			if (this->m_Authenticate.m_HasOldCredentials)
 			{
-				//MMG_AuthToken::FromStream(aMessage);
-				this->m_Authenticate.m_Credentials.FromStream(&decryptedMsg);
+				if(!this->m_Authenticate.m_Credentials.FromStream(&decryptedMsg))
+					return false;
 			}
 
 			DebugLog(L_INFO, "ACCOUNT_AUTH_ACCOUNT_REQ: %s %ws", this->m_Authenticate.m_Email, this->m_Authenticate.m_Password);
@@ -333,15 +333,11 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myStatusCode = AuthFailed_AccountBanned;
 					mySuccessFlag = 0;
 				}
-				
-				//this shouldnt be here//
 				else if(myAuthToken->m_ProfileId == 0 && AuthQueryOK)	//no profiles exist. bring up add profile box
 				{
 					myStatusCode = AuthFailed_RequestedProfileNotFound;
 					mySuccessFlag = 0;
 				}
-				//this shouldnt be here//
-
 				else if(!AuthQueryOK)									// something went wrong executing the query
 				{
 					myStatusCode = AuthFailed_General; //ServerError
@@ -351,9 +347,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				{
 					bool ProfileQueryOK;
 
-					
 					//AuthFailed_AccountInUse, AuthFailed_ProfileInUse, AuthFailed_CdKeyInUse, AuthFailed_IllegalCDKey(not using)
-					
 
 					//profile selection box was used
 					if(myQuery.m_Authenticate.m_UseProfile)

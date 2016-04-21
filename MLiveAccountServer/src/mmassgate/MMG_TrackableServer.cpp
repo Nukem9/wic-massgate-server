@@ -13,6 +13,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		// Ping/pong handler
 		case MMG_ProtocolDelimiters::MESSAGING_DS_PING:
 		{
+			DebugLog(L_INFO, "MESSAGING_DS_PING:");
 			ushort protocolVersion;// MassgateProtocolVersion
 			uint publicServerId;   // Server ID sent on SERVERTRACKER_SERVER_STARTED
 
@@ -29,6 +30,12 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 			if (!aClient->SendData(&responseMessage))
 				return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_DS_GET_BANNED_WORDS_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_DS_GET_BANNED_WORDS_REQ:");
 		}
 		break;
 
