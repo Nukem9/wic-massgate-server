@@ -258,9 +258,6 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.h">
-      <Filter>Header Files\mmassgate</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
@@ -462,9 +459,6 @@
       <Filter>Source Files\Server Modules</Filter>
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.cpp">
-      <Filter>Source Files\mmassgate</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackablePlayerVariables.cpp">
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.cpp">

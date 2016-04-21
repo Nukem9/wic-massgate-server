@@ -24,7 +24,6 @@ class SvClient;
 #include "MMG_ProfileEditableVariablesProtocol.h"
 #include "MMG_ServerTracker.h"
 #include "MMG_TrackableServer.h"
-#include "MMG_TrackablePlayerVariables.h"
 #include "MMG_TrackableServerBriefInfo.h"
 #include "MMG_TrackableServerFullInfo.h"
 #include "MMG_TrackableServerHeartbeat.h"

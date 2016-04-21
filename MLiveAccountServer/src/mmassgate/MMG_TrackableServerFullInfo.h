@@ -1,5 +1,35 @@
 #pragma once
 
+class MMG_TrackablePlayerVariables : public MMG_IStreamable
+{
+public:
+	uint m_ProfileId;
+	uint m_Score;
+
+private:
+
+public:
+	MMG_TrackablePlayerVariables()
+	{
+		this->m_ProfileId	= 0;
+		this->m_Score		= 0;
+	}
+
+	void ToStream	(MN_WriteMessage *aMessage)
+	{
+		aMessage->WriteUInt(this->m_ProfileId);
+		aMessage->WriteUInt(this->m_Score);
+	}
+
+	bool FromStream	(MN_ReadMessage *aMessage)
+	{
+		if (!aMessage->ReadUInt(this->m_ProfileId) || !aMessage->ReadUInt(this->m_Score))
+			return false;
+
+		return true;
+	}
+};
+
 class MMG_TrackableServerFullInfo : public MMG_IStreamable
 {
 public:
