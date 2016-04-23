@@ -306,7 +306,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				MMG_Profile *myProfile = aClient->GetProfile();
 
 				//password check should be done by massgate server, not by database
-				wchar_t myPassword[16];
+				wchar_t myPassword[WIC_PASSWORD_MAX_LENGTH];
 				memset(myPassword, 0, sizeof(myPassword));
 
 				uchar isBanned = 0;
@@ -440,7 +440,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				int mySuccessFlag = 0;
 
 				bool CheckEmailQueryOK = MySQLDatabase::CheckIfEmailExists(myQuery.m_Create.m_Email, &myId);
-				bool CheckCDKeyQueryOK = MySQLDatabase::CheckIfCDKeyExists(&myId2);	//todo
+				bool CheckCDKeyQueryOK = MySQLDatabase::CheckIfCDKeyExists(myQuery.m_CipherKeys, &myId2);
 
 				if (myId > 0 && CheckEmailQueryOK)			//account exists with that email
 				{
@@ -460,7 +460,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				else							//should be ok to create account
 				{
 					bool CreateQueryOK = MySQLDatabase::CreateUserAccount(myQuery.m_Create.m_Email, myQuery.m_Create.m_Password, 
-						myQuery.m_Create.m_Country, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail);
+						myQuery.m_Create.m_Country, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail, myQuery.m_CipherKeys);
 
 					if(CreateQueryOK)			//create user account succeeded
 					{
@@ -485,7 +485,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				DebugLog(L_INFO, "ACCOUNT_PREPARE_CREATE_ACCOUNT_RSP:");
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_PREPARE_CREATE_ACCOUNT_RSP;
 
-				char country[5];							// Guessed by IPv4 geolocation information
+				char country[WIC_COUNTRY_MAX_LENGTH];	// Guessed by IPv4 geolocation information
 				strcpy_s(country, "US");
 
 				//char* countrycode = GeoIP::ClientLocateIP(aClient->GetIPAddress());
@@ -540,7 +540,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
 				MMG_Profile *myProfiles;
 
-				wchar_t myPassword[16];
+				wchar_t myPassword[WIC_PASSWORD_MAX_LENGTH];
 				memset(myPassword, 0, sizeof(myPassword));
 
 				uchar isBanned = 0;
@@ -612,7 +612,6 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					delete [] myProfiles;
 
 				myProfiles = nullptr;
-
 				*/
 			}
 			break;
@@ -626,7 +625,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
 				MMG_Profile *myProfiles;
 
-				wchar_t myPassword[16];
+				wchar_t myPassword[WIC_PASSWORD_MAX_LENGTH];
 				memset(myPassword, 0, sizeof(myPassword));
 
 				uchar isBanned = 0;

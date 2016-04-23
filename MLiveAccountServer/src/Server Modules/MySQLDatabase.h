@@ -9,8 +9,8 @@ namespace MySQLDatabase
 	
 	//accounts
 	bool	CheckIfEmailExists	(const char *email, uint *dstId);
-	bool	CheckIfCDKeyExists	(uint *dstId);
-	bool	CreateUserAccount	(const char *email, const wchar_t *password, const char *country, const uchar *emailme, const uchar *acceptsemail);
+	bool	CheckIfCDKeyExists	(const ulong cipherKeys[], uint *dstId);
+	bool	CreateUserAccount	(const char *email, const wchar_t *password, const char *country, const uchar *emailme, const uchar *acceptsemail, const ulong cipherKeys[]);
 	bool	AuthUserAccount		(const char *email, wchar_t *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
 	
 	//profiles

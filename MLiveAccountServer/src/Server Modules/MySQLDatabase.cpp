@@ -47,13 +47,11 @@
 	the only problem is that a new connection is required for each thread that makes a query.
 	A thread CAN execute multiple queries on the same connection.
 
-	todo:
-	- save/get cipher keys to/from database
-	- do checkcdkeyexists function
+	TODO:
 	- rename database fields to something that better describes what they are
-		emailme, acceptsemail, isbanned, cdkey
+		emailme, acceptsemail, isbanned
 		experience, onlinestatus can probably be removed
-	- CreateUserProfile, DeleteUserProfile and QueryUserProfile are a little messy but are sufficient for now
+	- CreateUserAccount, CreateUserProfile, DeleteUserProfile and QueryUserProfile are a little messy but are sufficient for now
 
 */
 
@@ -228,13 +226,7 @@ namespace MySQLDatabase
 		return querySuccess;
 	}
 
-	bool CheckIfCDKeyExists(uint *dstId)
-	{
-		*dstId = 0;
-		return true;
-	}
-
-	bool CreateUserAccount(const char *email, const wchar_t *password, const char *country, const uchar *emailme, const uchar *acceptsemail)
+	bool CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	{
 		MYSQL *con = mysql_init(NULL);
 
@@ -247,16 +239,75 @@ namespace MySQLDatabase
 			return false;
 		}
 
-		char *sql = "INSERT INTO mg_accounts (email, password, country, emailme, acceptsemail, activeprofileid, isbanned, cdkey) VALUES (?, ?, ?, ?, ?, 0, 0, 0)";
+		char *sql = "SELECT id FROM mg_cdkeys WHERE cipherkeys0 = ? AND cipherkeys1 = ? AND cipherkeys2 = ? AND cipherkeys3 = ?";
+
+		MySQLQuery query(con, sql);
+		MYSQL_BIND param[4], result[1];
+		uint id;
+		bool querySuccess;
+
+		memset(param, 0, sizeof(param));
+		memset(result, 0, sizeof(result));
+
+		query.Bind(param[0], cipherKeys[0]);
+		query.Bind(param[1], cipherKeys[1]);
+		query.Bind(param[2], cipherKeys[2]);
+		query.Bind(param[3], cipherKeys[3]);
+
+		query.Bind(result[0], id);		//mg_cdkeys.id
+
+		if(!query.StmtExecute(param, result))
+		{
+			DatabaseLog("CheckIfCDKeyExists() query failed:");
+			querySuccess = false;
+			*dstId = 0;
+		}
+		else
+		{
+			if (!query.StmtFetch())
+			{
+				DatabaseLog("cipherkeys not found");
+				querySuccess = true;
+				*dstId = 0;
+			}
+			else
+			{
+				DatabaseLog("cipherkeys found");
+				querySuccess = true;
+				*dstId = id;
+			}
+		}
+		
+		mysql_close(con);
+		mysql_thread_end();
+
+		return querySuccess;
+	}
+
+	bool CreateUserAccount(const char *email, const wchar_t *password, const char *country, const uchar *emailme, const uchar *acceptsemail, const ulong cipherKeys[])
+	{
+		MYSQL *con = mysql_init(NULL);
+
+		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
+		{
+			DebugLog(L_ERROR, "%s", mysql_error(con));
+			mysql_close(con);
+			mysql_thread_end();
+
+			return false;
+		}
+
+		//step 1: insert account
+		char *sql = "INSERT INTO mg_accounts (email, password, country, emailme, acceptsemail, activeprofileid, isbanned) VALUES (?, ?, ?, ?, ?, 0, 0)";
 
 		MySQLQuery query(con, sql);
 		MYSQL_BIND params[5];
 		ulong email_len, pass_len, country_len;
-		bool querySuccess;
+		uint account_insert_id, cdkey_insert_id;
+		bool query1Success, query2Success;
 
 		memset(params, 0, sizeof(params));
 
-		// TODO: save cipherkeys/cdkey
 		query.Bind(params[0], email, email_len);		//email
 		query.Bind(params[1], password, pass_len);		//password
 		query.Bind(params[2], country, country_len);	//country
@@ -266,18 +317,50 @@ namespace MySQLDatabase
 		if (!query.StmtExecute(params))
 		{
 			DatabaseLog("CreateUserAccount() query failed: %s", email);
-			querySuccess = false;
+			account_insert_id = 0;
+			query1Success = false;
 		}
 		else
 		{
 			DatabaseLog("created account: %s", email);
-			querySuccess = true;
+			account_insert_id = (uint)mysql_insert_id(con);
+			query1Success = true;
 		}
-		
+
+		//step 2: insert cdkeys
+		if(query1Success)
+		{
+			char *sql2 = "INSERT INTO mg_cdkeys (accountid, cipherkeys0, cipherkeys1, cipherkeys2, cipherkeys3) VALUES (?, ?, ?, ?, ?)";
+
+			MySQLQuery query2(con, sql2);
+			MYSQL_BIND params2[5];
+
+			memset(params2, 0, sizeof(params2));
+
+			query2.Bind(params2[0], account_insert_id);	
+			query2.Bind(params2[1], cipherKeys[0]);
+			query2.Bind(params2[2], cipherKeys[1]);
+			query2.Bind(params2[3], cipherKeys[2]);
+			query2.Bind(params2[4], cipherKeys[3]);
+
+			if (!query2.StmtExecute(params2))
+			{
+				DatabaseLog("CreateUserAccount() query2 failed: %s", email);
+				cdkey_insert_id = 0;
+				query2Success = false;
+			}
+			else
+			{
+				DatabaseLog("inserted cipherkeys: %s", email);
+				cdkey_insert_id = (uint)mysql_insert_id(con);
+				query2Success = true;
+			}
+		}
+
 		mysql_close(con);
 		mysql_thread_end();
 
-		return querySuccess;
+		return query1Success && query2Success;
 	}
 
 	bool AuthUserAccount(const char *email, wchar_t *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken)
@@ -293,13 +376,18 @@ namespace MySQLDatabase
 			return false;
 		}
 
-		char *sql = "SELECT id, password, activeprofileid, isbanned FROM mg_accounts WHERE email = ?";
+		char *sql = "SELECT mg_accounts.id, mg_accounts.password, mg_accounts.activeprofileid, mg_accounts.isbanned, mg_cdkeys.id AS cdkeyid "
+					"FROM mg_accounts "
+					"JOIN mg_cdkeys "
+					"ON mg_accounts.id = mg_cdkeys.accountid "
+					"WHERE mg_accounts.email = ?";
 
 		MySQLQuery query(con, sql);
-		MYSQL_BIND param[1], results[4];
-		wchar_t password[16];
+		MYSQL_BIND param[1], results[5];
+		wchar_t password[WIC_PASSWORD_MAX_LENGTH];
 		uint id, activeprofileid;
 		uchar isbanned;
+		uint cdkeyid;
 		ulong email_len, pass_len;
 		bool querySuccess;
 
@@ -310,11 +398,11 @@ namespace MySQLDatabase
 		
 		query.Bind(param[0], email, email_len);		//email
 
-		// TODO: get cipherkeys/cdkey
 		query.Bind(results[0], id);					//mg_accounts.id
 		query.Bind(results[1], password, pass_len);	//mg_accounts.password
 		query.Bind(results[2], activeprofileid);	//mg_accounts.activeprofileid
 		query.Bind(results[3], isbanned);			//mg_accounts.isbanned
+		query.Bind(results[4], cdkeyid);			//mg_cdkeys.id AS cdkeyid
 		
 		if(!query.StmtExecute(param, results))
 		{
@@ -323,6 +411,8 @@ namespace MySQLDatabase
 
 			authToken->m_AccountId = 0;
 			authToken->m_ProfileId = 0;
+			//authToken->m_TokenId = 0;
+			authToken->m_CDkeyId = 0;
 			dstPassword = L"";
 			*dstIsBanned = 0;
 		}
@@ -335,6 +425,8 @@ namespace MySQLDatabase
 
 				authToken->m_AccountId = 0;
 				authToken->m_ProfileId = 0;
+				//authToken->m_TokenId = 0;
+				authToken->m_CDkeyId = 0;
 				dstPassword = L"";
 				*dstIsBanned = 0;
 			}
@@ -345,6 +437,8 @@ namespace MySQLDatabase
 
 				authToken->m_AccountId = id;
 				authToken->m_ProfileId = activeprofileid;
+				//authToken->m_TokenId = 0;
+				authToken->m_CDkeyId = cdkeyid;
 				wcscpy(dstPassword, password);
 				*dstIsBanned = isbanned;
 			}
@@ -539,7 +633,7 @@ namespace MySQLDatabase
 			return false;
 		}
 
-		//todo: (when forum is implemented) 
+		//TODO: (when forum is implemented) 
 		//dont delete the profile, just rename the profile name
 		//set an 'isdeleted' flag to 1
 		//disassociate the profile with the account
@@ -674,7 +768,7 @@ namespace MySQLDatabase
 		MySQLQuery query(con, sql);
 		MYSQL_BIND param[1], results[5];
 		ulong name_len;
-		wchar_t name[25];
+		wchar_t name[WIC_NAME_MAX_LENGTH];
 		bool query1Success, query2Success, query3Success;
 
 		memset(name, 0, sizeof(name));
@@ -787,7 +881,7 @@ namespace MySQLDatabase
 		ulong name_len, email_len;
 		uint id, clanid, onlinestatus;
 		uchar rank, rankinclan;
-		wchar_t name[25];
+		wchar_t name[WIC_NAME_MAX_LENGTH];
 		bool querySuccess;
 
 		memset(name, 0, sizeof(name));

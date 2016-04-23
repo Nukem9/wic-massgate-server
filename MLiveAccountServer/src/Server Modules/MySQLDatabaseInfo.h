@@ -17,7 +17,16 @@ static const char *MySQLTableValues[] =
 		"acceptsemail tinyint unsigned not null,"
 		"activeprofileid int notnull,"
 		"isbanned tinyint unsigned not null,"
-		"cdkey int not null,"
+		"PRIMARY KEY (id)"
+	");",
+
+	"CREATE TABLE mg_cdkeys ("
+		"id int not null auto_increment,"
+		"accountid int not null,"
+		"cipherkeys0 int not null,"
+		"cipherkeys1 int not null,"
+		"cipherkeys2 int not null,"
+		"cipherkeys3 int not null,"
 		"PRIMARY KEY (id)"
 	");",
 	

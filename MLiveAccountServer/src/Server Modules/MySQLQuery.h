@@ -60,6 +60,15 @@ public:
 		param.length= 0;
 	}
 
+	//INT
+	void Bind(MYSQL_BIND &param, const ulong &Value)
+	{
+		param.buffer_type= MYSQL_TYPE_LONG;
+		param.buffer= (char *)&Value;
+		param.is_null= (my_bool*)0;
+		param.length= 0;
+	}
+
 	//BIGINT
 	void Bind(MYSQL_BIND &param, const __int64 &Value)
 	{

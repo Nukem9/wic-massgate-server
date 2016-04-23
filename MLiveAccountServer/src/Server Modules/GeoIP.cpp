@@ -62,7 +62,7 @@ namespace GeoIP
 		
 		while (imin <= imax)
 		{
-			int imid = (imin + imax) / 2;
+			int imid = (imin + imax) >> 1;
 			if ((IpAddress >= data[imid].from) && (IpAddress <= data[imid].to))
 			{
 				if (!strcmp(data[imid].code,"-"))		//if the country of an IP range is not specified, output "US" as default country

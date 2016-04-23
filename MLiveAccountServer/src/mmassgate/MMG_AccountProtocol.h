@@ -52,8 +52,8 @@ public:
 			MMG_Profile		m_Profile;
 			MMG_AuthToken	m_Credentials;
 
-			char			m_Email[64];
-			wchar_t			m_Password[16];
+			char			m_Email[WIC_EMAIL_MAX_LENGTH];
+			wchar_t			m_Password[WIC_PASSWORD_MAX_LENGTH];
 			uint			m_UseProfile;
 			uint			m_Fingerprint;
 			uchar			m_HasOldCredentials;
@@ -72,9 +72,9 @@ public:
 		class Create
 		{
 		public:
-			char			m_Email[64];
-			wchar_t			m_Password[16];
-			char			m_Country[5];
+			char			m_Email[WIC_EMAIL_MAX_LENGTH];
+			wchar_t			m_Password[WIC_PASSWORD_MAX_LENGTH];
+			char			m_Country[WIC_COUNTRY_MAX_LENGTH];
 			uchar			m_EmailMeGameRelated;
 			uchar			m_AcceptsEmail;
 
@@ -92,9 +92,9 @@ public:
 		class ModifyProfile
 		{
 		public:
-			char			m_Email[64];
-			wchar_t			m_Password[16];
-			wchar_t			m_Name[25];
+			char			m_Email[WIC_EMAIL_MAX_LENGTH];
+			wchar_t			m_Password[WIC_PASSWORD_MAX_LENGTH];
+			wchar_t			m_Name[WIC_NAME_MAX_LENGTH];
 			uint			m_Operation;
 			uint			m_ProfileId;
 			uint			m_Fingerprint;
@@ -114,8 +114,8 @@ public:
 		class RetrieveProfiles
 		{
 		public:
-			char			m_Email[64];
-			wchar_t			m_Password[16];
+			char			m_Email[WIC_EMAIL_MAX_LENGTH];
+			wchar_t			m_Password[WIC_PASSWORD_MAX_LENGTH];
 			uint			m_Fingerprint;
 
 		public:

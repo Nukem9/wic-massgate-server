@@ -127,7 +127,7 @@ public:
 
 	bool HasFlag(ServerListFilterFlags flag)
 	{
-		return this->activefilters & flag;
+		return (this->activefilters & flag) != 0;
 	}
 };
 
