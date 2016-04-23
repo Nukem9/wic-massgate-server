@@ -273,12 +273,17 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					wcscpy_s(aClient->GetProfile()->m_Name, L"Nukem");
 					aClient->GetProfile()->m_OnlineStatus = 1;
 					aClient->GetProfile()->m_Rank = 18;
+					aClient->GetProfile()->m_ProfileId = 1234;
 
 					// Write the profile info stream
 					aClient->GetProfile()->ToStream(&cryptMessage);
 
 					MMG_AuthToken *myAuthToken = aClient->GetToken();
 
+					//sync client->authtoken.profileid to client->profile.profileid
+					myAuthToken->m_ProfileId = 1234; //myAuthToken->m_ProfileId = aClient->GetProfile()->m_ProfileId;
+					myAuthToken->m_AccountId = 69;
+					
 					// TigerMD5 of ...? (possibly crypt keys)
 					/*myAuthToken->m_Hash.m_Hash[0] = 0x558C0A1C;
 					myAuthToken->m_Hash.m_Hash[1] = 0xA59C9FCA;
@@ -527,7 +532,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				MMG_Profile *myProfile = aClient->GetProfile();
 				wcscpy_s(myProfile->m_Name, L"Nukem");
-				myProfile->m_ProfileId = 0;
+				myProfile->m_ProfileId = 1234;
 				myProfile->m_ClanId = 0;
 				myProfile->m_OnlineStatus = 0;
 				myProfile->m_Rank = 18;

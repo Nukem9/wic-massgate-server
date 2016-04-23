@@ -174,6 +174,17 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_PROFILE_GET_EDITABLES_REQ: Sending information");
 
+			/*
+				TODO:housebee
+				- read the data from the client, for which profile id am i retrieving the motto and homepage?
+				- (skip) read values from database using client data
+				- create MMG_ProfileEditableVariablesProtocol using values from database, 
+					or use hardcoded values if there is no database code. (or you could always write the code yourself :P)
+				- write response delimiter to stream
+				- write the MMG_ProfileEditableVariablesProtocol.ToStream(&responseMessage).... to the response message stream
+				- send the response to the client, aClient->SendData(&responseMessage)
+			*/
+
 			// to do: read strings from profile (or profile related) database
 
 			MMG_ProfileEditableVariablesProtocol myProfileEditableVariables;
@@ -192,6 +203,16 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_SET_EDITABLES_REQ:
 		{
 			DebugLog(L_INFO, "MESSAGING_PROFILE_SET_EDITABLES_REQ: Sending information");
+
+			/*
+				TODO:housebee
+				- read the data from the client, for which profile id am i saving the motto and homepage? and whats the new motto and homepage?
+				- create MMG_ProfileEditableVariablesProtocol set its members to values read from the client
+				- (skip) save values to the database
+				- write response delimiter to stream
+				- write the new MMG_ProfileEditableVariablesProtocol to the stream ( dont need to get them from the database)
+				- send the response to the client, aClient->SendData(&responseMessage)
+			*/
 
 			// to do: save strings to profile (or profile related) database
 
