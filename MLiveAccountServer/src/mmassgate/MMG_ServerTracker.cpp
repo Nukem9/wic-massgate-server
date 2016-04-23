@@ -43,7 +43,11 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			// read server fiters from the client
 			ServerListFilters filters;
 			filters.ReadFilters(activefilters, aMessage);
-			filters.PrintFilters(activefilters); //debug purposes
+
+			if(filters.HasFlag(DEDICATED_FLAG))
+				printf("activefilters has DEDICATED_FLAG\n");
+
+			filters.PrintFilters(); //debug purposes
 
 			//global server count
 			const int TOTAL_SERVERS = 2;
