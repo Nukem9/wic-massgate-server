@@ -1,5 +1,19 @@
 #pragma once
 
+struct MMG_TrackableServerCookie
+{
+	union
+	{
+		uint64 contents[2];
+
+		struct
+		{
+			uint64 trackid;
+			uint64 hash;
+		};
+	};
+};
+
 class MMG_TrackableServerHeartbeat : public MMG_IStreamable
 {
 public:
