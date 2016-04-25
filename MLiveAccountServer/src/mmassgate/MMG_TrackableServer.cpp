@@ -39,6 +39,15 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		}
 		break;
 
+		// List of banned words in chat
+		case MMG_ProtocolDelimiters::MESSAGING_DS_GET_BANNED_WORDS_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_DS_GET_BANNED_WORDS_REQ:");
+
+			// See MMG_BannedWordsProtocol::GetRsp::FromStream
+		}
+		break;
+
 		// Initial message from any server that wants to connect to Massgate.
 		case MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_AUTH_DS_CONNECTION:
 		{
