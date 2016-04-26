@@ -13,6 +13,43 @@ MMG_ServerTracker::MMG_ServerTracker()
 {
 }
 
+struct cycletest
+{
+	uint64 hash;
+	wchar_t *mapname;
+};
+
+cycletest cycles[] =
+{
+	{ 0x01574C4E7CBEF3D7, L"do_Apocalypse" },
+	{ 0x366789C15AE10C5E, L"tw_Radar" },
+	{ 0x36F05A2AA0295C85, L"do_Canal" },
+	{ 0x429233342E470501, L"do_Studio" },
+	{ 0x4C00F431FBEAE817, L"do_Riverbed" },
+	{ 0x525B0650EDB3F907, L"do_SpaceNeedle" },
+	{ 0x644ADB0FDB2C4659, L"do_Quarry" },
+	{ 0x683A6788987BBD08, L"do_Fjord" },
+	{ 0x769CA9D3DB3D4BC7, L"as_Bridge" },
+	{ 0x831F7B7F952D5B74, L"as_Hillside" },
+	{ 0x8F02D72ADA98376A, L"do_Xmas" },
+	{ 0x9E09C0C0A8287490, L"do_Hometown" },
+	{ 0xA034BA00003A26EF, L"do_Liberty" },
+	{ 0xA26056C7BDAFA137, L"as_AirBase" },
+	{ 0xA6125C4498FAAFE5, L"tw_Wasteland" },
+	{ 0xA8F4AD3889B7DB44, L"tw_Highway" },
+	{ 0xB192ED3AC88EC95E, L"as_Dome" },
+	{ 0xB66333A0F3934C34, L"do_Farmland" },
+	{ 0xB9A06118E38E7651, L"do_Powerplant" },
+	{ 0xBE135EFD6055077E, L"do_Riviera" },
+	{ 0xC5C22A5CBDA4CEA9, L"do_Island" },
+	{ 0xC94327B399856BA4, L"do_Tequila" },
+	{ 0xCE2385D40F5D1752, L"do_Mauer" },
+	{ 0xD9B85CACC9FEA400, L"do_Silo" },
+	{ 0xEC622A23B302DC9D, L"do_Seaside" },
+	{ 0xEC7E463C053AE139, L"as_Typhoon" },
+	{ 0xECD1F5047AD078A5, L"do_Ruins" },
+};
+
 bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter)
 {
 	MN_WriteMessage	responseMessage(2048);
@@ -26,6 +63,30 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		}
 		break;
 		*/
+
+		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CYCLE_MAP_LIST_REQ:
+		{
+			DebugLog(L_INFO, "SERVERTRACKER_USER_CYCLE_MAP_LIST_REQ:");
+
+			uint64 cycleHash;
+			aMessage->ReadUInt64(cycleHash);
+
+			DebugLog(L_INFO, "hash: %llX", cycleHash);
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_CYCLE_MAP_LIST_RSP);
+			responseMessage.WriteUInt64(cycleHash);
+			responseMessage.WriteUShort(ARRAYSIZE(cycles));
+
+			for (int i = 0; i < ARRAYSIZE(cycles); i++)
+			{
+				responseMessage.WriteUInt64(cycles[i].hash);
+				responseMessage.WriteString(cycles[i].mapname);
+			}
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
 
 		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_LIST_SERVERS:
 		{
@@ -50,7 +111,7 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			filters.PrintFilters(); //debug purposes
 
 			//global server count
-			const int TOTAL_SERVERS = 2;
+			const int TOTAL_SERVERS = 1;
 
 			//send total number of servers in global list
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_NUM_TOTAL_SERVERS);
@@ -64,6 +125,37 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			MMG_TrackableServerBriefInfo shortServerList[TOTAL_SERVERS];
 			MMG_TrackableServerFullInfo fullServerList[TOTAL_SERVERS];
 
+
+			auto sv = &MMG_TrackableServer::ourInstance->m_ServerList[0];
+
+			shortServerList[0].m_CycleHash = 0;
+			wcscpy_s(shortServerList[0].m_GameName, (const wchar_t *)sv->m_Info.m_ServerName);
+			shortServerList[0].m_IP = 0x0100007F;//sv->m_Info.m_Ip;
+			shortServerList[0].m_IsRankBalanced = sv->m_Info.m_IsRankBalanced;
+			shortServerList[0].m_MassgateCommPort = sv->m_Info.m_MassgateCommPort;
+			shortServerList[0].m_ModId = sv->m_Info.m_ModId;
+			shortServerList[0].m_ServerId = sv->m_Info.m_ServerId;
+			shortServerList[0].m_ServerType = sv->m_Info.m_ServerType;
+
+			fullServerList[0].gapc4 = 0;
+			fullServerList[0].m_CurrentLeader = sv->m_Heartbeat.m_CurrentLeader;
+			fullServerList[0].m_CurrentMapHash = sv->m_Heartbeat.m_CurrentMapHash;
+			fullServerList[0].m_CycleHash = 0;
+			fullServerList[0].m_GameTime = sv->m_Heartbeat.m_GameTime;
+			fullServerList[0].m_GameVersion = sv->m_Info.m_GameVersion;
+			fullServerList[0].m_HostProfileId = sv->m_Info.m_HostProfileId;
+			fullServerList[0].m_IP = 0x0100007F;//sv->m_Info.m_Ip;
+			fullServerList[0].m_MassgateCommPort = sv->m_Info.m_MassgateCommPort;
+			fullServerList[0].m_ModId = sv->m_Info.m_ModId;
+			fullServerList[0].m_Ping = 51;
+			fullServerList[0].m_ProtocolVersion = PROTO_1012;
+			fullServerList[0].m_ServerId = sv->m_Info.m_ServerId;
+			wcscpy_s(fullServerList[0].m_ServerName, (const wchar_t *)sv->m_Info.m_ServerName);
+			fullServerList[0].m_ServerReliablePort = sv->m_Info.m_ServerReliablePort;
+			fullServerList[0].m_ServerType = sv->m_Info.m_ServerType;
+			fullServerList[0].m_WinnerTeam = 0;
+			fullServerList[0]._bf198 = 0;
+
 			//send matched server list
 			for (int i = 0; i < TOTAL_SERVERS; i++)
 			{
@@ -71,12 +163,18 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_SHORT_SERVER_INFO);
 				shortServerList[i].ToStream(&responseMessage);
 				
+				if (!aClient->SendData(&responseMessage))
+					return false;
+
 				//write complete server info to stream
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_COMPLETE_SERVER_INFO);
 				fullServerList[i].ToStream(&responseMessage);
-			
-				//success flag?
-				responseMessage.WriteUInt(1);
+
+				// Must be zero (protocol verification only)
+				responseMessage.WriteUInt(0);
+
+				if (!aClient->SendData(&responseMessage))
+					return false;
 			}
 
 			//send "no more server info" delimiter

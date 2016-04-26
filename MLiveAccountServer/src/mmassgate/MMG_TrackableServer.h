@@ -38,8 +38,8 @@ public:
 		}
 	};
 
-private:
 	std::vector<Server> m_ServerList;
+private:
 	MT_Mutex m_Mutex;
 
 	bool AuthServer(SvClient *aClient, uint aKeySequence, ushort aProtocolVersion);
