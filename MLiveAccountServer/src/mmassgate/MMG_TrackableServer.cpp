@@ -40,6 +40,9 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 			// TODO: Verify proto and pub id
 
+			//if (publicServerId != server->m_Info.m_ServerId)
+				// ?????
+
 			// Pong!
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_DS_PONG);
 
@@ -57,7 +60,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		}
 		break;
 
-		// Initial message from any server that wants to connect to Massgate.
+		// Initial message from any server that wants to connect to Massgate
 		case MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_AUTH_DS_CONNECTION:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_SERVER_AUTH_DS_CONNECTION:");
@@ -71,7 +74,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			if (!aMessage->ReadUInt(keySequenceNumber))
 				return false;
 
-			// Drop immediately if the key not valid
+			// Drop immediately if key not valid
 			if (!AuthServer(aClient, keySequenceNumber, protocolVersion))
 			{
 				DebugLog(L_INFO, "Failed to authenticate server");
@@ -109,7 +112,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		}
 		break;
 
-		// Broadcasted startup message when a map is loaded
+		// Broadcasted message when the very first map is loaded
 		case MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_STARTED:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_SERVER_STARTED:");
@@ -126,9 +129,14 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				aClient->SetLoginStatus(true);
 				aClient->SetTimeout(WIC_HEARTBEAT_NET_TIMEOUT);
 
-				// Send back the assigned public id
-				DebugLog(L_INFO, "test: %ws %s %X %d", startupVars.m_ServerName, startupVars.m_PublicIp, startupVars.m_Ip, startupVars.m_MassgateCommPort);
+				DebugLog(L_INFO, "Info: %ws %s %X %d %d",
+					startupVars.m_ServerName,
+					startupVars.m_PublicIp,
+					startupVars.m_Ip,
+					startupVars.m_MassgateCommPort,
+					startupVars.m_ServerReliablePort);
 
+				// Send back the assigned public ID
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_PUBLIC_ID);
 				responseMessage.WriteUInt(server->m_Info.m_ServerId);// ServerId
 
@@ -150,13 +158,13 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		}
 		break;
 
-		// Map rotation cycle info from server
+		// Map rotation cycle info
 		case MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_MAP_LIST:
 		{
+			DebugLog(L_INFO, "SERVERTRACKER_SERVER_MAP_LIST:");
+
 			ushort mapCount;
 			aMessage->ReadUShort(mapCount);
-
-			DebugLog(L_INFO, "SERVERTRACKER_SERVER_MAP_LIST:");
 
 			for (int i = 0; i < mapCount; i++)
 			{
@@ -166,7 +174,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				aMessage->ReadUInt64(mapHash);
 				aMessage->ReadString(mapName, ARRAYSIZE(mapName));
 
-				DebugLog(L_INFO, "%ws", mapName);
+				DebugLog(L_INFO, "%llX - %ws", mapHash, mapName);
 			}
 		}
 		break;
@@ -177,8 +185,10 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			DebugLog(L_INFO, "SERVERTRACKER_SERVER_STATUS:");
 
 			MMG_TrackableServerHeartbeat heartbeat;
-
 			if (!heartbeat.FromStream(aMessage))
+				return false;
+
+			if (!UpdateServer(server, &heartbeat))
 				return false;
 		}
 		break;
@@ -256,14 +266,25 @@ bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, MM
 	return true;
 }
 
-void MMG_TrackableServer::DisconnectServer(MMG_TrackableServer::Server *aServer)
+bool MMG_TrackableServer::UpdateServer(MMG_TrackableServer::Server *aServer, MMG_TrackableServerHeartbeat *aHeartbeat)
 {
+	// Compare connection cookies
+	if (aServer->m_Cookie.hash != aHeartbeat->m_Cookie.hash ||
+		aServer->m_Cookie.trackid != aHeartbeat->m_Cookie.trackid)
+	{
+		__debugbreak();
+		return false;
+	}
 
+	// Copy heartbeat variables over to the startup info structure
+	aServer->m_Info.m_CurrentMapHash	= aHeartbeat->m_CurrentMapHash;
+	aServer->m_Info.somebits.bitfield1	= aHeartbeat->m_MaxNumPlayers;
+	aServer->m_Heartbeat				= *aHeartbeat;
+	return true;
 }
 
-bool MMG_TrackableServer::UpdateServer(MMG_TrackableServer::Server *aServer, MMG_ServerStartupVariables *StartupVars, uint *ServerId)
+void MMG_TrackableServer::DisconnectServer(MMG_TrackableServer::Server *aServer)
 {
-	return false;
 }
 
 MMG_TrackableServer::Server *MMG_TrackableServer::FindServer(SvClient *aClient)

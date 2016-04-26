@@ -2,13 +2,13 @@
 
 MMG_TrackableServerHeartbeat::MMG_TrackableServerHeartbeat()
 {
-	memset(m_PlayersInGame, 0, sizeof(m_PlayersInGame));
-	memset(&m_Cookie, 0, sizeof(m_Cookie));
 	m_CurrentMapHash		= 0;
 	m_GameTime				= 0.0f;
+	memset(m_PlayersInGame, 0, sizeof(m_PlayersInGame));
 	m_CurrentLeader			= 0;
 	m_MaxNumPlayers			= 0;
 	m_NumPlayers			= 0;
+	memset(&m_Cookie, 0, sizeof(m_Cookie));
 }
 
 void MMG_TrackableServerHeartbeat::ToStream(MN_WriteMessage *aMessage)

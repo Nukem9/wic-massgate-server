@@ -3,8 +3,8 @@
 MMG_ServerStartupVariables::MMG_ServerStartupVariables()
 {
 	memset(m_ServerName, 0, sizeof(m_ServerName));
-	memset(m_PublicIp, 0, sizeof(m_PublicIp));
 	m_CurrentMapHash		= 0;
+	memset(m_PublicIp, 0, sizeof(m_PublicIp));
 	m_Ip					= 0;
 	m_ModId					= 0;
 	m_ServerReliablePort	= 0;
