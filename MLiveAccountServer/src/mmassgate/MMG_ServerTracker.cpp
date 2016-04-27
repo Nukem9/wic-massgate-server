@@ -110,71 +110,34 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 
 			filters.PrintFilters(); //debug purposes
 
-			//global server count
-			const int TOTAL_SERVERS = 1;
-
-			//send total number of servers in global list
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_NUM_TOTAL_SERVERS);
-			responseMessage.WriteUInt(TOTAL_SERVERS);
-
 			// list of matched servers retrieved from global list, currently disregarding filters
 			// NOTE: all servers are sent to the client
 			// TODO:	- create list of servers using filters (MMG_TrackableServerFullInfo)
 			//			- build MMG_TrackableServerBriefInfo from MMG_TrackableServerFullInfo
 			// temporary
-			MMG_TrackableServerBriefInfo shortServerList[TOTAL_SERVERS];
-			MMG_TrackableServerFullInfo fullServerList[TOTAL_SERVERS];
+			uint serverCount;
+			std::vector<MMG_TrackableServerFullInfo> serverFullInfo;
+			std::vector<MMG_TrackableServerBriefInfo> serverBriefInfo;
 
+			MMG_TrackableServer::ourInstance->GetServerListInfo(&serverFullInfo, &serverBriefInfo, &serverCount);
 
-			auto sv = &MMG_TrackableServer::ourInstance->m_ServerList[0];
-
-			shortServerList[0].m_CycleHash = 0;
-			wcscpy_s(shortServerList[0].m_GameName, (const wchar_t *)sv->m_Info.m_ServerName);
-			shortServerList[0].m_IP = 0x0100007F;//sv->m_Info.m_Ip;
-			shortServerList[0].m_IsRankBalanced = sv->m_Info.m_IsRankBalanced;
-			shortServerList[0].m_MassgateCommPort = sv->m_Info.m_MassgateCommPort;
-			shortServerList[0].m_ModId = sv->m_Info.m_ModId;
-			shortServerList[0].m_ServerId = sv->m_Info.m_ServerId;
-			shortServerList[0].m_ServerType = sv->m_Info.m_ServerType;
-
-			fullServerList[0].gapc4 = 0;
-			fullServerList[0].m_CurrentLeader = sv->m_Heartbeat.m_CurrentLeader;
-			fullServerList[0].m_CurrentMapHash = sv->m_Heartbeat.m_CurrentMapHash;
-			fullServerList[0].m_CycleHash = 0;
-			fullServerList[0].m_GameTime = sv->m_Heartbeat.m_GameTime;
-			fullServerList[0].m_GameVersion = sv->m_Info.m_GameVersion;
-			fullServerList[0].m_HostProfileId = sv->m_Info.m_HostProfileId;
-			fullServerList[0].m_IP = 0x0100007F;//sv->m_Info.m_Ip;
-			fullServerList[0].m_MassgateCommPort = sv->m_Info.m_MassgateCommPort;
-			fullServerList[0].m_ModId = sv->m_Info.m_ModId;
-			fullServerList[0].m_Ping = 51;
-			fullServerList[0].m_ProtocolVersion = PROTO_1012;
-			fullServerList[0].m_ServerId = sv->m_Info.m_ServerId;
-			wcscpy_s(fullServerList[0].m_ServerName, (const wchar_t *)sv->m_Info.m_ServerName);
-			fullServerList[0].m_ServerReliablePort = sv->m_Info.m_ServerReliablePort;
-			fullServerList[0].m_ServerType = sv->m_Info.m_ServerType;
-			fullServerList[0].m_WinnerTeam = 0;
-			fullServerList[0]._bf198 = 0;
+			//send total number of servers in global list
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_NUM_TOTAL_SERVERS);
+			responseMessage.WriteUInt(serverCount);
 
 			//send matched server list
-			for (int i = 0; i < TOTAL_SERVERS; i++)
+			for (int i = 0; i < serverCount; i++)
 			{
 				//write short server info to stream
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_SHORT_SERVER_INFO);
-				shortServerList[i].ToStream(&responseMessage);
+				serverBriefInfo[i].ToStream(&responseMessage);
 				
-				if (!aClient->SendData(&responseMessage))
-					return false;
-
 				//write complete server info to stream
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_COMPLETE_SERVER_INFO);
-				fullServerList[i].ToStream(&responseMessage);
+				serverFullInfo[i].ToStream(&responseMessage);
 
 				// Must be zero (protocol verification only)
 				responseMessage.WriteUInt(0);
-
-				if (!aClient->SendData(&responseMessage))
-					return false;
 			}
 
 			//send "no more server info" delimiter

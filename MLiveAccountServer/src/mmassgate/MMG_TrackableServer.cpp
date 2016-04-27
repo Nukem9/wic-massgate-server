@@ -1,8 +1,7 @@
 #include "../stdafx.h"
 
-MMG_TrackableServer::MMG_TrackableServer()
+MMG_TrackableServer::MMG_TrackableServer() : m_ServerList()
 {
-	m_ServerList.clear();
 }
 
 bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter)
@@ -244,7 +243,7 @@ bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, MM
 	//
 	// License validation
 	//
-	if (aStartupVars->somebits.bitfield4)
+	if (aStartupVars->somebits.Ranked)
 	{
 		// If ranked and mod, drop
 		if (aStartupVars->m_ModId != 0)
@@ -299,4 +298,72 @@ MMG_TrackableServer::Server *MMG_TrackableServer::FindServer(SvClient *aClient)
 	}
 
 	return nullptr;
+}
+
+bool MMG_TrackableServer::GetServerListInfo(std::vector<MMG_TrackableServerFullInfo> *aFullInfo, std::vector<MMG_TrackableServerBriefInfo> *aBriefInfo, uint *aCount)
+{
+	// Atleast one parameter must be supplied
+	if (!aFullInfo && !aBriefInfo && !aCount)
+		return false;
+
+	// Reset any initial data
+	if (aFullInfo)
+		aFullInfo->clear();
+
+	if (aBriefInfo)
+		aBriefInfo->clear();
+
+	if (aCount)
+		*aCount = this->m_ServerList.size();
+
+	// Loop through each master list entry and convert the structures
+	for (auto& server : this->m_ServerList)
+	{
+		// Full tracker information
+		if (aFullInfo)
+		{
+			MMG_TrackableServerFullInfo fullInfo;
+
+			fullInfo.m_GameVersion			= server.m_Info.m_GameVersion;
+			fullInfo.m_ProtocolVersion		= PROTO_1012;
+			fullInfo.m_CurrentMapHash		= server.m_Heartbeat.m_CurrentMapHash;
+			fullInfo.m_CycleHash			= 0;// TODO
+			wcscpy_s(fullInfo.m_ServerName, (const wchar_t *)server.m_Info.m_ServerName);
+			fullInfo.m_ServerReliablePort	= server.m_Info.m_ServerReliablePort;
+			fullInfo.gapc4					= 0;// TODO
+			fullInfo._bf198					= 0;// TODO
+			fullInfo.m_ServerType			= server.m_Info.m_ServerType;
+			fullInfo.m_IP					= 0x0100007F;//sv->m_Info.m_Ip;
+			fullInfo.m_ModId				= server.m_Info.m_ModId;
+			fullInfo.m_MassgateCommPort		= server.m_Info.m_MassgateCommPort;
+			fullInfo.m_GameTime				= server.m_Heartbeat.m_GameTime;
+			fullInfo.m_ServerId				= server.m_Info.m_ServerId;
+			fullInfo.m_CurrentLeader		= server.m_Heartbeat.m_CurrentLeader;
+			fullInfo.m_HostProfileId		= server.m_Info.m_HostProfileId;
+			fullInfo.m_WinnerTeam			= 0;
+			// TODO: m_Players
+			fullInfo.m_Ping					= 51;// TODO
+
+			aFullInfo->push_back(fullInfo);
+		}
+
+		// Brief tracker information
+		if (aBriefInfo)
+		{
+			MMG_TrackableServerBriefInfo briefInfo;
+
+			wcscpy_s(briefInfo.m_GameName, (const wchar_t *)server.m_Info.m_ServerName);
+			briefInfo.m_IP					= 0x0100007F;//sv->m_Info.m_Ip;
+			briefInfo.m_ModId				= server.m_Info.m_ModId;
+			briefInfo.m_ServerId			= server.m_Info.m_ServerId;
+			briefInfo.m_MassgateCommPort	= server.m_Info.m_MassgateCommPort;
+			briefInfo.m_CycleHash			= 0;// TODO
+			briefInfo.m_ServerType			= server.m_Info.m_ServerType;
+			briefInfo.m_IsRankBalanced		= server.m_Info.m_IsRankBalanced;
+
+			aBriefInfo->push_back(briefInfo);
+		}
+	}
+
+	return true;
 }

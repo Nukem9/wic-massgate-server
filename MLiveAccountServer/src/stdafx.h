@@ -6,6 +6,7 @@
 #include <assert.h>
 #include <intrin.h>
 #include <vector>
+#include <list>
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winmm.lib")

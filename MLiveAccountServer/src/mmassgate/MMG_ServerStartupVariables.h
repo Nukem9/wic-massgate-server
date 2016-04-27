@@ -29,7 +29,7 @@ public:
 			uchar bitfield1 : 5; // Maximum number of players
 			uchar bitfield2 : 1; // Password required
 			uchar bitfield3 : 1; // ?
-			uchar bitfield4 : 1; // Ranked
+			uchar Ranked : 1; // Ranked
 			uchar bitfield5 : 1; // Probably incorrect
 		} somebits;
 	};
