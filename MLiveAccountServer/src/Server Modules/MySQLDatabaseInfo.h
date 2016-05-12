@@ -4,48 +4,60 @@ static const char *MySQLTableValues[] =
 {
 	"drop table if exists mg_accounts;",
 
+	"drop table if exists mg_cdkeys;",
+
 	"drop table if exists mg_profiles;",
+
+	"drop table if exists mg_friends;",
 
 	"drop table if exists mg_clans;",
 
 	"CREATE TABLE mg_accounts ("
-		"id int not null auto_increment,"
+		"id int(10) unsigned not null auto_increment,"
 		"email varchar(64) not null,"
-		"password varchar(16) not null,"
+		"password varchar(32) not null,"
 		"country varchar(5) not null,"
-		"emailme tinyint unsigned not null,"
-		"acceptsemail tinyint unsigned not null,"
-		"activeprofileid int notnull,"
-		"isbanned tinyint unsigned not null,"
+		"emailgamerelated tinyint(3) unsigned not null,"
+		"acceptsemail tinyint(3) unsigned not null,"
+		"activeprofileid int(10) unsigned not null,"
+		"isbanned tinyint(3) unsigned not null,"
 		"PRIMARY KEY (id)"
 	");",
 
 	"CREATE TABLE mg_cdkeys ("
-		"id int not null auto_increment,"
-		"accountid int not null,"
-		"cipherkeys0 int not null,"
-		"cipherkeys1 int not null,"
-		"cipherkeys2 int not null,"
-		"cipherkeys3 int not null,"
+		"id int(10) unsigned not null auto_increment,"
+		"accountid int(10) unsigned not null,"
+		"cipherkeys0 int(10) not null,"
+		"cipherkeys1 int(10) not null,"
+		"cipherkeys2 int(10) not null,"
+		"cipherkeys3 int(10) not null,"
 		"PRIMARY KEY (id)"
 	");",
 	
 	"CREATE TABLE mg_profiles ("
-		"id int not null auto_increment,"
-		"accountid int not null,"
-		"name varchar(25) not null,"
-		"experience int unsigned not null,"
-		"rank int unsigned not null,"
-		"clanid int unsigned not null,"
-		"rankinclan int unsigned not null,"
-		"chatoptions int unsigned not null,"
-		"onlinestatus int unsigned not null,"
+		"id int(10) unsigned not null auto_increment,"
+		"accountid int(10) unsigned not null,"
+		"name varchar(32) not null,"
+		"rank tinyint(3) unsigned not null,"
+		"clanid int(10) unsigned not null,"
+		"rankinclan tinyint(3) unsigned not null,"
+		"commoptions int(10) unsigned not null,"
+		"onlinestatus int(10) unsigned not null,"
 		"lastlogindate datetime not null,"
+		"motto varchar(512),"
+		"homepage varchar(512),"
+		"PRIMARY KEY (id)"
+	");",
+
+	"CREATE TABLE mg_friends ("
+		"id int(10) unsigned not null auto_increment,"
+		"profileid int(10) unsigned not null,"
+		"friendprofileid int(10) unsigned not null,"
 		"PRIMARY KEY (id)"
 	");",
 
 	"CREATE TABLE mg_clans ("
-		"id int not null auto_increment,"
+		"id int(10) unsigned not null auto_increment,"
 		"name varchar(25) not null,"
 		"PRIMARY KEY (id)"
 	");",

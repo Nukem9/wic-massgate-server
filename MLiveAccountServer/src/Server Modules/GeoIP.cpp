@@ -47,7 +47,7 @@ namespace GeoIP
 
 			data[i].from = rec.from;
 			data[i].to = rec.to;
-			strncpy(data[i].code, rec.code, sizeof(rec.code));
+			strcpy_s(data[i].code, rec.code);
 		}
 
 		fclose(f);

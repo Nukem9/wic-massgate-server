@@ -244,6 +244,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			// Account authorization: Login
 			case MMG_ProtocolDelimiters::ACCOUNT_AUTH_ACCOUNT_REQ:
 			{
+#ifndef USING_MYSQL_DATABASE
 				// Query the database and determine if credentials were valid
 				uint accProfileId = 0;//Database::AuthUserAccount(myQuery.m_Authenticate.m_Email, myQuery.m_Authenticate.m_Password);
 
@@ -274,11 +275,16 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					aClient->GetProfile()->m_OnlineStatus = 1;
 					aClient->GetProfile()->m_Rank = 18;
 					aClient->GetProfile()->m_ProfileId = 1234;
+					//aClient->GetProfile()->m_ClanId = 4321;
+					//aClient->GetProfile()->m_RankInClan = 1;
 
 					// Write the profile info stream
 					aClient->GetProfile()->ToStream(&cryptMessage);
 
 					MMG_AuthToken *myAuthToken = aClient->GetToken();
+
+					// set client communicaton options
+					aClient->GetOptions()->FromUInt(992);		//i dont remember the default values
 
 					//sync client->authtoken.profileid to client->profile.profileid
 					myAuthToken->m_ProfileId = 1234; //myAuthToken->m_ProfileId = aClient->GetProfile()->m_ProfileId;
@@ -301,14 +307,14 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					cryptMessage.WriteUInt(0);						// myLeaseTimeLeft (Limited access key)
 					cryptMessage.WriteUInt(45523626);				// myAntiSpoofToken (Random number)
 				}
-				
-				/*
+#else		
 				//DebugLog(L_INFO, "ACCOUNT_AUTH_ACCOUNT_RSP: Sending login response (id %i)", AccountId);
 				DebugLog(L_INFO, "ACCOUNT_AUTH_ACCOUNT_RSP:");
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_AUTH_ACCOUNT_RSP;
 
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
 				MMG_Profile *myProfile = aClient->GetProfile();
+				MMG_Options *myOptions = aClient->GetOptions();
 
 				//password check should be done by massgate server, not by database
 				wchar_t myPassword[WIC_PASSWORD_MAX_LENGTH];
@@ -316,8 +322,8 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				uchar isBanned = 0;
 
-				int myStatusCode = 0;
-				int mySuccessFlag = 0;
+				uint myStatusCode = 0;
+				uint mySuccessFlag = 0;
 
 				// Query the database
 				bool AuthQueryOK = MySQLDatabase::AuthUserAccount(myQuery.m_Authenticate.m_Email, myPassword, &isBanned, myAuthToken);
@@ -357,7 +363,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					//profile selection box was used
 					if(myQuery.m_Authenticate.m_UseProfile)
 					{
-						ProfileQueryOK = MySQLDatabase::QueryUserProfile(myAuthToken->m_AccountId, myQuery.m_Authenticate.m_UseProfile, myProfile);
+						ProfileQueryOK = MySQLDatabase::QueryUserProfile(myAuthToken->m_AccountId, myQuery.m_Authenticate.m_UseProfile, myProfile, myOptions);
 
 						//if(myQuery.m_Authenticate.m_UseProfile > 0 && ProfileQueryOK)
 						if(ProfileQueryOK)											//ok to login, set active profile
@@ -380,7 +386,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 						//myQuery.m_Authenticate.m_Credentials, myQuery.m_Authenticate.m_Profile, myQuery.m_Authenticate.m_UseProfile
 						//myAuthToken, myProfile
 
-						ProfileQueryOK = MySQLDatabase::QueryUserProfile(myAuthToken->m_AccountId, myAuthToken->m_ProfileId, myProfile);
+						ProfileQueryOK = MySQLDatabase::QueryUserProfile(myAuthToken->m_AccountId, myAuthToken->m_ProfileId, myProfile, myOptions);
 
 						if(myAuthToken->m_ProfileId > 0 && ProfileQueryOK)			// ok to login, set active profile
 						{
@@ -397,6 +403,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 					//TODO: use SetLoginStatus() + SetTimeout(), we need
 					//a way to determine if a profile or account is currently in use
+					//auth.myLatestVersion??
 
 					// Update the maximum client timeout
 					aClient->SetLoginStatus(true);
@@ -412,13 +419,13 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				myProfile->ToStream(&cryptMessage);
 
 				// TigerMD5 of ...? (possibly crypt keys)
-				//myAuthToken->m_Hash.m_Hash[0] = 0x558C0A1C;
-				//myAuthToken->m_Hash.m_Hash[1] = 0xA59C9FCA;
-				//myAuthToken->m_Hash.m_Hash[2] = 0x6566857D;
-				//myAuthToken->m_Hash.m_Hash[3] = 0x8A3FF551;
-				//myAuthToken->m_Hash.m_Hash[4] = 0xB69D17E5;
-				//myAuthToken->m_Hash.m_Hash[5] = 0xD7BBF74D;
-				//memset(&myAuthToken->m_Hash.m_Hash, 0, 6 * sizeof(ulong));
+				/*myAuthToken->m_Hash.m_Hash[0] = 0x558C0A1C;
+				myAuthToken->m_Hash.m_Hash[1] = 0xA59C9FCA;
+				myAuthToken->m_Hash.m_Hash[2] = 0x6566857D;
+				myAuthToken->m_Hash.m_Hash[3] = 0x8A3FF551;
+				myAuthToken->m_Hash.m_Hash[4] = 0xB69D17E5;
+				myAuthToken->m_Hash.m_Hash[5] = 0xD7BBF74D;
+				memset(&myAuthToken->m_Hash.m_Hash, 0, 6 * sizeof(ulong));*/
 
 				myAuthToken->m_Hash.m_HashLength = 6 * sizeof(ulong);
 				myAuthToken->m_Hash.m_GeneratedFromHashAlgorithm = HASH_ALGORITHM_TIGER;
@@ -429,7 +436,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				cryptMessage.WriteUInt(WIC_CREDAUTH_RESEND_S);	// periodicityOfCredentialsRequests (How long until the first is sent)
 				cryptMessage.WriteUInt(0);						// myLeaseTimeLeft (Limited access key)
 				cryptMessage.WriteUInt(45523626);				// myAntiSpoofToken (Random number)
-				*/
+#endif
 			}
 			break;
 
@@ -438,21 +445,21 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			{
 				DebugLog(L_INFO, "ACCOUNT_CREATE_ACCOUNT_RSP:");
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_CREATE_ACCOUNT_RSP;
+#ifdef USING_MYSQL_DATABASE
+				uint myAccountId=0, myCdkeyId=0;
 
-				uint myId=0, myId2=0;
+				uint myStatusCode = 0;
+				uint mySuccessFlag = 0;
 
-				int myStatusCode = 0;
-				int mySuccessFlag = 0;
+				bool CheckEmailQueryOK = MySQLDatabase::CheckIfEmailExists(myQuery.m_Create.m_Email, &myAccountId);
+				bool CheckCDKeyQueryOK = MySQLDatabase::CheckIfCDKeyExists(myQuery.m_CipherKeys, &myCdkeyId);
 
-				bool CheckEmailQueryOK = MySQLDatabase::CheckIfEmailExists(myQuery.m_Create.m_Email, &myId);
-				bool CheckCDKeyQueryOK = MySQLDatabase::CheckIfCDKeyExists(myQuery.m_CipherKeys, &myId2);
-
-				if (myId > 0 && CheckEmailQueryOK)			//account exists with that email
+				if (myAccountId > 0 && CheckEmailQueryOK)			//account exists with that email
 				{
 					myStatusCode = CreateFailed_EmailExists;
 					mySuccessFlag = 0;
 				}
-				else if(myId2 > 0 && CheckCDKeyQueryOK)		//an account has already been created with this cdkey
+				else if(myCdkeyId > 0 && CheckCDKeyQueryOK)		//an account has already been created with this cdkey
 				{
 					myStatusCode = CreateFailed_CdKeyExhausted;
 					mySuccessFlag = 0;
@@ -481,6 +488,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				cryptMessage.WriteUChar(myStatusCode);
 				cryptMessage.WriteUChar(mySuccessFlag);					// mySuccessFlag
+#endif
 			}
 			break;
 
@@ -491,11 +499,13 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_PREPARE_CREATE_ACCOUNT_RSP;
 
 				char country[WIC_COUNTRY_MAX_LENGTH];	// Guessed by IPv4 geolocation information
+
+#ifndef USING_MYSQL_DATABASE
 				strcpy_s(country, "US");
-
-				//char* countrycode = GeoIP::ClientLocateIP(aClient->GetIPAddress());
-				//strcpy_s(country, countrycode);
-
+#else
+				char* countrycode = GeoIP::ClientLocateIP(aClient->GetIPAddress());
+				strcpy_s(country, countrycode);
+#endif
 				cryptMessage.WriteUChar(AuthSuccess);	// Otherwise AuthFailed_CdKeyExpired
 				cryptMessage.WriteUChar(1);				// mySuccessFlag
 				cryptMessage.WriteString(country);		// yourCountry
@@ -524,24 +534,23 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			{
 				DebugLog(L_INFO, "ACCOUNT_RETRIEVE_PROFILES_RSP: getting profiles for %s", myQuery.m_RetrieveProfiles.m_Email);
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_RETRIEVE_PROFILES_RSP;
-
+#ifndef USING_MYSQL_DATABASE
 				cryptMessage.WriteUChar(AuthSuccess);
 				cryptMessage.WriteUChar(1);	// mySuccessFlag
 				cryptMessage.WriteUInt(1);	// numUserProfiles
-				cryptMessage.WriteUInt(0);	// lastUsedProfileId
+				cryptMessage.WriteUInt(1234);	// lastUsedProfileId
 
 				MMG_Profile *myProfile = aClient->GetProfile();
 				wcscpy_s(myProfile->m_Name, L"Nukem");
 				myProfile->m_ProfileId = 1234;
-				myProfile->m_ClanId = 0;
+				//myProfile->m_ClanId = 4321;
 				myProfile->m_OnlineStatus = 0;
 				myProfile->m_Rank = 18;
-				myProfile->m_RankInClan = 0;
+				//myProfile->m_RankInClan = 1;
 
 				// Write the profile info stream
 				myProfile->ToStream(&cryptMessage);
-
-				/*
+#else
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
 				MMG_Profile *myProfiles;
 
@@ -549,11 +558,11 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				memset(myPassword, 0, sizeof(myPassword));
 
 				uchar isBanned = 0;
-				ulong num_profiles = 0;
+				ulong myProfileCount = 0;
 				uint lastUsedId = 0;
 
-				int myStatusCode = 0;
-				int mySuccessFlag = 0;
+				uint myStatusCode = 0;
+				uint mySuccessFlag = 0;
 
 				bool AuthQueryOK = MySQLDatabase::AuthUserAccount(myQuery.m_RetrieveProfiles.m_Email, myPassword, &isBanned, myAuthToken);
 
@@ -580,14 +589,14 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				else													//should be ok to retrieve profile list
 				{
-					bool RetrieveProfilesQueryOK = MySQLDatabase::RetrieveUserProfiles(myQuery.m_RetrieveProfiles.m_Email, myQuery.m_RetrieveProfiles.m_Password, &num_profiles, &myProfiles);
+					bool RetrieveProfilesQueryOK = MySQLDatabase::RetrieveUserProfiles(myQuery.m_RetrieveProfiles.m_Email, myQuery.m_RetrieveProfiles.m_Password, &myProfileCount, &myProfiles);
 
 					if(RetrieveProfilesQueryOK)
 					{
 						myStatusCode = AuthSuccess;
 						mySuccessFlag = 1;
 
-						if (num_profiles < 1)
+						if (myProfileCount < 1)
 							lastUsedId = myProfiles->m_ProfileId;
 						else
 							lastUsedId = myProfiles[0].m_ProfileId;	//myAuthToken->m_ProfileId
@@ -597,32 +606,33 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 						myStatusCode = AuthFailed_General; //ServerError
 						mySuccessFlag = 0;
 						
-						num_profiles = 0;
+						myProfileCount = 0;
 						lastUsedId = 0;
 					}
 				}
 
 				cryptMessage.WriteUChar(myStatusCode);
 				cryptMessage.WriteUChar(mySuccessFlag);	// mySuccessFlag
-				cryptMessage.WriteUInt(num_profiles);	// numUserProfiles
+				cryptMessage.WriteUInt(myProfileCount);	// numUserProfiles
 				cryptMessage.WriteUInt(lastUsedId);	// lastUsedProfileId
 
 				//write profile/s to stream
-				for(uint i=0; i < num_profiles; i++)
+				for(uint i=0; i < myProfileCount; i++)
 				{
 					myProfiles[i].ToStream(&cryptMessage);
 				}
 
-				if(num_profiles > 0)
+				if(myProfileCount > 0)
 					delete [] myProfiles;
 
 				myProfiles = nullptr;
-				*/
+#endif
 			}
 			break;
 
 			case MMG_ProtocolDelimiters::ACCOUNT_MODIFY_PROFILE_REQ:
 			{
+#ifdef USING_MYSQL_DATABASE
 				//DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: modify profiles");
 				//responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_MODIFY_PROFILE_RSP;
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_RETRIEVE_PROFILES_RSP;
@@ -634,21 +644,21 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				memset(myPassword, 0, sizeof(myPassword));
 
 				uchar isBanned = 0;
-				ulong num_profiles = 0;
+				ulong myProfileCount = 0;
 				uint lastUsedId = 0;
 
-				uint myId = 0;
+				uint myProfileId = 0;
 
-				int myStatusCode = 0;
-				int mySuccessFlag = 0;
+				uint myStatusCode = 0;
+				uint mySuccessFlag = 0;
 
 				if (myQuery.m_ModifyProfile.m_Operation == MODIFY_PROFILE_ADD)
 				{
 					DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: add profile %ws for %s", myQuery.m_ModifyProfile.m_Name, myQuery.m_ModifyProfile.m_Email);
 					
-					bool CheckProfileQueryOK = MySQLDatabase::CheckIfProfileExists(myQuery.m_ModifyProfile.m_Name, &myId);
+					bool CheckProfileQueryOK = MySQLDatabase::CheckIfProfileExists(myQuery.m_ModifyProfile.m_Name, &myProfileId);
 					
-					if (myId > 0 && CheckProfileQueryOK)			//profile exists with that name
+					if (myProfileId > 0 && CheckProfileQueryOK)			//profile exists with that name
 					{
 						myStatusCode = ModifyFailed_ProfileNameTaken;
 						mySuccessFlag = 1;
@@ -697,11 +707,11 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				
 				// retrieve and send profile list
-				bool RetrieveProfilesQueryOK = MySQLDatabase::RetrieveUserProfiles(myQuery.m_ModifyProfile.m_Email, myQuery.m_ModifyProfile.m_Password, &num_profiles, &myProfiles);
+				bool RetrieveProfilesQueryOK = MySQLDatabase::RetrieveUserProfiles(myQuery.m_ModifyProfile.m_Email, myQuery.m_ModifyProfile.m_Password, &myProfileCount, &myProfiles);
 
 				if (RetrieveProfilesQueryOK && mySuccessFlag)
 				{
-					if (num_profiles < 1)
+					if (myProfileCount < 1)
 						lastUsedId = myProfiles->m_ProfileId;
 					else
 						lastUsedId = myProfiles[0].m_ProfileId;	//myAuthToken->m_ProfileId
@@ -711,30 +721,31 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myStatusCode = ModifyFailed_General; //ServerError
 					mySuccessFlag = 0;
 				
-					num_profiles = 0;
+					myProfileCount = 0;
 					lastUsedId = 0;
 				}
 				
 				cryptMessage.WriteUChar(myStatusCode);
 				cryptMessage.WriteUChar(mySuccessFlag);	// mySuccessFlag
-				cryptMessage.WriteUInt(num_profiles);	// numUserProfiles
+				cryptMessage.WriteUInt(myProfileCount);	// numUserProfiles
 				cryptMessage.WriteUInt(lastUsedId);		// lastUsedProfileId
 
 				//write profile/s to stream
-				for(uint i=0; i < num_profiles; i++)
+				for(uint i=0; i < myProfileCount; i++)
 				{
 					myProfiles[i].ToStream(&cryptMessage);
 				}
 
-				if(num_profiles > 0)
+				if(myProfileCount > 0)
 					delete [] myProfiles;
 
 				myProfiles = nullptr;
+#endif
 			}
 			break;
 
 			default:
-				DebugLog(L_INFO, "Unknown delimiter %i", aDelimiter);
+				DebugLog(L_WARN, "Unknown delimiter %i", aDelimiter);
 			return false;
 		}
 	}

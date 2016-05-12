@@ -37,23 +37,35 @@
 
 		*to use a statement that returns a result set, call StmtFetch() after calling StmtExecute()
 
-	Currently i have to open a new connection for each thread that tries to execute a query because the library is not thread safe
-	if i want use only one connection for all queries, i will need to use a mutex when executing prepared statements from each client
+	*More Information about threaded clients
 	https://dev.mysql.com/doc/refman/5.7/en/c-api-threaded-clients.html
 	https://dev.mysql.com/doc/refman/5.7/en/mysql-thread-init.html
 	https://dev.mysql.com/doc/refman/5.7/en/mysql-thread-end.html
 
 	The MySQLQuery class is basically a wrapper that utilises all of the functions needed to execute a prepared statement
-	the only problem is that a new connection is required for each thread that makes a query.
+	at the moment massgate connects to the database on startup and does not check to see if a connection exists when 
+	executing statements, errors are not handled correctly and massgate will most likely crash if the database connection
+	is lost.
+
+	now massgate uses the open connection, rather then opening and closing new connections to perform queries, like it 
+	was before.	the original code is commented just in case is needs to be put back, but at this stage we cant afford 
+	to keep opening and closing the database connection.
+	
+	There could be an issue when clients start querying the database at the same time.
+
 	A thread CAN execute multiple queries on the same connection.
 
 	TODO:
-	- rename database fields to something that better describes what they are
-		emailme, acceptsemail, isbanned
-		experience, onlinestatus can probably be removed
+	- better error handling if database loses connection
+		experience "experience int(10) unsigned not null,"
+	- handle communication options properly
+	- IgnoredProfiles
+	- save password hash, compatible with phpbb or some other forum
 	- CreateUserAccount, CreateUserProfile, DeleteUserProfile and QueryUserProfile are a little messy but are sufficient for now
 
 */
+
+MYSQL *con = nullptr;
 
 namespace MySQLDatabase
 {
@@ -64,12 +76,10 @@ namespace MySQLDatabase
 
 	bool Initialize()
 	{
-		//mysql_library_init(); //doesnt work with braces :S
-
 		if(!ReadConfig())
 			return false;
 
-		MYSQL *con = mysql_init(NULL);
+		con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -83,8 +93,9 @@ namespace MySQLDatabase
 		DatabaseLog("client version: %s started", mysql_get_client_info());
 		DatabaseLog("connection to %s ok", host);
 
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 
 		return true;
 	}
@@ -96,7 +107,9 @@ namespace MySQLDatabase
 		free((char*)pass);
 		free((char*)db);
 
-		//mysql_library_end();
+		mysql_close(con);
+		mysql_thread_end();
+		con = nullptr;
 	}
 
 	bool ReadConfig()
@@ -142,7 +155,7 @@ namespace MySQLDatabase
 
 	bool InitializeSchema()
 	{
-		MYSQL *con = mysql_init(NULL);
+		/*MYSQL *con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -152,6 +165,7 @@ namespace MySQLDatabase
 
 			return false;
 		}
+		*/
 
 		// Go through each table entry
 		for(int i = 0; i < ARRAYSIZE(MySQLTableValues); i++)
@@ -164,15 +178,16 @@ namespace MySQLDatabase
 
 		DatabaseLog("database tables created OK");
 
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 
 		return true;
 	}
 
 	bool CheckIfEmailExists(const char *email, uint *dstId)
 	{
-		MYSQL *con = mysql_init(NULL);
+		/*MYSQL *con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -182,6 +197,7 @@ namespace MySQLDatabase
 
 			return false;
 		}
+		*/
 
 		char *sql = "SELECT id FROM mg_accounts WHERE email = ?";
 
@@ -194,9 +210,9 @@ namespace MySQLDatabase
 		memset(param, 0, sizeof(param));
 		memset(result, 0, sizeof(result));
 
-		query.Bind(param[0], email, email_len);		//bind 'email' to the first/only parameter
+		query.Bind(&param[0], email, &email_len);	//bind 'email' to the first/only parameter
 
-		query.Bind(result[0], id);		//mg_accounts.id
+		query.Bind(&result[0], &id);				//mg_accounts.id
 
 		if(!query.StmtExecute(param, result))
 		{
@@ -220,15 +236,16 @@ namespace MySQLDatabase
 			}
 		}
 		
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 
 		return querySuccess;
 	}
 
 	bool CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	{
-		MYSQL *con = mysql_init(NULL);
+		/*MYSQL *con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -238,25 +255,26 @@ namespace MySQLDatabase
 
 			return false;
 		}
+		*/
 
 		char *sql = "SELECT id FROM mg_cdkeys WHERE cipherkeys0 = ? AND cipherkeys1 = ? AND cipherkeys2 = ? AND cipherkeys3 = ?";
 
 		MySQLQuery query(con, sql);
-		MYSQL_BIND param[4], result[1];
+		MYSQL_BIND params[4], result[1];
 		uint id;
 		bool querySuccess;
 
-		memset(param, 0, sizeof(param));
+		memset(params, 0, sizeof(params));
 		memset(result, 0, sizeof(result));
 
-		query.Bind(param[0], cipherKeys[0]);
-		query.Bind(param[1], cipherKeys[1]);
-		query.Bind(param[2], cipherKeys[2]);
-		query.Bind(param[3], cipherKeys[3]);
+		query.Bind(&params[0], &cipherKeys[0]);
+		query.Bind(&params[1], &cipherKeys[1]);
+		query.Bind(&params[2], &cipherKeys[2]);
+		query.Bind(&params[3], &cipherKeys[3]);
 
-		query.Bind(result[0], id);		//mg_cdkeys.id
+		query.Bind(&result[0], &id);			//mg_cdkeys.id
 
-		if(!query.StmtExecute(param, result))
+		if(!query.StmtExecute(params, result))
 		{
 			DatabaseLog("CheckIfCDKeyExists() query failed:");
 			querySuccess = false;
@@ -278,15 +296,16 @@ namespace MySQLDatabase
 			}
 		}
 		
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 
 		return querySuccess;
 	}
 
-	bool CreateUserAccount(const char *email, const wchar_t *password, const char *country, const uchar *emailme, const uchar *acceptsemail, const ulong cipherKeys[])
+	bool CreateUserAccount(const char *email, const wchar_t *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const ulong cipherKeys[])
 	{
-		MYSQL *con = mysql_init(NULL);
+		/*MYSQL *con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -296,9 +315,10 @@ namespace MySQLDatabase
 
 			return false;
 		}
+		*/
 
 		//step 1: insert account
-		char *sql = "INSERT INTO mg_accounts (email, password, country, emailme, acceptsemail, activeprofileid, isbanned) VALUES (?, ?, ?, ?, ?, 0, 0)";
+		char *sql = "INSERT INTO mg_accounts (email, password, country, emailgamerelated, acceptsemail, activeprofileid, isbanned) VALUES (?, ?, ?, ?, ?, 0, 0)";
 
 		MySQLQuery query(con, sql);
 		MYSQL_BIND params[5];
@@ -308,11 +328,11 @@ namespace MySQLDatabase
 
 		memset(params, 0, sizeof(params));
 
-		query.Bind(params[0], email, email_len);		//email
-		query.Bind(params[1], password, pass_len);		//password
-		query.Bind(params[2], country, country_len);	//country
-		query.Bind(params[3], *emailme);				//emailme (game related news and events)
-		query.Bind(params[4], *acceptsemail);			//acceptsemail (from ubisoft (pfft) rename this field)
+		query.Bind(&params[0], email, &email_len);			//email
+		query.Bind(&params[1], password, &pass_len);		//password
+		query.Bind(&params[2], country, &country_len);		//country
+		query.Bind(&params[3], emailgamerelated);			//emailgamerelated (game related news and events)
+		query.Bind(&params[4], acceptsemail);				//acceptsemail (from ubisoft (pfft) rename this field)
 
 		if (!query.StmtExecute(params))
 		{
@@ -337,11 +357,11 @@ namespace MySQLDatabase
 
 			memset(params2, 0, sizeof(params2));
 
-			query2.Bind(params2[0], account_insert_id);	
-			query2.Bind(params2[1], cipherKeys[0]);
-			query2.Bind(params2[2], cipherKeys[1]);
-			query2.Bind(params2[3], cipherKeys[2]);
-			query2.Bind(params2[4], cipherKeys[3]);
+			query2.Bind(&params2[0], &account_insert_id);	
+			query2.Bind(&params2[1], &cipherKeys[0]);
+			query2.Bind(&params2[2], &cipherKeys[1]);
+			query2.Bind(&params2[3], &cipherKeys[2]);
+			query2.Bind(&params2[4], &cipherKeys[3]);
 
 			if (!query2.StmtExecute(params2))
 			{
@@ -357,15 +377,16 @@ namespace MySQLDatabase
 			}
 		}
 
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 
 		return query1Success && query2Success;
 	}
 
 	bool AuthUserAccount(const char *email, wchar_t *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken)
 	{
-		MYSQL *con = mysql_init(NULL);
+		/*MYSQL *con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -375,6 +396,7 @@ namespace MySQLDatabase
 
 			return false;
 		}
+		*/
 
 		char *sql = "SELECT mg_accounts.id, mg_accounts.password, mg_accounts.activeprofileid, mg_accounts.isbanned, mg_cdkeys.id AS cdkeyid "
 					"FROM mg_accounts "
@@ -396,13 +418,13 @@ namespace MySQLDatabase
 		memset(param, 0, sizeof(param));
 		memset(results, 0, sizeof(results));
 		
-		query.Bind(param[0], email, email_len);		//email
+		query.Bind(&param[0], email, &email_len);		//email
 
-		query.Bind(results[0], id);					//mg_accounts.id
-		query.Bind(results[1], password, pass_len);	//mg_accounts.password
-		query.Bind(results[2], activeprofileid);	//mg_accounts.activeprofileid
-		query.Bind(results[3], isbanned);			//mg_accounts.isbanned
-		query.Bind(results[4], cdkeyid);			//mg_cdkeys.id AS cdkeyid
+		query.Bind(&results[0], &id);					//mg_accounts.id
+		query.Bind(&results[1], password, &pass_len);	//mg_accounts.password
+		query.Bind(&results[2], &activeprofileid);		//mg_accounts.activeprofileid
+		query.Bind(&results[3], &isbanned);				//mg_accounts.isbanned
+		query.Bind(&results[4], &cdkeyid);				//mg_cdkeys.id AS cdkeyid
 		
 		if(!query.StmtExecute(param, results))
 		{
@@ -439,20 +461,21 @@ namespace MySQLDatabase
 				authToken->m_ProfileId = activeprofileid;
 				//authToken->m_TokenId = 0;
 				authToken->m_CDkeyId = cdkeyid;
-				wcscpy(dstPassword, password);
+				wcscpy_s(dstPassword, ARRAYSIZE(password), password);
 				*dstIsBanned = isbanned;
 			}
 		}
 		
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 
 		return querySuccess;
 	}
 
 	bool CheckIfProfileExists(const wchar_t* name, uint *dstId)
 	{
-		MYSQL *con = mysql_init(NULL);
+		/*MYSQL *con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -462,6 +485,7 @@ namespace MySQLDatabase
 
 			return false;
 		}
+		*/
 
 		char *sql = "SELECT id FROM mg_profiles WHERE name = ?";
 
@@ -474,13 +498,13 @@ namespace MySQLDatabase
 		memset(param, 0, sizeof(param));
 		memset(result, 0, sizeof(result));
 
-		query.Bind(param[0], name, name_len);
+		query.Bind(&param[0], name, &name_len);
 
-		query.Bind(result[0], id);		//mg_profiles.id
+		query.Bind(&result[0], &id);		//mg_profiles.id
 
 		if(!query.StmtExecute(param, result))
 		{
-			DatabaseLog("CheckIfProfileExists() query failed: %s", name);
+			DatabaseLog("CheckIfProfileExists() query failed: %ws", name);
 			querySuccess = false;
 			*dstId = 0;
 		}
@@ -488,27 +512,28 @@ namespace MySQLDatabase
 		{
 			if (!query.StmtFetch())
 			{
-				DatabaseLog("profile %s not found", name);
+				DatabaseLog("profile %ws not found", name);
 				querySuccess = true;
 				*dstId = 0;
 			}
 			else
 			{
-				DatabaseLog("profile %s found", name);
+				DatabaseLog("profile %ws found", name);
 				querySuccess = true;
 				*dstId = id;
 			}
 		}
 		
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 
 		return querySuccess;
 	}
 
 	bool CreateUserProfile(const uint accountId, const wchar_t* name, const char* email)
 	{
-		MYSQL *con = mysql_init(NULL);
+		/*MYSQL *con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -518,9 +543,10 @@ namespace MySQLDatabase
 
 			return false;
 		}
+		*/
 
 		//Step 1: create the profile as usual
-		char *sql = "INSERT INTO mg_profiles (accountid, name, experience, rank, clanid, rankinclan, chatoptions, onlinestatus, lastlogindate) VALUES (?, ?, 0, 0, 0, 0, 0, 0, ?)";
+		char *sql = "INSERT INTO mg_profiles (accountid, name, rank, clanid, rankinclan, commoptions, onlinestatus, lastlogindate, motto, homepage) VALUES (?, ?, 0, 0, 0, 992, 0, ?, NULL, NULL)";
 
 		MySQLQuery query(con, sql);
 		MYSQL_BIND params[3];
@@ -539,9 +565,9 @@ namespace MySQLDatabase
 
 		memset(params, 0, sizeof(params));
 
-		query.Bind(params[0], accountId);			//account id
-		query.Bind(params[1], name, name_len);	//profile name
-		query.BindDateTime(params[2], datetime);	//last login date, set to 1/1/1970 for new accounts
+		query.Bind(&params[0], &accountId);			//account id
+		query.Bind(&params[1], name, &name_len);	//profile name
+		query.BindDateTime(&params[2], &datetime);	//last login date, set to 1/1/1970 for new accounts
 
 		if (!query.StmtExecute(params))
 		{
@@ -572,9 +598,9 @@ namespace MySQLDatabase
 			memset(params2, 0, sizeof(params2));
 			memset(results2, 0, sizeof(results2));
 
-			query2.Bind(params2[0], email, email_len);	//email
+			query2.Bind(&params2[0], email, &email_len);	//email
 
-			query2.Bind(results2[0], id);				//mg_profiles.id
+			query2.Bind(&results2[0], &id);					//mg_profiles.id
 
 			if(!query2.StmtExecute(params2, results2))
 			{
@@ -598,8 +624,8 @@ namespace MySQLDatabase
 			MySQLQuery query3(con, sql3);
 			MYSQL_BIND params3[2];
 
-			query3.Bind(params3[0], last_id);		//profileid
-			query3.Bind(params3[1], accountId);		//account id
+			query3.Bind(&params3[0], &last_id);			//profileid
+			query3.Bind(&params3[1], &accountId);		//account id
 		
 			if(!query3.StmtExecute(params3))
 			{
@@ -614,15 +640,16 @@ namespace MySQLDatabase
 			}
 		}
 		
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 
 		return query1Success && query2Success && query3Success;
 	}
 
 	bool DeleteUserProfile(const uint accountId, const uint profileId, const char* email)
 	{
-		MYSQL *con = mysql_init(NULL);
+		/*MYSQL *con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -632,6 +659,7 @@ namespace MySQLDatabase
 
 			return false;
 		}
+		*/
 
 		//TODO: (when forum is implemented) 
 		//dont delete the profile, just rename the profile name
@@ -650,7 +678,7 @@ namespace MySQLDatabase
 
 		memset(param, 0, sizeof(param));
 
-		query.Bind(param[0], profileId);		//profile id
+		query.Bind(&param[0], &profileId);		//profile id
 
 		if (!query.StmtExecute(param))
 		{
@@ -679,9 +707,9 @@ namespace MySQLDatabase
 			memset(params2, 0, sizeof(params2));
 			memset(results2, 0, sizeof(results2));
 
-			query2.Bind(params2[0], email, email_len);	//email
+			query2.Bind(&params2[0], email, &email_len);	//email
 
-			query2.Bind(results2[0], id);				//mg_profiles.id
+			query2.Bind(&results2[0], &id);					//mg_profiles.id
 
 			if(!query2.StmtExecute(params2, results2))
 			{
@@ -708,8 +736,8 @@ namespace MySQLDatabase
 			MySQLQuery query3(con, sql3);
 			MYSQL_BIND params3[2];
 
-			query3.Bind(params3[0], id);			//last used id
-			query3.Bind(params3[1], accountId);		//account id
+			query3.Bind(&params3[0], &id);				//last used id
+			query3.Bind(&params3[1], &accountId);		//account id
 		
 			if(!query3.StmtExecute(params3))
 			{
@@ -729,7 +757,7 @@ namespace MySQLDatabase
 			MySQLQuery query3(con, sql3);
 			MYSQL_BIND params3[1];
 
-			query3.Bind(params3[0], accountId);		//account id
+			query3.Bind(&params3[0], &accountId);		//account id
 		
 			if(!query3.StmtExecute(params3))
 			{
@@ -743,15 +771,16 @@ namespace MySQLDatabase
 			}
 		}
 		
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 		
 		return query1Success && query2Success && query3Success;
 	}
 
-	bool QueryUserProfile(const uint accountId, const uint profileId, MMG_Profile *profile)
+	bool QueryUserProfile(const uint accountId, const uint profileId, MMG_Profile *profile, MMG_Options *options)
 	{
-		MYSQL *con = mysql_init(NULL);
+		/*MYSQL *con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -761,14 +790,18 @@ namespace MySQLDatabase
 
 			return false;
 		}
+		*/
 
 		//Step 1: get the requested profile
-		char *sql = "SELECT id, name, rank, clanid, rankinclan FROM mg_profiles WHERE id = ?";
+		char *sql = "SELECT id, name, rank, clanid, rankinclan, commoptions FROM mg_profiles WHERE id = ?";
 
 		MySQLQuery query(con, sql);
-		MYSQL_BIND param[1], results[5];
+		MYSQL_BIND param[1], results[6];
+		uint id, clanid, commoptions;
+		uchar rank, rankinclan;
 		ulong name_len;
 		wchar_t name[WIC_NAME_MAX_LENGTH];
+
 		bool query1Success, query2Success, query3Success;
 
 		memset(name, 0, sizeof(name));
@@ -776,18 +809,29 @@ namespace MySQLDatabase
 		memset(param, 0, sizeof(param));
 		memset(results, 0, sizeof(results));
 
-		query.Bind(param[0], profileId);				//profile id
+		query.Bind(&param[0], &profileId);			//profile id
 
-		query.Bind(results[0], profile->m_ProfileId);	//mg_profiles.id
-		query.Bind(results[1], name, name_len);			//mg_profiles.name
-		query.Bind(results[2], profile->m_Rank);		//mg_profiles.rank
-		query.Bind(results[3], profile->m_ClanId);		//mg_profiles.clanid
-		query.Bind(results[4], profile->m_RankInClan);	//mg_profiles.rankinclan
+		query.Bind(&results[0], &id);				//mg_profiles.id
+		query.Bind(&results[1], name, &name_len);	//mg_profiles.name
+		query.Bind(&results[2], &rank);				//mg_profiles.rank
+		query.Bind(&results[3], &clanid);			//mg_profiles.clanid
+		query.Bind(&results[4], &rankinclan);		//mg_profiles.rankinclan
+		query.Bind(&results[5], &commoptions);		//mg_profiles.commoptions
 
 		if(!query.StmtExecute(param, results))
 		{
 			DatabaseLog("QueryUserProfile(query) failed: profile id(%d)", profileId);
 			query1Success = false;
+
+			//profile
+			profile->m_ProfileId = 0;
+			wcscpy_s(profile->m_Name, L"");
+			profile->m_Rank = 0;
+			profile->m_ClanId = 0;
+			profile->m_RankInClan = 0;
+
+			//communication options
+			options->FromUInt(0);
 		}
 		else
 		{
@@ -795,13 +839,31 @@ namespace MySQLDatabase
 			{
 				DatabaseLog("profile id(%d) not found", profileId);
 				query1Success = true;
+
+				//profile
+				profile->m_ProfileId = 0;
+				wcscpy_s(profile->m_Name, L"");
+				profile->m_Rank = 0;
+				profile->m_ClanId = 0;
+				profile->m_RankInClan = 0;
+
+				//communication options
+				options->FromUInt(0);
 			}
 			else
 			{
-				wcscpy_s(profile->m_Name, name);
-
-				DatabaseLog("profile id(%d) %ws found", profileId, profile->m_Name);
+				DatabaseLog("profile id(%d) %ws found", profileId, name);
 				query1Success = true;
+
+				//profile
+				profile->m_ProfileId = id;
+				wcscpy_s(profile->m_Name, name);
+				profile->m_Rank = rank;
+				profile->m_ClanId = clanid;
+				profile->m_RankInClan = rankinclan;
+
+				//communication options
+				options->FromUInt(commoptions);
 			}
 		}
 
@@ -813,7 +875,7 @@ namespace MySQLDatabase
 			MySQLQuery query2(con, sql2);
 			MYSQL_BIND param2[1];
 
-			query2.Bind(param2[0], profile->m_ProfileId);		//profile id
+			query2.Bind(&param2[0], &profile->m_ProfileId);		//profile id
 		
 			if(!query2.StmtExecute(param2))
 			{
@@ -835,8 +897,8 @@ namespace MySQLDatabase
 			MySQLQuery query3(con, sql3);
 			MYSQL_BIND params3[2];
 
-			query3.Bind(params3[0], profile->m_ProfileId);		//profileid
-			query3.Bind(params3[1], accountId);		//account id
+			query3.Bind(&params3[0], &profile->m_ProfileId);		//profileid
+			query3.Bind(&params3[1], &accountId);					//account id
 		
 			if(!query3.StmtExecute(params3))
 			{
@@ -850,15 +912,16 @@ namespace MySQLDatabase
 			}
 		}
 
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 
 		return query1Success && query2Success && query3Success;
 	}
 
 	bool RetrieveUserProfiles(const char *email, const wchar_t *password, ulong *dstProfileCount, MMG_Profile *profiles[])
 	{
-		MYSQL *con = mysql_init(NULL);
+		/*MYSQL *con = mysql_init(NULL);
 
 		if (mysql_real_connect(con, host, user, pass, db, 0, NULL, 0) == NULL)
 		{
@@ -868,6 +931,7 @@ namespace MySQLDatabase
 
 			return false;
 		}
+		*/
 
 		char *sql = "SELECT mg_profiles.id, mg_profiles.name, mg_profiles.rank, mg_profiles.clanid, mg_profiles.rankinclan, mg_profiles.onlinestatus "
 					"FROM mg_profiles "
@@ -877,7 +941,7 @@ namespace MySQLDatabase
 					"ORDER BY lastlogindate DESC, id ASC";
 
 		MySQLQuery query(con, sql);
-		MYSQL_BIND params[1], results[6];
+		MYSQL_BIND param[1], results[6];
 		ulong name_len, email_len;
 		uint id, clanid, onlinestatus;
 		uchar rank, rankinclan;
@@ -886,19 +950,19 @@ namespace MySQLDatabase
 
 		memset(name, 0, sizeof(name));
 
-		memset(params, 0, sizeof(params));
+		memset(param, 0, sizeof(param));
 		memset(results, 0, sizeof(results));
 
-		query.Bind(params[0], email, email_len);		//email
+		query.Bind(&param[0], email, &email_len);		//email
 
-		query.Bind(results[0], id);				//mg_profiles.id
-		query.Bind(results[1], name, name_len);	//mg_profiles.name
-		query.Bind(results[2], rank);			//mg_profiles.rank
-		query.Bind(results[3], clanid);			//mg_profiles.clanid
-		query.Bind(results[4], rankinclan);		//mg_profiles.rankinclan
-		query.Bind(results[5], onlinestatus);	//mg_profiles.onlinestatus, do we need this in the database?
+		query.Bind(&results[0], &id);					//mg_profiles.id
+		query.Bind(&results[1], name, &name_len);		//mg_profiles.name
+		query.Bind(&results[2], &rank);					//mg_profiles.rank
+		query.Bind(&results[3], &clanid);				//mg_profiles.clanid
+		query.Bind(&results[4], &rankinclan);			//mg_profiles.rankinclan
+		query.Bind(&results[5], &onlinestatus);			//mg_profiles.onlinestatus, do we need this in the database?
 
-		if(!query.StmtExecute(params, results))
+		if(!query.StmtExecute(param, results))
 		{
 			DatabaseLog("RetrieveUserProfiles() query failed: %s", email);
 			querySuccess = false;
@@ -957,19 +1021,245 @@ namespace MySQLDatabase
 			}
 		}
 		
-		mysql_close(con);
+		/*mysql_close(con);
 		mysql_thread_end();
+		*/
 
 		return querySuccess;
 	}
 
-	bool QueryUserOptions(const wchar_t *name, int *options)
+	bool QueryUserOptions(const uint profileId, int *options)
 	{
+		//TODO
 		return true;
 	}
 
-	bool QueryUserOptions(const uint profileId, int *options)
+	bool SaveUserOptions(const uint profileId, const int options)
 	{
+		char *sql = "UPDATE mg_profiles SET commoptions = ? WHERE id = ?";
+
+		MySQLQuery query(con, sql);
+		MYSQL_BIND params[2];
+		bool querySuccess;
+
+		memset(params, 0, sizeof(params));
+
+		query.Bind(&params[0], &options);
+		query.Bind(&params[1], &profileId);
+
+		if(!query.StmtExecute(params))
+		{
+			DatabaseLog("SaveUserOptions() failed: profile id(%d), options(%d)", profileId, options);
+			querySuccess = false;
+		}
+		else
+		{
+			DatabaseLog("profile id(%d) set commoptions(%d)", profileId, options);
+			querySuccess = true;
+		}
+
+		return querySuccess;
+	}
+
+	bool QueryFriends(const uint profileId, uint *dstProfileCount, uint *friendIds[])
+	{
+		char *sql = "SELECT profileid, friendprofileid from mg_friends WHERE profileid = ?";
+
+		MySQLQuery query(con, sql);
+		MYSQL_BIND param[1], results[2];
+		uint id, friendid;
+		bool querySuccess;
+
+		memset(param, 0, sizeof(param));
+		memset(results, 0, sizeof(results));
+
+		query.Bind(&param[0], &profileId);		//profileid
+
+		query.Bind(&results[0], &id);			//mg_friends.profileid
+		query.Bind(&results[1], &friendid);		//mg_friends.friendprofileid
+
+		if(!query.StmtExecute(param, results))
+		{
+			DatabaseLog("QueryFriends() query failed: %s", profileId);
+			querySuccess = false;
+
+			uint *tmp = new uint();
+
+			*tmp = 0;
+
+			*friendIds = tmp;
+			*dstProfileCount = 0;
+		}
+		else
+		{
+			ulong count = (ulong)mysql_stmt_num_rows(query.GetStatement());
+			DatabaseLog("profile id(%d), %d friends found", profileId, count);
+			querySuccess = true;
+
+			if (count < 1)
+			{
+				uint *tmp = new uint();
+
+				*tmp = 0;
+
+				*friendIds = tmp;
+				*dstProfileCount = 0;
+			}
+			else
+			{
+				uint *tmp = new uint[count];
+				int i = 0;
+
+				while(query.StmtFetch())
+				{
+					tmp[i] = friendid;
+					i++;
+				}
+
+				*friendIds = tmp;
+				*dstProfileCount = count;
+			}
+		}
+
+		return querySuccess;
+	}
+
+	bool QueryAcquaintances(const uint profileId, uint *dstProfileCount, uint *acquaintanceIds[])
+	{
+		char *sql = "SELECT id from mg_profiles WHERE id <> ? LIMIT 100";
+
+		MySQLQuery query(con, sql);
+		MYSQL_BIND param[1], results[1];
+		uint id;
+		bool querySuccess;
+
+		memset(param, 0, sizeof(param));
+		memset(results, 0, sizeof(results));
+
+		query.Bind(&param[0], &profileId);			//temporary, will fix when acquaitances are implemented
+
+		query.Bind(&results[0], &id);			//mg_profiles.id
+
+		if(!query.StmtExecute(param, results))
+		{
+			DatabaseLog("QueryAcquaintances() query failed: %s", profileId);
+			querySuccess = false;
+
+			uint *tmp = new uint();
+
+			*tmp = 0;
+
+			*acquaintanceIds = tmp;
+			*dstProfileCount = 0;
+		}
+		else
+		{
+			ulong count = (ulong)mysql_stmt_num_rows(query.GetStatement());
+			DatabaseLog("profile id(%d), %d acquaintances found", profileId, count);
+			querySuccess = true;
+
+			if (count < 1)
+			{
+				uint *tmp = new uint();
+
+				*tmp = 0;
+
+				*acquaintanceIds = tmp;
+				*dstProfileCount = 0;
+			}
+			else
+			{
+				uint *tmp = new uint[count];
+				int i = 0;
+
+				while(query.StmtFetch())
+				{
+					tmp[i] = id;
+					i++;
+				}
+
+				*acquaintanceIds = tmp;
+				*dstProfileCount = count;
+			}
+		}
+
+		return querySuccess;
+	}
+
+	bool QueryIgnoredProfiles(const uint profileId, uint *dstProfileCount, uint *ignoredIds[])
+	{
+		//TODO
 		return true;
+	}
+
+	bool QueryProfileName (const uint profileId, MMG_Profile *profile)
+	{
+		char *sql = "SELECT id, name, rank, clanid, rankinclan, onlinestatus FROM mg_profiles WHERE id = ?";
+
+		MySQLQuery query(con, sql);
+		MYSQL_BIND param[1], results[6];
+		uint id, clanid, onlinestatus;
+		uchar rank, rankinclan;
+		ulong name_len;
+		wchar_t name[WIC_NAME_MAX_LENGTH];
+
+		bool querySuccess;
+
+		memset(name, 0, sizeof(name));
+
+		memset(param, 0, sizeof(param));
+		memset(results, 0, sizeof(results));
+
+		query.Bind(&param[0], &profileId);			//profile id
+
+		query.Bind(&results[0], &id);				//mg_profiles.id
+		query.Bind(&results[1], name, &name_len);	//mg_profiles.name
+		query.Bind(&results[2], &rank);				//mg_profiles.rank
+		query.Bind(&results[3], &clanid);			//mg_profiles.clanid
+		query.Bind(&results[4], &rankinclan);		//mg_profiles.rankinclan
+		query.Bind(&results[5], &onlinestatus);		//mg_profiles.onlinestatus
+
+		if(!query.StmtExecute(param, results))
+		{
+			DatabaseLog("QueryProfileName() failed: profile id(%d)", profileId);
+			querySuccess = false;
+
+			profile->m_ProfileId = 0;
+			wcscpy_s(profile->m_Name, L"");
+			profile->m_Rank = 0;
+			profile->m_ClanId = 0;
+			profile->m_RankInClan = 0;
+			profile->m_OnlineStatus = 0;
+		}
+		else
+		{
+			if (!query.StmtFetch())
+			{
+				DatabaseLog("profile id(%d) not found", profileId);
+				querySuccess = true;
+
+				profile->m_ProfileId = 0;
+				wcscpy_s(profile->m_Name, L"");
+				profile->m_Rank = 0;
+				profile->m_ClanId = 0;
+				profile->m_RankInClan = 0;
+				profile->m_OnlineStatus = 0;
+			}
+			else
+			{
+				DatabaseLog("profile id(%d) %ws found", profileId, name);
+				querySuccess = true;
+
+				//profile
+				profile->m_ProfileId = id;
+				wcscpy_s(profile->m_Name, name);
+				profile->m_Rank = rank;
+				profile->m_ClanId = clanid;
+				profile->m_RankInClan = rankinclan;
+				profile->m_OnlineStatus = onlinestatus;
+			}
+		}
+
+		return querySuccess;
 	}
 }

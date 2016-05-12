@@ -25,6 +25,7 @@ private:
 
 	MMG_Profile			*m_Profile;
 	MMG_AuthToken		*m_AuthToken;
+	MMG_Options			*m_Options;
 
 public:
 	SvClient();
@@ -44,6 +45,7 @@ public:
 
 	MMG_Profile		*GetProfile		();
 	MMG_AuthToken	*GetToken		();
+	MMG_Options		*GetOptions		();
 
 	SOCKET			GetSocket		();
 	uint			GetIPAddress	();

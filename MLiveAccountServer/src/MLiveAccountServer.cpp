@@ -35,16 +35,18 @@ void Startup()
 {
 	CreateServices();
 
-	//if (!MySQLDatabase::Initialize())
-	//	DebugLog(L_ERROR, "Failed to initialize database back end");
+#ifdef USING_MYSQL_DATABASE
+	if (!MySQLDatabase::Initialize())
+		DebugLog(L_ERROR, "Failed to initialize database back end");
 
 	//only run once to create the tables, TODO: move the database schema to an .sql file
-	//if(!MySQLDatabase::InitializeSchema())
+	//if (!MySQLDatabase::InitializeSchema())
 	//	DebugLog(L_ERROR, "Failed to create database tables");
 
 	/* GeoIP init*/
-	//if (!GeoIP::Initialize())
-	//	DebugLog(L_ERROR, "Failed to initialize GeoIP database");
+	if (!GeoIP::Initialize())
+		DebugLog(L_ERROR, "Failed to initialize GeoIP database");
+#endif
 
 	Winsock_Startup();
 	HTTPService_Startup();
@@ -62,8 +64,10 @@ void Shutdown()
 	HTTPService_Shutdown();
 	Winsock_Shutdown();
 
+#ifdef USING_MYSQL_DATABASE
 	GeoIP::Unload();
 	MySQLDatabase::Unload();
+#endif
 }
 
 int main(int argc, char **argv)

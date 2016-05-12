@@ -29,11 +29,47 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 	switch(aDelimiter)
 	{
+		case MMG_ProtocolDelimiters::MESSAGING_RETRIEVE_PROFILENAME:
+		{
+			DebugLog(L_INFO, "MESSAGING_RETRIEVE_PROFILENAME:");
+
+			ushort count;
+			if (!aMessage->ReadUShort(count))
+				return false;
+
+#ifndef USING_MYSQL_DATABASE
+
+				//TODO: handle profiles (count). unnecessary really, since count is going to be 0 if youre not using the database
+#else
+			for (int i = 0; i < count; i++)
+			{
+				MMG_Profile myFriend;
+
+				uint id;
+				if (!aMessage->ReadUInt(id))
+					return false;
+
+				//TODO: not sure if all profiles should be sent all in one delimiter
+				bool QueryOK = MySQLDatabase::QueryProfileName(id, &myFriend);
+
+				//this->SendProfileName(aClient, &responseMessage, &myFriend);
+
+				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+				myFriend.ToStream(&responseMessage);
+			}
+#endif
+			DebugLog(L_INFO, "MESSAGING_RESPOND_PROFILENAME:");
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
+
 		case MMG_ProtocolDelimiters::MESSAGING_GET_FRIENDS_AND_ACQUAINTANCES_REQUEST:
 		{
-			DebugLog(L_INFO, "MESSAGING_GET_FRIENDS_AND_ACQUAINTANCES_REQUEST: Sending information");
+			DebugLog(L_INFO, "MESSAGING_GET_FRIENDS_AND_ACQUAINTANCES_REQUEST:");
 
-			MMG_Profile *myProfile = aClient->GetProfile();
+			/*MMG_Profile *myProfile = aClient->GetProfile();
 
 			this->SendProfileName(aClient, &responseMessage, myProfile);
 			this->SendPingsPerSecond(aClient, &responseMessage);
@@ -57,28 +93,67 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			this->SendCommOptions(aClient, &responseMessage);
 			this->SendStartupSequenceComplete(aClient, &responseMessage);
+			*/
+
+			this->SendFriend(aClient, &responseMessage);
+			this->SendAcquaintance(aClient, &responseMessage);
+		}
+		break;
+
+		
+		case MMG_ProtocolDelimiters::MESSAGING_IM_CHECK_PENDING_MESSAGES:
+		{
+			DebugLog(L_INFO, "MESSAGING_IM_CHECK_PENDING_MESSAGES:");
+
+			//TODO
 		}
 		break;
 
 		case MMG_ProtocolDelimiters::MESSAGING_SET_COMMUNICATION_OPTIONS_REQ:
 		{
+			DebugLog(L_INFO, "MESSAGING_SET_COMMUNICATION_OPTIONS_REQ:");
+
 			uint commOptions;
 
 			if (!aMessage->ReadUInt(commOptions))
 				return false;
 
 			// TODO
-			MMG_Options myOptions;
-			myOptions.FromUInt(commOptions);
+			//MMG_Options myOptions;
+			//myOptions.FromUInt(commOptions);
+
+			aClient->GetOptions()->FromUInt(commOptions);
+
+#ifdef USING_MYSQL_DATABASE
+
+			bool QueryOK = MySQLDatabase::SaveUserOptions(aClient->GetProfile()->m_ProfileId, commOptions);
+			//if (QueryOK)
+				//response message?
+#endif
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_GET_COMMUNICATION_OPTIONS_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_GET_COMMUNICATION_OPTIONS_REQ:");
+
+			this->SendCommOptions(aClient, &responseMessage);
 		}
 		break;
 
 		case MMG_ProtocolDelimiters::MESSAGING_GET_IM_SETTINGS:
 		{
-			this->SendIMSettings(aClient, &responseMessage);
+			DebugLog(L_INFO, "MESSAGING_GET_IM_SETTINGS:");
 
-			// TODO
-			this->SendStartupSequenceComplete(aClient, &responseMessage);
+			this->SendIMSettings(aClient, &responseMessage);
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_GET_PPS_SETTINGS_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_GET_PPS_SETTINGS_REQ:");
+
+			this->SendPingsPerSecond(aClient, &responseMessage);
 		}
 		break;
 
@@ -148,6 +223,74 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			aClient->SendData(&responseMessage);
 		}
 		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_SET_STATUS_ONLINE:
+		{
+			DebugLog(L_INFO, "MESSAGING_SET_STATUS_ONLINE:");
+
+			/*
+			IDA wic.exe sub_7A1360 MMG_Messaging::SetStatusOnline
+			after WriteDelimiter, the client appends a Uint ( 0, some sort of padding? ) to the packet
+			handling this random 0 is necessary otherwise "message from client delimiter 0 type 0"
+			will show up in the debug log.
+			
+			Massgate will crash if these 0's arent handled since the message reader will 
+			treat it as the next delimiter.
+
+			the same thing happens for cases:
+				- MESSAGING_GET_CLIENT_METRICS -UChar, (IDA sub_7A1200 MMG_Messaging::GetClientMetrics)
+				- MESSAGING_STARTUP_SEQUENCE_COMPLETE -2 x UInt, (IDA sub_7A1B00, see EXMASS_Client::ReceiveNotification lines 41 and 42)
+
+			remove the handle padding code in the 3 cases to reproduce the crash
+			*/
+
+			//handle padding
+			uint randomZero;
+			if (!aMessage->ReadUInt(randomZero))
+				return false;
+
+			//TODO: is there a response for the client?
+			// need some way to tell every other client that someone is online
+			aClient->GetProfile()->m_OnlineStatus = 1;
+			aClient->SetLoginStatus(true);
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS:
+		{
+			DebugLog(L_INFO, "MESSAGING_GET_CLIENT_METRICS:");
+
+			//handle padding
+			uchar randomZero;
+			if (!aMessage->ReadUChar(randomZero))
+				return false;
+
+			//TODO: i dont know what these are
+			//DebugBreak();
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_SET_CLIENT_SETTINGS:
+		{
+			DebugLog(L_INFO, "MESSAGING_SET_CLIENT_SETTINGS:");
+
+			//TODO
+			//DebugBreak();
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_STARTUP_SEQUENCE_COMPLETE:
+		{
+			DebugLog(L_INFO, "MESSAGING_STARTUP_SEQUENCE_COMPLETE:");
+
+			//handle padding
+			uint randomZero;
+			if (!aMessage->ReadUInt(randomZero) || !aMessage->ReadUInt(randomZero))
+				return false;
+
+			this->SendStartupSequenceComplete(aClient, &responseMessage);
+		}
+		break;
 		
 		case MMG_ProtocolDelimiters::MESSAGING_OPTIONAL_CONTENT_GET_REQ:
 		{
@@ -163,6 +306,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 		case MMG_ProtocolDelimiters::MESSAGING_OPTIONAL_CONTENT_RETRY_REQ:
 		{
+			DebugLog(L_INFO, "MESSAGING_OPTIONAL_CONTENT_RETRY_REQ:");
 			// TODO
 			// Is this used?
 			// Retry
@@ -309,6 +453,22 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 		
+		case MMG_ProtocolDelimiters::MESSAGING_IGNORELIST_GET_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_IGNORELIST_GET_REQ:");
+
+			this->SendProfileIgnoreList(aClient, &responseMessage);
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_CLAN_COLOSSEUM_GET_FILTER_WEIGHTS_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_CLAN_COLOSSEUM_GET_FILTER_WEIGHTS_REQ:");
+
+			this->SendClanWarsFilterWeights(aClient, &responseMessage);
+		}
+		break;
+
 		default:
 			DebugLog(L_WARN, "Unknown delimiter %i", aDelimiter);
 		return false;
@@ -319,33 +479,133 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 bool MMG_Messaging::SendProfileName(SvClient *aClient, MN_WriteMessage	*aMessage, MMG_Profile *aProfile)
 {
+	DebugLog(L_INFO, "MESSAGING_RESPOND_PROFILENAME:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 	aProfile->ToStream(aMessage);
 
 	return aClient->SendData(aMessage);
 }
 
+bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
+{
+	DebugLog(L_INFO, "MESSAGING_GET_FRIENDS_RESPONSE:");
+	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_FRIENDS_RESPONSE);
+
+#ifndef USING_MYSQL_DATABASE
+	//write uint (num friends)
+	aMessage->WriteUInt(0);
+
+	//for each friend
+		//write uint (profile id)
+#else
+	uint friendCount=0;
+	uint *myFriends;
+
+	bool QueryOK = MySQLDatabase::QueryFriends(aClient->GetProfile()->m_ProfileId, &friendCount, &myFriends);
+
+	if (QueryOK)
+	{
+		aMessage->WriteUInt(friendCount);
+
+		for (int i=0; i < friendCount; i++)
+		{
+			aMessage->WriteUInt(myFriends[i]);
+		}
+	}
+	else
+	{
+		aMessage->WriteUInt(0);
+	}
+
+	if(friendCount > 0)
+		delete [] myFriends;
+
+	myFriends = nullptr;
+#endif
+
+	return aClient->SendData(aMessage);
+}
+
+bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessage)
+{
+	DebugLog(L_INFO, "MESSAGING_GET_ACQUAINTANCES_RESPONSE:");
+	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_ACQUAINTANCES_RESPONSE);
+
+#ifndef USING_MYSQL_DATABASE
+	//write uint (num acquaitances)
+	aMessage->WriteUInt(0);
+
+	//for each acquaintance
+		//write uint (profile id)
+		//write uint number times played
+#else
+
+	//NOTE: this does not return acquaintances just yet, at the moment it sends
+	//everyone currently registered, may need to limit this later on.
+
+	uint acquaintanceCount=0;
+	uint *myAcquaintances;
+
+	bool QueryOK = MySQLDatabase::QueryAcquaintances(aClient->GetProfile()->m_ProfileId, &acquaintanceCount, &myAcquaintances);
+
+	if (QueryOK)
+	{
+		aMessage->WriteUInt(acquaintanceCount);
+
+		for (int i=0; i < acquaintanceCount; i++)
+		{
+			aMessage->WriteUInt(myAcquaintances[i]);	//profileId
+			aMessage->WriteUInt(0);						//numTimesPlayed
+		}
+	}
+	else
+	{
+		aMessage->WriteUInt(0);
+	}
+
+	if(acquaintanceCount > 0)
+		delete [] myAcquaintances;
+
+	myAcquaintances = nullptr;
+#endif
+
+	return aClient->SendData(aMessage);
+}
+
 bool MMG_Messaging::SendCommOptions(SvClient *aClient, MN_WriteMessage *aMessage)
 {
+	DebugLog(L_INFO, "MESSAGING_GET_COMMUNICATION_OPTIONS_RSP:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_COMMUNICATION_OPTIONS_RSP);
 
 	// Temporary
-	MMG_Options myOptions;
-	aMessage->WriteUInt(myOptions.ToUInt());
+	// to avoid another database query, a client now has an MMG_Options object which 
+	// is read on login (MySQLDatabase::QueryUserProfile) from the commoptions field.
+	// im not sure if this will cause problems later, the options will most likely
+	// need to be stored in another table as there are extra fields in the ida data structure
+	// that are not in the class.
+	//
+	aMessage->WriteUInt(aClient->GetOptions()->ToUInt());
 
 	return aClient->SendData(aMessage);
 }
 
 bool MMG_Messaging::SendIMSettings(SvClient *aClient, MN_WriteMessage *aMessage)
 {
+	DebugLog(L_INFO, "MESSAGING_GET_IM_SETTINGS:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_IM_SETTINGS);
 
 	// Temporary
+	// to avoid another database query, a client now has an MMG_Options object which 
+	// is read on login (MySQLDatabase::QueryUserProfile) from the commoptions field.
+	// im not sure if this will cause problems later, the options will most likely
+	// need to be stored in another table as there are extra fields in the ida data structure
+	// that are not in the class.
+	//
 	IM_Settings mySettings;
-	mySettings.m_Friends = false;
-	mySettings.m_Clanmembers = true;
-	mySettings.m_Acquaintances = false;
-	mySettings.m_Anyone = true;
+	mySettings.m_Friends = aClient->GetOptions()->m_ReceiveFromFriends;
+	mySettings.m_Clanmembers = aClient->GetOptions()->m_ReceiveFromClanMembers;
+	mySettings.m_Acquaintances = aClient->GetOptions()->m_ReceiveFromAcquaintances;
+	mySettings.m_Anyone = aClient->GetOptions()->m_ReceiveFromEveryoneElse;
 	mySettings.ToStream(aMessage);
 
 	return aClient->SendData(aMessage);
@@ -353,6 +613,7 @@ bool MMG_Messaging::SendIMSettings(SvClient *aClient, MN_WriteMessage *aMessage)
 
 bool MMG_Messaging::SendPingsPerSecond(SvClient *aClient, MN_WriteMessage *aMessage)
 {
+	DebugLog(L_INFO, "MESSAGING_GET_PPS_SETTINGS_RSP:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_PPS_SETTINGS_RSP);
 	aMessage->WriteUInt(WIC_CLIENT_PPS);
 
@@ -361,6 +622,7 @@ bool MMG_Messaging::SendPingsPerSecond(SvClient *aClient, MN_WriteMessage *aMess
 
 bool MMG_Messaging::SendStartupSequenceComplete(SvClient *aClient, MN_WriteMessage *aMessage)
 {
+	DebugLog(L_INFO, "MESSAGING_STARTUP_SEQUENCE_COMPLETE:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_STARTUP_SEQUENCE_COMPLETE);
 
 	return aClient->SendData(aMessage);
@@ -368,10 +630,42 @@ bool MMG_Messaging::SendStartupSequenceComplete(SvClient *aClient, MN_WriteMessa
 
 bool MMG_Messaging::SendOptionalContent(SvClient *aClient, MN_WriteMessage *aMessage)
 {
+	DebugLog(L_INFO, "MESSAGING_OPTIONAL_CONTENT_GET_RSP:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_OPTIONAL_CONTENT_GET_RSP);
 
 	// Write the map info data stream
 	//MMG_OptionalContentProtocol::ourInstance->ToStream(aMessage);
+
+	return aClient->SendData(aMessage);
+}
+
+bool MMG_Messaging::SendProfileIgnoreList(SvClient *aClient, MN_WriteMessage *aMessage)
+{
+	DebugLog(L_INFO, "MESSAGING_IGNORELIST_GET_RSP:");
+	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IGNORELIST_GET_RSP);
+
+	//TODO
+	//write uint (num ignored profiles)
+	aMessage->WriteUInt(0);
+
+	//for each ignored profile
+		//write uint (profile id)
+
+	return aClient->SendData(aMessage);
+}
+
+bool MMG_Messaging::SendClanWarsFilterWeights(SvClient *aClient, MN_WriteMessage *aMessage)
+{
+	DebugLog(L_INFO, "MESSAGING_CLAN_COLOSSEUM_GET_FILTER_WEIGHTS_RSP:");
+	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_COLOSSEUM_GET_FILTER_WEIGHTS_RSP);
+
+	//TODO: i have no idea what these are for
+	aMessage->WriteFloat(0.0f);	//myClanWarsHaveMapWeight
+	aMessage->WriteFloat(0.0f);	//myClanWarsDontHaveMapWeight
+	aMessage->WriteFloat(0.0f);	//myClanWarsPlayersWeight
+	aMessage->WriteFloat(0.0f);	//myClanWarsWrongOrderWeight
+	aMessage->WriteFloat(0.0f);	//myClanWarsRatingDiffWeight
+	aMessage->WriteFloat(0.0f);	//myClanWarsMaxRatingDiff
 
 	return aClient->SendData(aMessage);
 }

@@ -49,7 +49,6 @@ public:
 		class Authenticate
 		{
 		public:
-			MMG_Profile		m_Profile;
 			MMG_AuthToken	m_Credentials;
 
 			char			m_Email[WIC_EMAIL_MAX_LENGTH];
@@ -59,7 +58,7 @@ public:
 			uchar			m_HasOldCredentials;
 
 		public:
-			Authenticate() : m_Profile(), m_Credentials()
+			Authenticate() : m_Credentials()
 			{
 				memset(this->m_Email, 0, sizeof(this->m_Email));
 				memset(this->m_Password, 0, sizeof(this->m_Password));

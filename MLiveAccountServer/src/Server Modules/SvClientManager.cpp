@@ -7,6 +7,7 @@ SvClient::SvClient()
 {
 	this->m_Profile		= nullptr;
 	this->m_AuthToken	= nullptr;
+	this->m_Options		= nullptr;
 
 	this->Reset();
 }
@@ -66,6 +67,11 @@ MMG_AuthToken *SvClient::GetToken()
 	return this->m_AuthToken;
 }
 
+MMG_Options *SvClient::GetOptions()
+{
+	return this->m_Options;
+}
+
 SOCKET SvClient::GetSocket()
 {
 	return this->m_Socket;
@@ -122,6 +128,13 @@ void SvClient::Reset()
 	{
 		delete this->m_AuthToken;
 		this->m_AuthToken = nullptr;
+	}
+
+	// Communication options structure
+	if (this->m_Options)
+	{
+		delete this->m_Options;
+		this->m_Options = nullptr;
 	}
 }
 
@@ -272,6 +285,7 @@ SvClient *SvClientManager::AddClient(uint aIpAddr, uint aPort, SOCKET aSocket)
 	{
 		slot->m_Profile		= new MMG_Profile();
 		slot->m_AuthToken	= new MMG_AuthToken();
+		slot->m_Options		= new MMG_Options();
 		slot->m_Socket		= aSocket;
 		slot->m_IpAddress	= aIpAddr;
 		slot->m_Port		= aPort;
