@@ -64,30 +64,6 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		break;
 		*/
 
-		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CYCLE_MAP_LIST_REQ:
-		{
-			DebugLog(L_INFO, "SERVERTRACKER_USER_CYCLE_MAP_LIST_REQ:");
-
-			uint64 cycleHash;
-			aMessage->ReadUInt64(cycleHash);
-
-			DebugLog(L_INFO, "hash: %llX", cycleHash);
-
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_CYCLE_MAP_LIST_RSP);
-			responseMessage.WriteUInt64(cycleHash);
-			responseMessage.WriteUShort(ARRAYSIZE(cycles));
-
-			for (int i = 0; i < ARRAYSIZE(cycles); i++)
-			{
-				responseMessage.WriteUInt64(cycles[i].hash);
-				responseMessage.WriteString(cycles[i].mapname);
-			}
-
-			if (!aClient->SendData(&responseMessage))
-				return false;
-		}
-		break;
-
 		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_LIST_SERVERS:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_LIST_SERVERS:");
@@ -155,24 +131,73 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		break;
 		*/
 
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CYCLE_MAP_LIST_REQ:
+		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CYCLE_MAP_LIST_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_CYCLE_MAP_LIST_REQ:");
 
-			// works but is definitely not done
+			uint64 cycleHash;
+			aMessage->ReadUInt64(cycleHash);
+
+			DebugLog(L_INFO, "hash: %llX", cycleHash);
+
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_CYCLE_MAP_LIST_RSP);
-			responseMessage.WriteUInt64(1);
-			responseMessage.WriteUShort(1);
-			
+			responseMessage.WriteUInt64(cycleHash);
+			responseMessage.WriteUShort(ARRAYSIZE(cycles));
+
+			for (int i = 0; i < ARRAYSIZE(cycles); i++)
+			{
+				responseMessage.WriteUInt64(cycles[i].hash);
+				responseMessage.WriteString(cycles[i].mapname);
+			}
+
 			if (!aClient->SendData(&responseMessage))
 				return false;
 		}
 		break;
-		*/
 
 		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_LADDER_GET_REQ:");
+
+			uint aUInt1 = 0;
+			uint ProfileId = 0;
+			uint aUInt2 = 0;
+			uint aUInt3 = 0;
+			aMessage->ReadUInt(aUInt1);
+			aMessage->ReadUInt(ProfileId);
+			aMessage->ReadUInt(aUInt2);
+			aMessage->ReadUInt(aUInt3);
+			
+			uchar msgcase = 1;
+			uint numberofplayers = 0;
+			MMG_Profile aProfile[2];
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
+			responseMessage.WriteUChar(msgcase);
+			
+			switch (msgcase)
+			{
+				case 1:
+					responseMessage.WriteUInt(1);
+					responseMessage.WriteUInt(1);
+					responseMessage.WriteUInt(1);
+					responseMessage.WriteUInt(numberofplayers);
+					for (int i = 0; i < numberofplayers; i++)
+					{
+						responseMessage.WriteUInt(1);
+					}
+					break;
+				case 2:
+					responseMessage.WriteUInt(numberofplayers);
+					for (int i = 0; i < numberofplayers; i++)
+					{
+						aProfile[i].ToStream(&responseMessage);
+					}
+					break;
+				case 3:
+					break;
+			
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 		break;
 		*/
@@ -184,16 +209,16 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		break;
 		*/
 
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_LADDER_TOPTEN_REQ: //sub_791940
+		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_LADDER_GET_REQ: //sub_791940
 		{
-			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_LADDER_TOPTEN_REQ:");
+			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_LADDER_GET_REQ:");
 		}
 		break;
 		*/
 
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_LADDER_GET_REQ: //sub_791940
+		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_LADDER_TOPTEN_REQ: //sub_791940
 		{
-			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_LADDER_GET_REQ:");
+			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_LADDER_TOPTEN_REQ:");
 		}
 		break;
 		*/
@@ -286,30 +311,76 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			uint ProfileId = 0, BadgesStreamLength = 1;
 			aMessage->ReadUInt(ProfileId);
 			
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_BADGES_RSP);
-			responseMessage.WriteUInt(ProfileId);
-			responseMessage.WriteUInt(0);
+			//responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_BADGES_RSP);
+			//responseMessage.WriteUInt(ProfileId);
+			//responseMessage.WriteUInt(0);
 			//responseMessage.WriteRawData(dataStream, dataLength);
 			
 			//MN_WriteMessage bufferMessage(1024);
 			//sizeptr_t dataLength = bufferMessage.GetDataLength();
 			//voidptr_t dataStream = bufferMessage.GetDataStream();
 
-			if (!aClient->SendData(&responseMessage))
-				return false;
+			//if (!aClient->SendData(&responseMessage))
+			//	return false;
 		}
 		break;
 		*/
 		
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_STATS_REQ: //sub_7916B0
+		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_STATS_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_STATS_REQ:");
 
 			uint ClanProfileId = 0;
 			aMessage->ReadUInt(ClanProfileId);
 			
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_STATS_RSP);
+			MMG_ClanStats myClanStats;
+			myClanStats.m_ClanId = ClanProfileId;
+			myClanStats.m_LastMatchPlayed = 60;
+			myClanStats.m_NumberOfMatches = 150;
+			myClanStats.m_NumberOfMatchesWon = 100;
+			myClanStats.m_BestWinningStreak = 55;
+			myClanStats.m_CurrentWinningStreak = 10;
+			myClanStats.m_CurrentLadderPosition = 30; // +1 in the profile screen tho
+			myClanStats.m_NumberOfTournaments = 21; // not listed
+			myClanStats.m_NumberOfTournamentsWon = 3; // not listed
+
+			myClanStats.m_NumberOfDominationMatches = 77; // not listed
+			myClanStats.m_NumberOfDominationMatchesWon = 50;
+			myClanStats.m_NumberOfMatchesWonByTotalDomination = 46;
+			myClanStats.m_NumberOfAssaultMatches = 22;  // not listed
+			myClanStats.m_NumberOfAssaultMatchesWon = 15;
+			myClanStats.m_NumberOfPerfectDefensesInAssaultMatch = 13;
+			myClanStats.m_NumberOfTugOfWarMatches = 51;  // not listed
+			myClanStats.m_NumberOfTugOfWarMatchesWon = 41;
+			myClanStats.m_NumberOfPerfectPushesInTugOfWarMatch = 33;
 			
+			myClanStats.m_NumberOfUnitsKilled = 1500; // not listed
+			myClanStats.m_NumberOfUnitsLost = 1200; // not listed
+			myClanStats.m_NumberOfNukesDeployed = 32;
+			myClanStats.m_NumberOfTacticalAidCriticalHits = 123;
+			
+			myClanStats.m_TimePlayedAsUSA = 320; // in seconds
+			myClanStats.m_TimePlayedAsUSSR = 340; // in seconds
+			myClanStats.m_TimePlayedAsNATO = 360; // in seconds
+			myClanStats.m_ScoreTotal = 40000;
+			myClanStats.m_HighestScore = 8000;
+
+			myClanStats.m_ScoreByDamagingEnemies = 12000;
+			myClanStats.m_ScoreByRepairing = 9000;
+			myClanStats.m_ScoreByUsingTacticalAid = 11000;
+			myClanStats.m_ScoreByFortifying = 4500;
+			myClanStats.m_ScoreAsInfantry = 12121;
+			myClanStats.m_ScoreAsSupport = 13131;
+			myClanStats.m_ScoreAsAir = 4545;
+			myClanStats.m_ScoreAsArmor = 14141;
+			myClanStats.m_HighScoreAsInfantry = 2109;
+			myClanStats.m_HighScoreAsSupport = 2209;
+			myClanStats.m_HighScoreAsAir = 1509;
+			myClanStats.m_HighScoreAsArmor = 2009;
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_STATS_RSP);
+			myClanStats.ToStream(&responseMessage);
+
 			if (!aClient->SendData(&responseMessage))
 				return false;
 		}
@@ -323,8 +394,27 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			uint ClanProfileId = 0;
 			aMessage->ReadUInt(ClanProfileId);
 			
+			uchar ClanMedalBuffer[9];
+			for (int i = 0; i < 9; i++)
+				ClanMedalBuffer[i] = 0;
+
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_MEDALS_RSP);
+			responseMessage.WriteUInt(4321); // ClanId
+			responseMessage.WriteUInt(9); // medal count
+			//responseMessage.WriteUInt(64); // max size
+			responseMessage.WriteUInt(9*4); // data
 			
+			for (int j = 0; j < 9; j++)
+			{
+				// per medal
+				responseMessage.WriteUShort(1); // medal level
+				responseMessage.WriteUShort(1); // number of stars
+			}
+
+
+			//responseMessage.WriteRawData(&ClanMedalBuffer, sizeof(ClanMedalBuffer));
+
+
 			if (!aClient->SendData(&responseMessage))
 				return false;
 		}

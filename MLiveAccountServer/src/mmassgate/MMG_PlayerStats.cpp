@@ -105,35 +105,35 @@ bool MMG_PlayerStats::FromStream(MN_ReadMessage *aMessage)
 {
 	if (!aMessage->ReadUInt(this->m_PlayerId) || !aMessage->ReadUInt(this->m_LastMatchPlayed) || !aMessage->ReadUInt(this->m_ScoreTotal))
 		return false;
-	if (aMessage->ReadUInt(this->m_ScoreAsInfantry) || !aMessage->ReadUInt(this->m_HighScoreAsInfantry) || !aMessage->ReadUInt(this->m_ScoreAsSupport))
+	if (!aMessage->ReadUInt(this->m_ScoreAsInfantry) || !aMessage->ReadUInt(this->m_HighScoreAsInfantry) || !aMessage->ReadUInt(this->m_ScoreAsSupport))
 		return false;
-	if (aMessage->ReadUInt(this->m_HighScoreAsSupport) || !aMessage->ReadUInt(this->m_ScoreAsArmor) || !aMessage->ReadUInt(this->m_HighScoreAsArmor))
+	if (!aMessage->ReadUInt(this->m_HighScoreAsSupport) || !aMessage->ReadUInt(this->m_ScoreAsArmor) || !aMessage->ReadUInt(this->m_HighScoreAsArmor))
 		return false;
-	if (aMessage->ReadUInt(this->m_ScoreAsAir) || !aMessage->ReadUInt(this->m_HighScoreAsAir) || !aMessage->ReadUInt(this->m_ScoreByDamagingEnemies))
+	if (!aMessage->ReadUInt(this->m_ScoreAsAir) || !aMessage->ReadUInt(this->m_HighScoreAsAir) || !aMessage->ReadUInt(this->m_ScoreByDamagingEnemies))
 		return false;
-	if (aMessage->ReadUInt(this->m_ScoreByUsingTacticalAid) || !aMessage->ReadUInt(this->m_ScoreByCapturingCommandPoints) || !aMessage->ReadUInt(this->m_ScoreByRepairing))
+	if (!aMessage->ReadUInt(this->m_ScoreByUsingTacticalAid) || !aMessage->ReadUInt(this->m_ScoreByCapturingCommandPoints) || !aMessage->ReadUInt(this->m_ScoreByRepairing))
 		return false;
-	if (aMessage->ReadUInt(this->m_ScoreByFortifying) || !aMessage->ReadUInt(this->m_HighestScore) || !aMessage->ReadUInt(this->m_CurrentLadderPosition))
+	if (!aMessage->ReadUInt(this->m_ScoreByFortifying) || !aMessage->ReadUInt(this->m_HighestScore) || !aMessage->ReadUInt(this->m_CurrentLadderPosition))
 		return false;
-	if (aMessage->ReadUInt(this->m_TimeTotalMatchLength) || !aMessage->ReadUInt(this->m_TimePlayedAsUSA) || !aMessage->ReadUInt(this->m_TimePlayedAsUSSR))
+	if (!aMessage->ReadUInt(this->m_TimeTotalMatchLength) || !aMessage->ReadUInt(this->m_TimePlayedAsUSA) || !aMessage->ReadUInt(this->m_TimePlayedAsUSSR))
 		return false;
-	if (aMessage->ReadUInt(this->m_TimePlayedAsNATO) || !aMessage->ReadUInt(this->m_TimePlayedAsInfantry) || !aMessage->ReadUInt(this->m_TimePlayedAsSupport))
+	if (!aMessage->ReadUInt(this->m_TimePlayedAsNATO) || !aMessage->ReadUInt(this->m_TimePlayedAsInfantry) || !aMessage->ReadUInt(this->m_TimePlayedAsSupport))
 		return false;
-	if (aMessage->ReadUInt(this->m_TimePlayedAsArmor) || !aMessage->ReadUInt(this->m_TimePlayedAsAir) || !aMessage->ReadUInt(this->m_NumberOfMatches))
+	if (!aMessage->ReadUInt(this->m_TimePlayedAsArmor) || !aMessage->ReadUInt(this->m_TimePlayedAsAir) || !aMessage->ReadUInt(this->m_NumberOfMatches))
 		return false;
-	if (aMessage->ReadUInt(this->m_NumberOfMatchesWon) || !aMessage->ReadUInt(this->m_NumberOfMatchesLost) || !aMessage->ReadUInt(this->m_CurrentWinningStreak))
+	if (!aMessage->ReadUInt(this->m_NumberOfMatchesWon) || !aMessage->ReadUInt(this->m_NumberOfMatchesLost) || !aMessage->ReadUInt(this->m_CurrentWinningStreak))
 		return false;
-	if (aMessage->ReadUInt(this->m_BestWinningStreak) || !aMessage->ReadUInt(this->m_NumberOfAssaultMatches) || !aMessage->ReadUInt(this->m_NumberOfAssaultMatchesWon))
+	if (!aMessage->ReadUInt(this->m_BestWinningStreak) || !aMessage->ReadUInt(this->m_NumberOfAssaultMatches) || !aMessage->ReadUInt(this->m_NumberOfAssaultMatchesWon))
 		return false;
-	if (aMessage->ReadUInt(this->m_NumberOfDominationMatches) || !aMessage->ReadUInt(this->m_NumberOfDominationMatchesWon) || !aMessage->ReadUInt(this->m_NumberOfTugOfWarMatches))
+	if (!aMessage->ReadUInt(this->m_NumberOfDominationMatches) || !aMessage->ReadUInt(this->m_NumberOfDominationMatchesWon) || !aMessage->ReadUInt(this->m_NumberOfTugOfWarMatches))
 		return false;
-	if (aMessage->ReadUInt(this->m_NumberOfTugOfWarMatchesWon) || !aMessage->ReadUInt(this->m_NumberOfMatchesWonByTotalDomination) || !aMessage->ReadUInt(this->m_NumberOfPerfectDefensesInAssaultMatch))
+	if (!aMessage->ReadUInt(this->m_NumberOfTugOfWarMatchesWon) || !aMessage->ReadUInt(this->m_NumberOfMatchesWonByTotalDomination) || !aMessage->ReadUInt(this->m_NumberOfPerfectDefensesInAssaultMatch))
 		return false;
-	if (aMessage->ReadUInt(this->m_NumberOfPerfectPushesInTugOfWarMatch) || !aMessage->ReadUInt(this->m_NumberOfUnitsKilled) || !aMessage->ReadUInt(this->m_NumberOfUnitsLost))
+	if (!aMessage->ReadUInt(this->m_NumberOfPerfectPushesInTugOfWarMatch) || !aMessage->ReadUInt(this->m_NumberOfUnitsKilled) || !aMessage->ReadUInt(this->m_NumberOfUnitsLost))
 		return false;
-	if (aMessage->ReadUInt(this->m_NumberOfReinforcementPointsSpent) || !aMessage->ReadUInt(this->m_NumberOfTacticalAidPointsSpent) || !aMessage->ReadUInt(this->m_NumberOfNukesDeployed))
+	if (!aMessage->ReadUInt(this->m_NumberOfReinforcementPointsSpent) || !aMessage->ReadUInt(this->m_NumberOfTacticalAidPointsSpent) || !aMessage->ReadUInt(this->m_NumberOfNukesDeployed))
 		return false;
-	if (aMessage->ReadUInt(this->m_NumberOfTacticalAidCriticalHits))
+	if (!aMessage->ReadUInt(this->m_NumberOfTacticalAidCriticalHits))
 		return false;
 
 	return true;

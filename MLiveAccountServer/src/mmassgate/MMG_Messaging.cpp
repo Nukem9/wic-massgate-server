@@ -100,7 +100,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 
-		
 		case MMG_ProtocolDelimiters::MESSAGING_IM_CHECK_PENDING_MESSAGES:
 		{
 			DebugLog(L_INFO, "MESSAGING_IM_CHECK_PENDING_MESSAGES:");
@@ -171,11 +170,12 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			aMessage->ReadUInt(zero);
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_CREATE_RESPONSE);
-			//responseMessage.WriteUChar(1); // successflag
-			//responseMessage.WriteUInt(1); // clan id
-			responseMessage.WriteUChar(0);
-			responseMessage.WriteUInt(0);
-			aClient->SendData(&responseMessage);
+			responseMessage.WriteUChar(1); // successflag
+			responseMessage.WriteUInt(4321); // clan id
+			//responseMessage.WriteUChar(0);
+			//responseMessage.WriteUInt(0);
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 		break;
 
@@ -183,6 +183,11 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_CLAN_FULL_INFO_REQUEST:");
 
+			uint ProfileId = 0;
+			uint aUInt1 = 0;
+			aMessage->ReadUInt(ProfileId);
+			aMessage->ReadUInt(aUInt1);
+			
 			// TODO
 			wchar_t clanName[32];
 			wchar_t clanTag[11];
@@ -190,7 +195,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			wchar_t clanMessageOfTheDay[256];
 			wchar_t clanHomepage[256];
 			uint clanNumberOfPlayers = 0;
-			uint clanPlayerId[512];
+			//uint clanPlayerId[512];
 			uint clanLeaderId = 0, clanPlayerOfTheWeekId = 0;
 			memset(clanName, 0, sizeof(clanName));
 			memset(clanTag, 0, sizeof(clanTag));
@@ -198,10 +203,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			memset(clanMessageOfTheDay, 0, sizeof(clanMessageOfTheDay));
 			memset(clanHomepage, 0, sizeof(clanHomepage));
 			
-			uchar messagecontent[500];
-			for (int i = 0; i < 500; i++)
-				aMessage->ReadUChar(messagecontent[i]);
-
 			wcscpy(clanName, L"Developers & Moderators");
 			wcscpy(clanTag, L"devs^");
 			wcscpy(clanMotto, L"Today is a good day for clan wars!");
@@ -216,11 +217,12 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			responseMessage.WriteString(clanHomepage);
 			
 			responseMessage.WriteUInt(1);	// number of players
-			responseMessage.WriteUInt(74);	// player list
-			responseMessage.WriteUInt(74);	// clan leader
-			responseMessage.WriteUInt(74);	// player of the week
+			responseMessage.WriteUInt(ProfileId);	// player list - TODO: replace with loop
+			responseMessage.WriteUInt(ProfileId);	// clan leader
+			responseMessage.WriteUInt(0);	// player of the week
 			
-			aClient->SendData(&responseMessage);
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 		break;
 
@@ -291,6 +293,39 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			this->SendStartupSequenceComplete(aClient, &responseMessage);
 		}
 		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_CLIENT_REQ_GET_PCC:
+		{
+			DebugLog(L_INFO, "MESSAGING_CLIENT_REQ_GET_PCC:");
+
+			// This is called when the clan profile page is opened, clan collosseum filters
+
+			uint PCCRequestCount = 0;
+			uint PCCRequestId = 0;
+			uchar PCCRequestType = 0;
+			aMessage->ReadUInt(PCCRequestCount);
+			for (int i = 0; i < PCCRequestCount; i++)
+			{
+				aMessage->ReadUInt(PCCRequestId);
+				aMessage->ReadUChar(PCCRequestType);
+			}
+
+			uint NumberOfPlayers = 0;
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLIENT_RSP_GET_PCC);
+			responseMessage.WriteUInt(NumberOfPlayers);	// number of players
+
+			for (int i = 0; i < NumberOfPlayers; i++)
+			{
+				responseMessage.WriteUInt(1); // ProfileId ???
+				responseMessage.WriteUInt(1); // ???
+				responseMessage.WriteUChar(1); // player rank?
+				responseMessage.WriteString(""); // ??? 256 byte size
+			}
+			
+			if (!aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
 		
 		case MMG_ProtocolDelimiters::MESSAGING_OPTIONAL_CONTENT_GET_REQ:
 		{
@@ -311,67 +346,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			// Is this used?
 			// Retry
 			// this->SendOptionalContent(aClient, &responseMessage);
-		}
-		break;
-
-		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_REQ:
-		{
-			DebugLog(L_INFO, "MESSAGING_PROFILE_GET_EDITABLES_REQ: Sending information");
-
-			/*
-				TODO:housebee
-				- read the data from the client, for which profile id am i retrieving the motto and homepage?
-				- (skip) read values from database using client data
-				- create MMG_ProfileEditableVariablesProtocol using values from database, 
-					or use hardcoded values if there is no database code. (or you could always write the code yourself :P)
-				- write response delimiter to stream
-				- write the MMG_ProfileEditableVariablesProtocol.ToStream(&responseMessage).... to the response message stream
-				- send the response to the client, aClient->SendData(&responseMessage)
-			*/
-
-			// to do: read strings from profile (or profile related) database
-
-			MMG_ProfileEditableVariablesProtocol myProfileEditableVariables;
-			wcscpy(myProfileEditableVariables.m_Motto, L"Hi to everyone");
-			wcscpy(myProfileEditableVariables.m_Homepage, L"GL & HF");
-			
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_RSP);
-			
-			myProfileEditableVariables.ToStream(&responseMessage);
-
-			if (!aClient->SendData(&responseMessage))
-				return false;
-		}
-		break;
-
-		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_SET_EDITABLES_REQ:
-		{
-			DebugLog(L_INFO, "MESSAGING_PROFILE_SET_EDITABLES_REQ: Sending information");
-
-			/*
-				TODO:housebee
-				- read the data from the client, for which profile id am i saving the motto and homepage? and whats the new motto and homepage?
-				- create MMG_ProfileEditableVariablesProtocol set its members to values read from the client
-				- (skip) save values to the database
-				- write response delimiter to stream
-				- write the new MMG_ProfileEditableVariablesProtocol to the stream ( dont need to get them from the database)
-				- send the response to the client, aClient->SendData(&responseMessage)
-			*/
-
-			// to do: save strings to profile (or profile related) database
-
-			// to do: read freshly saved strings from profile (or profile related) database
-
-			MMG_ProfileEditableVariablesProtocol myProfileEditableVariables;
-			wcscpy(myProfileEditableVariables.m_Motto, L"Hello!");
-			wcscpy(myProfileEditableVariables.m_Homepage, L"Bye!");
-			
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_RSP);
-			
-			myProfileEditableVariables.ToStream(&responseMessage);
-
-			if (!aClient->SendData(&responseMessage))
-				return false;
 		}
 		break;
 
@@ -450,6 +424,59 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			//if (!aClient->SendData(&responseMessage))
 			//	return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_SET_EDITABLES_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_PROFILE_SET_EDITABLES_REQ: Sending information");
+
+			/*// read message byte by byte
+			uchar aUChar[6];
+			for (int i=0;i<6;i++)
+				aMessage->ReadUChar(aUChar[i]);
+			*/
+			
+			// there might be something else in the message, however that tab is not accessible yet
+			MMG_ProfileEditableVariablesProtocol myNewEditables;
+			myNewEditables.FromStream(aMessage);
+			
+			// to do: save strings to profile (or profile related) database
+
+			// to do: read freshly saved strings from profile (or profile related) database
+
+			MMG_ProfileEditableVariablesProtocol myProfileEditableVariables;
+			wcscpy(myProfileEditableVariables.m_Motto, L"Hello!");
+			wcscpy(myProfileEditableVariables.m_Homepage, L"Bye!");
+			
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_RSP);
+			
+			myProfileEditableVariables.ToStream(&responseMessage);
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GET_EDITABLES_REQ: Sending information");
+
+			uint ProfileId = 0;
+			aMessage->ReadUInt(ProfileId);
+
+			// query database with ProfileId for saved editables
+
+			MMG_ProfileEditableVariablesProtocol myProfileEditableVariables;
+			wcscpy(myProfileEditableVariables.m_Motto, L"Hi to everyone");
+			wcscpy(myProfileEditableVariables.m_Homepage, L"GL & HF");
+			
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_RSP);
+			
+			myProfileEditableVariables.ToStream(&responseMessage);
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 		break;
 		

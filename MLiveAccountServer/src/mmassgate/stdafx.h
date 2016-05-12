@@ -18,6 +18,7 @@ class SvClient;
 #include "MMG_AccountProtocol.h"
 #include "MMG_Messaging.h"
 #include "MMG_OptionalContentProtocol.h"
+#include "MMG_ClanStats.h"
 #include "MMG_PlayerStats.h"
 #include "MMG_ProfileGuestBookEntry.h"
 #include "MMG_ProfileGuestBookProtocol.h"

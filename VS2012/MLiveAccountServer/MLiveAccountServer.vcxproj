@@ -116,6 +116,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ClanStats.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Constants.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_GroupMemberships.h" />
@@ -198,6 +199,7 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ClanStats.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ICipher.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Messaging.cpp" />
