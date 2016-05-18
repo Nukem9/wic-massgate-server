@@ -170,7 +170,13 @@ public:
 private:
 
 public:
-	MMG_AccountProtocol();
+
+	bool				m_MaintenanceMode;
+
+	MMG_AccountProtocol()
+	{
+		this->m_MaintenanceMode				= false;
+	}
 
 	bool HandleMessage				(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter);
 	void WritePatchInformation		(MN_WriteMessage *aMessage, Query *aQuery);

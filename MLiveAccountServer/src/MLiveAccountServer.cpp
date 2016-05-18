@@ -23,6 +23,10 @@ void CreateServices()
 	// Server Client Manager
 	SvClientManager::Create();
 
+#ifdef USING_MYSQL_DATABASE
+	MySQLDatabase::Create();
+#endif
+
 	MMG_AccountProtocol::Create();
 	MMG_Messaging::Create();
 	MMG_OptionalContentProtocol::Create();
@@ -36,11 +40,11 @@ void Startup()
 	CreateServices();
 
 #ifdef USING_MYSQL_DATABASE
-	if (!MySQLDatabase::Initialize())
+	if (!MySQLDatabase::ourInstance->Initialize())
 		DebugLog(L_ERROR, "Failed to initialize database back end");
 
 	//only run once to create the tables, TODO: move the database schema to an .sql file
-	//if (!MySQLDatabase::InitializeSchema())
+	//if (!MySQLDatabase::ourInstance->InitializeSchema())
 	//	DebugLog(L_ERROR, "Failed to create database tables");
 
 	/* GeoIP init*/
@@ -66,7 +70,7 @@ void Shutdown()
 
 #ifdef USING_MYSQL_DATABASE
 	GeoIP::Unload();
-	MySQLDatabase::Unload();
+	MySQLDatabase::ourInstance->Unload();
 #endif
 }
 

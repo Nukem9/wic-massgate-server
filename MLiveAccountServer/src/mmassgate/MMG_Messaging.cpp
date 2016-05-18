@@ -50,7 +50,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					return false;
 
 				//TODO: not sure if all profiles should be sent all in one delimiter
-				bool QueryOK = MySQLDatabase::QueryProfileName(id, &myFriend);
+				bool QueryOK = MySQLDatabase::ourInstance->QueryProfileName(id, &myFriend);
 
 				//this->SendProfileName(aClient, &responseMessage, &myFriend);
 
@@ -125,7 +125,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 #ifdef USING_MYSQL_DATABASE
 
-			bool QueryOK = MySQLDatabase::SaveUserOptions(aClient->GetProfile()->m_ProfileId, commOptions);
+			bool QueryOK = MySQLDatabase::ourInstance->SaveUserOptions(aClient->GetProfile()->m_ProfileId, commOptions);
 			//if (QueryOK)
 				//response message?
 #endif
@@ -528,7 +528,7 @@ bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 	uint friendCount=0;
 	uint *myFriends;
 
-	bool QueryOK = MySQLDatabase::QueryFriends(aClient->GetProfile()->m_ProfileId, &friendCount, &myFriends);
+	bool QueryOK = MySQLDatabase::ourInstance->QueryFriends(aClient->GetProfile()->m_ProfileId, &friendCount, &myFriends);
 
 	if (QueryOK)
 	{
@@ -573,7 +573,7 @@ bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessag
 	uint acquaintanceCount=0;
 	uint *myAcquaintances;
 
-	bool QueryOK = MySQLDatabase::QueryAcquaintances(aClient->GetProfile()->m_ProfileId, &acquaintanceCount, &myAcquaintances);
+	bool QueryOK = MySQLDatabase::ourInstance->QueryAcquaintances(aClient->GetProfile()->m_ProfileId, &acquaintanceCount, &myAcquaintances);
 
 	if (QueryOK)
 	{
@@ -606,7 +606,7 @@ bool MMG_Messaging::SendCommOptions(SvClient *aClient, MN_WriteMessage *aMessage
 
 	// Temporary
 	// to avoid another database query, a client now has an MMG_Options object which 
-	// is read on login (MySQLDatabase::QueryUserProfile) from the commoptions field.
+	// is read on login (MySQLDatabase::ourInstance->QueryUserProfile) from the commoptions field.
 	// im not sure if this will cause problems later, the options will most likely
 	// need to be stored in another table as there are extra fields in the ida data structure
 	// that are not in the class.
@@ -623,7 +623,7 @@ bool MMG_Messaging::SendIMSettings(SvClient *aClient, MN_WriteMessage *aMessage)
 
 	// Temporary
 	// to avoid another database query, a client now has an MMG_Options object which 
-	// is read on login (MySQLDatabase::QueryUserProfile) from the commoptions field.
+	// is read on login (MySQLDatabase::ourInstance->QueryUserProfile) from the commoptions field.
 	// im not sure if this will cause problems later, the options will most likely
 	// need to be stored in another table as there are extra fields in the ida data structure
 	// that are not in the class.

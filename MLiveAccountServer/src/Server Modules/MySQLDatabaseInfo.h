@@ -2,6 +2,14 @@
 
 static const char *MySQLTableValues[] =
 {
+	"drop table if exists mg_utils",
+
+	"CREATE TABLE mg_utils ("
+		"poll tinyint(3) unsigned not null"
+	");",
+
+	"INSERT INTO mg_utils (poll) VALUES ('1');",
+
 	"drop table if exists mg_accounts;",
 
 	"drop table if exists mg_cdkeys;",

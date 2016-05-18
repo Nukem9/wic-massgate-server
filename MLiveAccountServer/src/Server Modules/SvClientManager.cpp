@@ -256,6 +256,12 @@ void SvClientManager::DisconnectClient(SvClient *aClient)
 	this->RemoveClient(aClient);
 }
 
+void SvClientManager::EmergencyDisconnectAll()
+{
+	for(uint i = 0; i < this->m_ClientMaxCount; i++)
+		this->m_Clients[i].Reset();
+}
+
 uint SvClientManager::GetClientCount()
 {
 	return this->m_ClientCount;

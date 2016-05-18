@@ -85,6 +85,8 @@ public:
 	SvClient	*ConnectClient	(SOCKET aSocket, sockaddr_in *aAddr);
 	void		DisconnectClient(SvClient *aClient);
 
+	void		EmergencyDisconnectAll();
+
 	uint		GetClientCount	();
 
 private:

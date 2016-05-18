@@ -1,14 +1,123 @@
 #pragma once
 
+/*
+	MySQL C API - Documentation
+	https://dev.mysql.com/doc/refman/5.7/en/c-api.html
+
+	MySQL C API Prepared Statements
+	https://dev.mysql.com/doc/refman/5.7/en/c-api-prepared-statements.html
+
+	NOTES: -taken directly from the documentation
+	1)	To obtain a statement handle, pass a MYSQL connection handler to mysql_stmt_init(), which returns a pointer to a MYSQL_STMT data structure. 
+		This structure is used for further operations with the statement. 
+		To specify the statement to prepare, pass the MYSQL_STMT pointer and the statement string to mysql_stmt_prepare().
+			- The string must consist of a single SQL statement. You should not add a terminating semicolon (";") or \g to the statement.
+			  See: https://dev.mysql.com/doc/refman/5.7/en/mysql-stmt-prepare.html
+
+		*The MYSQLQuery constuctor calls mysql_stmt_init() and mysql_stmt_prepare()
+
+	2)	To provide input parameters for a prepared statement, set up MYSQL_BIND structures and pass them to mysql_stmt_bind_param(). 
+		To receive output column values, set up MYSQL_BIND structures and pass them to mysql_stmt_bind_result().
+		See:https://dev.mysql.com/doc/refman/5.7/en/c-api-prepared-statement-data-structures.html
+
+		*after using Bind(), you can use StmtExecute() to execute your prepared statement
+		*otherwise you can use Step() if its not a prepared statement
+		*use StmtFetch() to get the results
+
+	3)	Multiple statement handles can be associated with a single connection. The limit on the number of handles depends on the available system resources.
+
+	4)	To use a MYSQL_BIND structure, zero its contents to initialize it, then set its members appropriately.
+
+		*Bind has been overloaded for ease of use, to bind dates, nulls, and blobs, use BindDate(), BindNull() and BindBlob()
+
+		*to use a statement that returns a result set, call StmtFetch() after calling StmtExecute()
+
+	*More Information about threaded clients
+	https://dev.mysql.com/doc/refman/5.7/en/c-api-threaded-clients.html
+	https://dev.mysql.com/doc/refman/5.7/en/mysql-thread-init.html
+	https://dev.mysql.com/doc/refman/5.7/en/mysql-thread-end.html
+
+	The MySQLQuery class is basically a wrapper that utilises all of the functions needed to execute a prepared statement
+	at the moment massgate connects to the database on startup and does not check to see if a connection exists when 
+	executing statements, errors are not handled correctly and massgate will most likely crash if the database connection
+	is lost.
+
+	now massgate uses the open connection, rather then opening and closing new connections to perform queries, like it 
+	was before.	the original code is commented just in case is needs to be put back, but at this stage we cant afford 
+	to keep opening and closing the database connection.
+	
+	There could be an issue when clients start querying the database at the same time.
+
+	A thread can execute multiple queries on the same connection.
+
+	TODO:
+	- better error handling if database loses connection
+		experience "experience int(10) unsigned not null,"
+	- handle communication options properly
+	- IgnoredProfiles
+	- save password hash, compatible with phpbb or some other forum
+	- CreateUserAccount, CreateUserProfile, DeleteUserProfile and QueryUserProfile are a little messy but are sufficient for now
+	- the ping function can affect the connection state, more info:
+			http://dev.mysql.com/doc/refman/5.7/en/mysql-ping.html
+			http://dev.mysql.com/doc/refman/5.7/en/auto-reconnect.html
+
+*/
+
 #ifndef USING_MYSQL_DATABASE
 //#define USING_MYSQL_DATABASE
 #endif
 
-namespace MySQLDatabase
+CLASS_SINGLE(MySQLDatabase)
 {
+private:
+	//mysql connection settings
+	char* host;
+	char* user;
+	char* pass;
+	char* db;
+
+	// mysql connection object
+	MYSQL *m_Connection;
+
+	// mysql connection options
+	my_bool reconnect;
+	char *bind_interface;
+	char *charset_name;
+
+	unsigned long sleep_interval_s;		//connection timeout for a default mysql install is 28800 seconds (8 hours)
+	unsigned long sleep_interval_ms;
+
+	HANDLE m_PingThreadHandle;
+
+	static DWORD WINAPI PingThread(LPVOID lpArg);
+
+public:
+	MySQLDatabase()
+	{
+		this->host = nullptr;
+		this->user = nullptr;
+		this->pass = nullptr;
+		this->db = nullptr;
+
+		this->m_Connection = nullptr;
+
+		// mysql connection options
+		this->reconnect = 1;
+		this->bind_interface = "localhost";
+		this->charset_name = "latin1";		//TODO: change to utf8
+
+		this->sleep_interval_s = 18000;		// 5 hours
+		this->sleep_interval_ms = sleep_interval_s * 1000;
+
+		this->m_PingThreadHandle = nullptr;
+	}
+
 	bool	Initialize			();
 	void	Unload				();
 	bool	ReadConfig			();
+	bool	ConnectDatabase		();
+	bool	TestDatabase		();
+	bool	PingDatabase		();
 	bool	InitializeSchema	();
 	
 	//accounts
@@ -31,4 +140,4 @@ namespace MySQLDatabase
 	bool	QueryAcquaintances	(const uint profileId, uint *dstProfileCount, uint *acquaintanceIds[]);
 	bool	QueryIgnoredProfiles	(const uint profileId, uint *dstProfileCount, uint *ignoredIds[]);	//TODO
 	bool	QueryProfileName	(const uint profileId, MMG_Profile *profile);
-}
+};
