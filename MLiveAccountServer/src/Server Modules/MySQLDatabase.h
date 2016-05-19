@@ -127,7 +127,7 @@ public:
 	bool	AuthUserAccount		(const char *email, wchar_t *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
 	
 	//profiles (logins)
-	bool	CheckIfProfileExists(const wchar_t* name, uint *dstId);
+	bool	CheckIfProfileExists	(const wchar_t* name, uint *dstId);
 	bool	CreateUserProfile	(const uint accountId, const wchar_t* name, const char* email);
 	bool	DeleteUserProfile	(const uint accountId, const uint profileId, const char* email);
 	bool	QueryUserProfile	(const uint accountId, const uint profileId, MMG_Profile *profile, MMG_Options *options);
@@ -137,7 +137,11 @@ public:
 	bool	QueryUserOptions	(const uint profileId, int *options);	//TODO
 	bool	SaveUserOptions		(const uint profileId, const int options);
 	bool	QueryFriends		(const uint profileId, uint *dstProfileCount, uint *friendIds[]);
+	bool	AddFriend			(const uint profileId, uint friendProfileId);
+	bool	RemoveFriend		(const uint profileId, uint friendProfileId);
 	bool	QueryAcquaintances	(const uint profileId, uint *dstProfileCount, uint *acquaintanceIds[]);
-	bool	QueryIgnoredProfiles	(const uint profileId, uint *dstProfileCount, uint *ignoredIds[]);	//TODO
+	bool	QueryIgnoredProfiles	(const uint profileId, uint *dstProfileCount, uint *ignoredIds[]);
+	bool	AddIgnoredProfile		(const uint profileId, uint ignoredProfileId);
+	bool	RemoveIgnoredProfile	(const uint profileId, uint ignoredProfileId);
 	bool	QueryProfileName	(const uint profileId, MMG_Profile *profile);
 };

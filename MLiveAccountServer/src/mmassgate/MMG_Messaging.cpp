@@ -55,6 +55,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				//this->SendProfileName(aClient, &responseMessage, &myFriend);
 
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+
 				myFriend.ToStream(&responseMessage);
 			}
 #endif
@@ -97,6 +98,42 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			this->SendFriend(aClient, &responseMessage);
 			this->SendAcquaintance(aClient, &responseMessage);
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_ADD_FRIEND_REQUEST:
+		{
+			DebugLog(L_INFO, "MESSAGING_ADD_FRIEND_REQUEST:");
+
+			uint profileId;
+			if (!aMessage->ReadUInt(profileId))
+				return false;
+
+#ifdef USING_MYSQL_DATABASE
+			MySQLDatabase::ourInstance->AddFriend(aClient->GetProfile()->m_ProfileId, profileId);
+#endif
+			// there doesnt seem to be a response
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_REMOVE_FRIEND_REQUEST:
+		{
+			DebugLog(L_INFO, "MESSAGING_REMOVE_FRIEND_REQUEST:");
+
+			uint profileId;
+			if (!aMessage->ReadUInt(profileId))
+				return false;
+
+#ifdef USING_MYSQL_DATABASE
+
+			MySQLDatabase::ourInstance->RemoveFriend(aClient->GetProfile()->m_ProfileId, profileId);
+
+#endif
+
+			DebugLog(L_INFO, "MESSAGING_REMOVE_FRIEND_RESPONSE:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_REMOVE_FRIEND_RESPONSE);
+			responseMessage.WriteUInt(profileId);
+			aClient->SendData(&responseMessage);
 		}
 		break;
 
@@ -479,6 +516,34 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 		}
 		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_IGNORELIST_ADD_REMOVE_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_IGNORELIST_ADD_REMOVE_REQ:");
+
+			//wic.exe IDA sub_761070
+
+			uchar profileId;
+			if (!aMessage->ReadUChar(profileId))
+				return false;
+
+			float operation;
+			if (!aMessage->ReadFloat(operation))
+				return false;
+#ifndef USING_MYSQL_DATABASE
+			if (operation > 0)
+				printf("add\n");
+			else
+				printf("remove\n");
+#else
+			if (operation > 0)
+				MySQLDatabase::ourInstance->AddIgnoredProfile(aClient->GetProfile()->m_ProfileId, (uint)profileId);
+			else
+				MySQLDatabase::ourInstance->RemoveIgnoredProfile(aClient->GetProfile()->m_ProfileId, (uint)profileId);
+#endif
+			// there doesnt seem to be a response
+		}
+		break;
 		
 		case MMG_ProtocolDelimiters::MESSAGING_IGNORELIST_GET_REQ:
 		{
@@ -534,7 +599,7 @@ bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 	{
 		aMessage->WriteUInt(friendCount);
 
-		for (int i=0; i < friendCount; i++)
+		for (uint i=0; i < friendCount; i++)
 		{
 			aMessage->WriteUInt(myFriends[i]);
 		}
@@ -568,7 +633,7 @@ bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessag
 #else
 
 	//NOTE: this does not return acquaintances just yet, at the moment it sends
-	//everyone currently registered, may need to limit this later on.
+	//everyone currently registered.
 
 	uint acquaintanceCount=0;
 	uint *myAcquaintances;
@@ -579,7 +644,7 @@ bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessag
 	{
 		aMessage->WriteUInt(acquaintanceCount);
 
-		for (int i=0; i < acquaintanceCount; i++)
+		for (uint i=0; i < acquaintanceCount; i++)
 		{
 			aMessage->WriteUInt(myAcquaintances[i]);	//profileId
 			aMessage->WriteUInt(0);						//numTimesPlayed
@@ -671,12 +736,37 @@ bool MMG_Messaging::SendProfileIgnoreList(SvClient *aClient, MN_WriteMessage *aM
 	DebugLog(L_INFO, "MESSAGING_IGNORELIST_GET_RSP:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IGNORELIST_GET_RSP);
 
-	//TODO
+#ifndef USING_MYSQL_DATABASE
 	//write uint (num ignored profiles)
 	aMessage->WriteUInt(0);
 
 	//for each ignored profile
 		//write uint (profile id)
+#else
+	uint ignoredCount=0;
+	uint *myIgnoreList;
+
+	bool QueryOK = MySQLDatabase::ourInstance->QueryIgnoredProfiles(aClient->GetProfile()->m_ProfileId, &ignoredCount, &myIgnoreList);
+
+	if (QueryOK)
+	{
+		aMessage->WriteUInt(ignoredCount);
+
+		for (uint i=0; i < ignoredCount; i++)
+		{
+			aMessage->WriteUInt(myIgnoreList[i]);
+		}
+	}
+	else
+	{
+		aMessage->WriteUInt(0);
+	}
+
+	if(ignoredCount > 0)
+		delete [] myIgnoreList;
+
+	myIgnoreList = nullptr;
+#endif
 
 	return aClient->SendData(aMessage);
 }

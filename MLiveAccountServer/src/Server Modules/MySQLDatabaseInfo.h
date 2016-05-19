@@ -18,6 +18,8 @@ static const char *MySQLTableValues[] =
 
 	"drop table if exists mg_friends;",
 
+	"drop table if exists mg_ignored;",
+
 	"drop table if exists mg_clans;",
 
 	"CREATE TABLE mg_accounts ("
@@ -61,6 +63,13 @@ static const char *MySQLTableValues[] =
 		"id int(10) unsigned not null auto_increment,"
 		"profileid int(10) unsigned not null,"
 		"friendprofileid int(10) unsigned not null,"
+		"PRIMARY KEY (id)"
+	");",
+
+	"CREATE TABLE mg_ignored ("
+		"id int(10) unsigned not null auto_increment,"
+		"profileid int(10) unsigned not null,"
+		"ignoredprofileid int(10) unsigned not null,"
 		"PRIMARY KEY (id)"
 	");",
 

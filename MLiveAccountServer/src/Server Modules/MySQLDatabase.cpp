@@ -980,7 +980,7 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 
 	MySQLQuery query(this->m_Connection, sql);
 	MYSQL_BIND param[1], results[2];
-	uint friendid;
+	uint id;
 	bool querySuccess;
 
 	memset(param, 0, sizeof(param));
@@ -988,7 +988,7 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 
 	query.Bind(&param[0], &profileId);		//profileid
 
-	query.Bind(&results[0], &friendid);		//mg_friends.friendprofileid
+	query.Bind(&results[0], &id);		//mg_friends.friendprofileid
 
 	if(!query.StmtExecute(param, results))
 	{
@@ -1024,7 +1024,7 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 
 			while(query.StmtFetch())
 			{
-				tmp[i] = friendid;
+				tmp[i] = id;
 				i++;
 			}
 
@@ -1036,11 +1036,79 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 	return querySuccess;
 }
 
+bool MySQLDatabase::AddFriend(const uint profileId, uint friendProfileId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+		return false;
+
+	char *sql = "INSERT INTO mg_friends (profileid, friendprofileid) VALUES (?, ?)";
+
+	MySQLQuery query(this->m_Connection, sql);
+	MYSQL_BIND param[2];
+	uint friend_insert_id;
+	bool querySuccess;
+
+	memset(param, 0, sizeof(param));
+
+	query.Bind(&param[0], &profileId);			//mg_friends.profileid
+	query.Bind(&param[1], &friendProfileId);	//mg_friends.friendprofileid
+
+	if (!query.StmtExecute(param))
+	{
+		DatabaseLog("AddFriend() query failed: %d", profileId);
+		friend_insert_id = 0;
+		querySuccess = false;
+	}
+	else
+	{
+		DatabaseLog("profileid (%d) added friendprofileid(%d)", profileId, friendProfileId);
+		friend_insert_id = (uint)mysql_insert_id(this->m_Connection);
+		querySuccess = true;
+	}
+	
+	return querySuccess;
+}
+
+bool MySQLDatabase::RemoveFriend(const uint profileId, uint friendProfileId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+		return false;
+
+	char *sql = "DELETE FROM mg_friends WHERE profileid = ? AND friendprofileid = ?";
+
+	MySQLQuery query(this->m_Connection, sql);
+	MYSQL_BIND param[2];
+	bool querySuccess;
+
+	memset(param, 0, sizeof(param));
+
+	query.Bind(&param[0], &profileId);			//mg_friends.profileid
+	query.Bind(&param[1], &friendProfileId);	//mg_friends.friendprofileid
+
+	if (!query.StmtExecute(param))
+	{
+		DatabaseLog("RemoveFriend() query failed: %d", profileId);
+		querySuccess = false;
+	}
+	else
+	{
+		DatabaseLog("profileid (%d) remove friendprofileid(%d)", profileId, friendProfileId);
+		querySuccess = true;
+	}
+	
+	return querySuccess;
+}
+
 bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCount, uint *acquaintanceIds[])
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
 		return false;
+
+	// this function is temporary
+	// must fix when stats are implemented
 
 	char *sql = "SELECT id from mg_profiles WHERE id <> ? LIMIT 100";
 
@@ -1052,7 +1120,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 	memset(param, 0, sizeof(param));
 	memset(results, 0, sizeof(results));
 
-	query.Bind(&param[0], &profileId);			//temporary, will fix when acquaitances are implemented
+	query.Bind(&param[0], &profileId);		//profileid
 
 	query.Bind(&results[0], &id);			//mg_profiles.id
 
@@ -1108,7 +1176,129 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 	if (!this->TestDatabase())
 		return false;
 
-	return true;
+	char *sql = "SELECT ignoredprofileid from mg_ignored WHERE profileid = ?";
+
+	MySQLQuery query(this->m_Connection, sql);
+	MYSQL_BIND param[1], results[1];
+	uint id;
+	bool querySuccess;
+
+	memset(param, 0, sizeof(param));
+	memset(results, 0, sizeof(results));
+
+	query.Bind(&param[0], &profileId);		//profileid
+
+	query.Bind(&results[0], &id);		//mg_friends.friendprofileid
+
+	if(!query.StmtExecute(param, results))
+	{
+		DatabaseLog("QueryIgnoredProfiles() query failed: %s", profileId);
+		querySuccess = false;
+
+		uint *tmp = new uint();
+
+		*tmp = 0;
+
+		*ignoredIds = tmp;
+		*dstProfileCount = 0;
+	}
+	else
+	{
+		ulong count = (ulong)mysql_stmt_num_rows(query.GetStatement());
+		DatabaseLog("profile id(%d), %d ignored profiles found", profileId, count);
+		querySuccess = true;
+
+		if (count < 1)
+		{
+			uint *tmp = new uint();
+
+			*tmp = 0;
+
+			*ignoredIds = tmp;
+			*dstProfileCount = 0;
+		}
+		else
+		{
+			uint *tmp = new uint[count];
+			int i = 0;
+
+			while(query.StmtFetch())
+			{
+				tmp[i] = id;
+				i++;
+			}
+
+			*ignoredIds = tmp;
+			*dstProfileCount = count;
+		}
+	}
+
+	return querySuccess;
+}
+
+bool MySQLDatabase::AddIgnoredProfile(const uint profileId, uint ignoredProfileId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+		return false;
+
+	char *sql = "INSERT INTO mg_ignored (profileid, ignoredprofileid) VALUES (?, ?)";
+
+	MySQLQuery query(this->m_Connection, sql);
+	MYSQL_BIND param[2];
+	uint ignored_insert_id;
+	bool querySuccess;
+
+	memset(param, 0, sizeof(param));
+
+	query.Bind(&param[0], &profileId);			//mg_friends.profileid
+	query.Bind(&param[1], &ignoredProfileId);	//mg_friends.ignoredprofileid
+
+	if (!query.StmtExecute(param))
+	{
+		DatabaseLog("AddIgnoredProfile() query failed: %d", profileId);
+		ignored_insert_id = 0;
+		querySuccess = false;
+	}
+	else
+	{
+		DatabaseLog("profileid (%d) added ingoredprofileid(%d)", profileId, ignoredProfileId);
+		ignored_insert_id = (uint)mysql_insert_id(this->m_Connection);
+		querySuccess = true;
+	}
+	
+	return querySuccess;
+}
+
+bool MySQLDatabase::RemoveIgnoredProfile(const uint profileId, uint ignoredProfileId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+		return false;
+
+	char *sql = "DELETE FROM mg_ignored WHERE profileid = ? AND ignoredprofileid = ?";
+
+	MySQLQuery query(this->m_Connection, sql);
+	MYSQL_BIND param[2];
+	bool querySuccess;
+
+	memset(param, 0, sizeof(param));
+
+	query.Bind(&param[0], &profileId);			//mg_friends.profileid
+	query.Bind(&param[1], &ignoredProfileId);	//mg_friends.ignoredprofileid
+
+	if (!query.StmtExecute(param))
+	{
+		DatabaseLog("RemoveIgnoredProfile() query failed: %d", profileId);
+		querySuccess = false;
+	}
+	else
+	{
+		DatabaseLog("profileid (%d) remove ignoredprofileid(%d)", profileId, ignoredProfileId);
+		querySuccess = true;
+	}
+	
+	return querySuccess;
 }
 
 bool MySQLDatabase::QueryProfileName (const uint profileId, MMG_Profile *profile)
