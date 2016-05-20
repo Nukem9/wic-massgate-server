@@ -342,15 +342,15 @@ bool MMG_TrackableServer::GetServerListInfo(std::vector<MMG_TrackableServerFullI
 			wcscpy_s(fullInfo.m_ServerName, (const wchar_t *)server.m_Info.m_ServerName);
 			fullInfo.m_ServerReliablePort	= server.m_Info.m_ServerReliablePort;
 
-			//fullInfo.somebits.bitfield1		= server.m_Info.somebits.MaxPlayers;	//TODO
-			fullInfo.somebits.bitfield2			= server.m_Heartbeat.m_NumPlayers;
-			//fullInfo.somebits.bitfield3		= 0;	//TODO
-			fullInfo.somebits2.bitfield1		= server.m_Info.m_ServerType;
-			fullInfo.somebits2.bitfield2		= server.m_Info.somebits.Ranked;
-			fullInfo.somebits2.RankBalanceTeams	= server.m_Info.m_IsRankBalanced;
-			fullInfo.somebits2.HasDomMaps		= server.m_Info.m_HasDominationMaps;
-			fullInfo.somebits2.HasAssaultMaps	= server.m_Info.m_HasAssaultMaps;
-			fullInfo.somebits2.HasTugOfWarMaps	= server.m_Info.m_HasTowMaps;
+			fullInfo.bf_MaxPlayers				= 0;	//TODO: server.m_Heartbeat.m_MaxNumPlayers, this kicks the client if its not 0.
+			fullInfo.bf_PlayerCount				= server.m_Heartbeat.m_NumPlayers;
+			fullInfo.bf_SpectatorCount			= 0;	//TODO
+			fullInfo.bf_ServerType				= server.m_Info.m_ServerType;
+			fullInfo.bf_RankedFlag				= server.m_Info.somebits.Ranked;
+			fullInfo.bf_RankBalanceTeams		= server.m_Info.m_IsRankBalanced;
+			fullInfo.bf_HasDomMaps				= server.m_Info.m_HasDominationMaps;
+			fullInfo.bf_HasAssaultMaps			= server.m_Info.m_HasAssaultMaps;
+			fullInfo.bf_HasTugOfWarMaps			= server.m_Info.m_HasTowMaps;
 
 			fullInfo.m_ServerType			= server.m_Info.m_ServerType;
 			fullInfo.m_IP					= server.m_Info.m_Ip;

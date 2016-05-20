@@ -8,15 +8,15 @@ void MMG_TrackableServerFullInfo::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUInt64(this->m_CycleHash);
 	aMessage->WriteString(this->m_ServerName);
 	aMessage->WriteUShort(this->m_ServerReliablePort);
-	aMessage->WriteUChar(this->somebits.bitfield2);
-	aMessage->WriteUChar(this->somebits.bitfield1);
-	aMessage->WriteUChar(this->somebits.bitfield3);
-	aMessage->WriteUChar(this->somebits2.bitfield2);
-	aMessage->WriteUChar(this->somebits2.bitfield1);
-	aMessage->WriteUChar(this->somebits2.RankBalanceTeams);
-	aMessage->WriteUChar(this->somebits2.HasDomMaps);
-	aMessage->WriteUChar(this->somebits2.HasAssaultMaps);
-	aMessage->WriteUChar(this->somebits2.HasTugOfWarMaps);
+	aMessage->WriteUChar(this->bf_PlayerCount);
+	aMessage->WriteUChar(this->bf_MaxPlayers);
+	aMessage->WriteUChar(this->bf_SpectatorCount);
+	aMessage->WriteUChar(this->bf_RankedFlag);
+	aMessage->WriteUChar(this->bf_ServerType);
+	aMessage->WriteUChar(this->bf_RankBalanceTeams);
+	aMessage->WriteUChar(this->bf_HasDomMaps);
+	aMessage->WriteUChar(this->bf_HasAssaultMaps);
+	aMessage->WriteUChar(this->bf_HasTugOfWarMaps);
 	aMessage->WriteUChar(this->m_ServerType);
 	aMessage->WriteUInt(this->m_IP);
 	aMessage->WriteUInt(this->m_ModId);
@@ -27,9 +27,9 @@ void MMG_TrackableServerFullInfo::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUInt(this->m_WinnerTeam);
 	aMessage->WriteUInt(this->m_HostProfileId);
 	
-	//if (this->somebits.bitfield2 > 0 && this->somebits.bitfield2 < this->somebits.bitfield1)
+	//if (this->bf_PlayerCount > 0 && this->bf_PlayerCount < this->bf_MaxPlayers)
 	//{
-	//	for(int i = 0; i < this->somebits.bitfield2; i++) 
+	//	for(int i = 0; i < this->bf_PlayerCount; i++) 
 	//		this->m_Players[i].ToStream(aMessage);
 	//}
 }
@@ -54,9 +54,9 @@ bool MMG_TrackableServerFullInfo::FromStream(MN_ReadMessage *aMessage)
 		|| !aMessage->ReadUChar(temp[2]))
 		return false;
 
-	this->somebits.bitfield2 = temp[0];
-	this->somebits.bitfield1 = temp[1];
-	this->somebits.bitfield3 = temp[2];
+	this->bf_MaxPlayers			= temp[1];
+	this->bf_PlayerCount		= temp[0];
+	this->bf_SpectatorCount		= temp[2];
 
 	// Read bitfields (2, 1, 3, 4, 5, 6)?
 	uchar temp2[6];
@@ -69,12 +69,12 @@ bool MMG_TrackableServerFullInfo::FromStream(MN_ReadMessage *aMessage)
 		|| !aMessage->ReadUChar(temp2[5]))
 		return false;
 
-	this->somebits2.bitfield2			= temp2[0];
-	this->somebits2.bitfield1			= temp2[1];
-	this->somebits2.RankBalanceTeams	= temp2[2];
-	this->somebits2.HasDomMaps			= temp2[3];
-	this->somebits2.HasAssaultMaps		= temp2[4];
-	this->somebits2.HasTugOfWarMaps		= temp2[5];
+	this->bf_ServerType			= temp2[1];
+	this->bf_RankedFlag			= temp2[0];
+	this->bf_RankBalanceTeams	= temp2[2];
+	this->bf_HasDomMaps			= temp2[3];
+	this->bf_HasAssaultMaps		= temp2[4];
+	this->bf_HasTugOfWarMaps	= temp2[5];
 
 	//read rest of message
 	if (!aMessage->ReadUChar(this->m_ServerType)
@@ -89,10 +89,10 @@ bool MMG_TrackableServerFullInfo::FromStream(MN_ReadMessage *aMessage)
 		return false;
 
 	// read players
-	//if (this->somebits.bitfield2 >= this->somebits.bitfield1)
+	//if (this->bf_PlayerCount >= this->bf_MaxPlayers)
 	//	return false;
 	//
-	//for (int i = 0; i < this->somebits.bitfield2; i++)
+	//for (int i = 0; i < this->bf_PlayerCount; i++)
 	//{
 	//	if (!this->m_Players[i].FromStream(aMessage))
 	//		return false;

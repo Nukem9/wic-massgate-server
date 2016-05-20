@@ -39,32 +39,15 @@ public:
 	uint64 m_CycleHash;
 	wchar_t m_ServerName[64];
 	ushort m_ServerReliablePort;
-
-	union
-	{
-		uchar gapc4[2];
-		struct
-		{
-			uchar bitfield1 : 5;	//maxPlayers
-			uchar bitfield2 : 5;	//playerCount
-			uchar bitfield3 : 5;	//spectatorCount
-		} somebits;
-	};
-
-	union
-	{
-		__int16	_bf198;
-		struct
-		{
-			uchar bitfield1			: 1;	//serverType
-			uchar bitfield2			: 1;	//rankedFlag
-			uchar RankBalanceTeams	: 1;
-			uchar HasDomMaps		: 1;
-			uchar HasAssaultMaps	: 1;
-			uchar HasTugOfWarMaps	: 1;
-		} somebits2;
-	};
-
+	uchar bf_MaxPlayers;
+	uchar bf_PlayerCount;
+	uchar bf_SpectatorCount;
+	uchar bf_ServerType;
+	uchar bf_RankedFlag;
+	uchar bf_RankBalanceTeams;
+	uchar bf_HasDomMaps;
+	uchar bf_HasAssaultMaps;
+	uchar bf_HasTugOfWarMaps;
 	uchar m_ServerType;
 	uint m_IP;
 	uint m_ModId;
@@ -87,10 +70,15 @@ public:
 		this->m_CycleHash			= 0;
 		memset(m_ServerName, 0, sizeof(m_ServerName));
 		this->m_ServerReliablePort	= 0;
-		
-		memset(this->gapc4, 0, sizeof(this->gapc4));
-		this->_bf198				= 0;
-		
+		this->bf_MaxPlayers			= 0;
+		this->bf_PlayerCount		= 0;
+		this->bf_SpectatorCount		= 0;
+		this->bf_ServerType			= 0;
+		this->bf_RankedFlag			= 0;
+		this->bf_RankBalanceTeams	= 0;
+		this->bf_HasDomMaps			= 0;
+		this->bf_HasAssaultMaps		= 0;
+		this->bf_HasTugOfWarMaps	= 0;
 		this->m_ServerType			= 0;
 		this->m_IP					= 0;
 		this->m_ModId				= 0;
