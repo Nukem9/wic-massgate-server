@@ -39,9 +39,33 @@ public:
 	uint64 m_CycleHash;
 	wchar_t m_ServerName[64];
 	ushort m_ServerReliablePort;
-	uchar gapc4; //bitmask?
-	uchar _bf198; //bitmask?
-	uchar m_ServerType;	//uint
+
+	union
+	{
+		uchar gapc4[2];
+		struct
+		{
+			uchar bitfield1 : 5;	//maxPlayers
+			uchar bitfield2 : 5;	//playerCount
+			uchar bitfield3 : 5;	//spectatorCount
+		} somebits;
+	};
+
+	union
+	{
+		__int16	_bf198;
+		struct
+		{
+			uchar bitfield1			: 1;	//serverType
+			uchar bitfield2			: 1;	//rankedFlag
+			uchar RankBalanceTeams	: 1;
+			uchar HasDomMaps		: 1;
+			uchar HasAssaultMaps	: 1;
+			uchar HasTugOfWarMaps	: 1;
+		} somebits2;
+	};
+
+	uchar m_ServerType;
 	uint m_IP;
 	uint m_ModId;
 	ushort m_MassgateCommPort;
@@ -51,8 +75,6 @@ public:
 	uint m_HostProfileId;
 	uint m_WinnerTeam;
 	MMG_TrackablePlayerVariables m_Players[64];
-
-	uint m_Ping;
 
 private:
 
@@ -66,7 +88,7 @@ public:
 		memset(m_ServerName, 0, sizeof(m_ServerName));
 		this->m_ServerReliablePort	= 0;
 		
-		this->gapc4					= 0;
+		memset(this->gapc4, 0, sizeof(this->gapc4));
 		this->_bf198				= 0;
 		
 		this->m_ServerType			= 0;
@@ -78,8 +100,6 @@ public:
 		this->m_CurrentLeader		= 0;
 		this->m_HostProfileId		= 0;
 		this->m_WinnerTeam			= 0;
-		
-		this->m_Ping				= 0;
 	}
 
 	void ToStream	(MN_WriteMessage *aMessage);

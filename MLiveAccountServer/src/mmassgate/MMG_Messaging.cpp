@@ -39,7 +39,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 #ifndef USING_MYSQL_DATABASE
 
-				//TODO: handle profiles (count). unnecessary really, since count is going to be 0 if youre not using the database
+				//handle profiles (count). unnecessary really, since count is going to be 0 if youre not using the database
 #else
 			for (int i = 0; i < count; i++)
 			{
@@ -49,20 +49,12 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				if (!aMessage->ReadUInt(id))
 					return false;
 
-				//TODO: not sure if all profiles should be sent all in one delimiter
 				bool QueryOK = MySQLDatabase::ourInstance->QueryProfileName(id, &myFriend);
 
-				//this->SendProfileName(aClient, &responseMessage, &myFriend);
-
-				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
-
-				myFriend.ToStream(&responseMessage);
+				if(QueryOK)
+					this->SendProfileName(aClient, &responseMessage, &myFriend);
 			}
 #endif
-			DebugLog(L_INFO, "MESSAGING_RESPOND_PROFILENAME:");
-
-			if (!aClient->SendData(&responseMessage))
-				return false;
 		}
 		break;
 
@@ -112,7 +104,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 #ifdef USING_MYSQL_DATABASE
 			MySQLDatabase::ourInstance->AddFriend(aClient->GetProfile()->m_ProfileId, profileId);
 #endif
-			// there doesnt seem to be a response
+			// NOTE:
+			// there doesnt seem to be a response, there is a lot of client side validation, making it unnecessary
+			// if the client behaves weird, use MESSAGING_GET_FRIENDS_RESPONSE
 		}
 		break;
 
@@ -132,7 +126,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			DebugLog(L_INFO, "MESSAGING_REMOVE_FRIEND_RESPONSE:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_REMOVE_FRIEND_RESPONSE);
-			responseMessage.WriteUInt(profileId);
+			responseMessage.WriteUInt(profileId);	//NOTE: might not be profileId
 			aClient->SendData(&responseMessage);
 		}
 		break;
@@ -521,27 +515,28 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_IGNORELIST_ADD_REMOVE_REQ:");
 
-			//wic.exe IDA sub_761070
-
-			uchar profileId;
-			if (!aMessage->ReadUChar(profileId))
+			uint profileId;
+			if (!aMessage->ReadUInt(profileId))
 				return false;
 
-			float operation;
-			if (!aMessage->ReadFloat(operation))
+			uchar operation;
+			if (!aMessage->ReadUChar(operation))
 				return false;
 #ifndef USING_MYSQL_DATABASE
-			if (operation > 0)
+			if (operation == 1)
 				printf("add\n");
 			else
 				printf("remove\n");
 #else
-			if (operation > 0)
-				MySQLDatabase::ourInstance->AddIgnoredProfile(aClient->GetProfile()->m_ProfileId, (uint)profileId);
+			if (operation == 1)
+				MySQLDatabase::ourInstance->AddIgnoredProfile(aClient->GetProfile()->m_ProfileId, profileId);
 			else
-				MySQLDatabase::ourInstance->RemoveIgnoredProfile(aClient->GetProfile()->m_ProfileId, (uint)profileId);
+				MySQLDatabase::ourInstance->RemoveIgnoredProfile(aClient->GetProfile()->m_ProfileId, profileId);
 #endif
-			// there doesnt seem to be a response
+			// wic.exe IDA sub_BD7C90 (called from WICMASS_ContactsScreenHandler)
+			// NOTE:
+			// there doesnt seem to be a response, there is a lot of client side validation, making it unnecessary
+			// if the client behaves weird, use MESSAGING_IGNORELIST_GET_RSP
 		}
 		break;
 		
@@ -571,7 +566,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 bool MMG_Messaging::SendProfileName(SvClient *aClient, MN_WriteMessage	*aMessage, MMG_Profile *aProfile)
 {
-	DebugLog(L_INFO, "MESSAGING_RESPOND_PROFILENAME:");
+	DebugLog(L_INFO, "MESSAGING_RESPOND_PROFILENAME: %ws", aProfile->m_Name);
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 	aProfile->ToStream(aMessage);
 

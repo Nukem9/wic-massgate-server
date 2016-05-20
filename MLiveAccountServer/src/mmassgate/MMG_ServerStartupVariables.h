@@ -26,11 +26,11 @@ public:
 		__int16	_bf166;
 		struct
 		{
-			uchar bitfield1 : 5; // Maximum number of players
-			uchar bitfield2 : 1; // Password required
-			uchar bitfield3 : 1; // ?
-			uchar Ranked : 1; // Ranked
-			uchar bitfield5 : 1; // Probably incorrect
+			uchar MaxPlayers	: 5;
+			uchar Passworded	: 1;
+			uchar bitfield3		: 1; // ?
+			uchar Ranked		: 1;
+			uchar bitfield5		: 1; // Probably incorrect
 		} somebits;
 	};
 	uchar		m_ServerType;

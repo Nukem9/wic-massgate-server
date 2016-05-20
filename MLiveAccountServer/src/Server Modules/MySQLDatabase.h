@@ -54,7 +54,6 @@
 	- better error handling if database loses connection
 		experience "experience int(10) unsigned not null,"
 	- handle communication options properly
-	- IgnoredProfiles
 	- save password hash, compatible with phpbb or some other forum
 	- CreateUserAccount, CreateUserProfile, DeleteUserProfile and QueryUserProfile are a little messy but are sufficient for now
 	- the ping function can affect the connection state, more info:
@@ -107,7 +106,7 @@ public:
 		this->charset_name = "latin1";		//TODO: change to utf8
 
 		this->sleep_interval_s = 18000;		// 5 hours
-		this->sleep_interval_ms = sleep_interval_s * 1000;
+		this->sleep_interval_ms = this->sleep_interval_s * 1000;
 
 		this->m_PingThreadHandle = nullptr;
 	}

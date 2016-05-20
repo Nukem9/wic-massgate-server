@@ -37,8 +37,8 @@ void MMG_ServerStartupVariables::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUShort(this->m_ServerReliablePort);
 	aMessage->WriteUShort(this->m_MassgateCommPort);
 	aMessage->WriteString(this->m_ServerName);
-	aMessage->WriteUChar(this->somebits.bitfield1);		// Maximum number of players
-	aMessage->WriteUChar(this->somebits.bitfield2);		// Password required
+	aMessage->WriteUChar(this->somebits.MaxPlayers);		// Maximum number of players
+	aMessage->WriteUChar(this->somebits.Passworded);		// Password required
 	aMessage->WriteUChar(this->somebits.bitfield5);		// ?
 	aMessage->WriteUChar(this->somebits.bitfield3);		// ?
 	aMessage->WriteUChar(this->somebits.Ranked);		// Ranked
@@ -90,8 +90,8 @@ bool MMG_ServerStartupVariables::FromStream(MN_ReadMessage *aMessage)
 		|| !aMessage->ReadUChar(temp[4]))
 		return false;
 
-	this->somebits.bitfield1 = temp[0];
-	this->somebits.bitfield2 = temp[1];
+	this->somebits.MaxPlayers = temp[0];
+	this->somebits.Passworded = temp[1];
 	this->somebits.bitfield5 = temp[2];
 	this->somebits.bitfield3 = temp[3];
 	this->somebits.Ranked = temp[4];

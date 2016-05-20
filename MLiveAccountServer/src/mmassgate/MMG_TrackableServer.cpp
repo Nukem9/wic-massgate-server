@@ -120,6 +120,13 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			if (!startupVars.FromStream(aMessage))
 				return false;
 
+			// wic_ds sends populated m_PublicIp if firewall flag is set
+			// use the PrivateIP/PublicIp as the servers' ip address
+			if (strlen(startupVars.m_PublicIp) > 0)
+				startupVars.m_Ip = inet_addr(startupVars.m_PublicIp);
+			else
+				startupVars.m_Ip = ntohl(aClient->GetIPAddress());
+
 			// Request to "connect" the active game server
 			if (ConnectServer(server, &startupVars))
 			{
@@ -127,11 +134,14 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				aClient->SetIsServer(true);
 				aClient->SetLoginStatus(true);
 				aClient->SetTimeout(WIC_HEARTBEAT_NET_TIMEOUT);
+				
+				struct sockaddr_in temp;
+				temp.sin_addr.S_un.S_addr = startupVars.m_Ip;
 
-				DebugLog(L_INFO, "Info: %ws %s %X %d %d",
+				DebugLog(L_INFO, "Info: %ws %s %s %d %d",
 					startupVars.m_ServerName,
 					startupVars.m_PublicIp,
-					startupVars.m_Ip,
+					inet_ntoa(temp.sin_addr),
 					startupVars.m_MassgateCommPort,
 					startupVars.m_ServerReliablePort);
 
@@ -250,7 +260,7 @@ bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, MM
 			return false;
 
 		// If ranked and password, drop
-		if (aStartupVars->somebits.bitfield2)
+		if (aStartupVars->somebits.Passworded)
 			return false;
 
 		// If ranked and has no license, drop
@@ -276,8 +286,8 @@ bool MMG_TrackableServer::UpdateServer(MMG_TrackableServer::Server *aServer, MMG
 	}
 
 	// Copy heartbeat variables over to the startup info structure
-	aServer->m_Info.m_CurrentMapHash	= aHeartbeat->m_CurrentMapHash;
-	aServer->m_Info.somebits.bitfield1	= aHeartbeat->m_MaxNumPlayers;
+	//aServer->m_Info.m_CurrentMapHash	= aHeartbeat->m_CurrentMapHash;
+	//aServer->m_Info.somebits.bitfield1	= aHeartbeat->m_MaxNumPlayers;
 	aServer->m_Heartbeat				= *aHeartbeat;
 	return true;
 }
@@ -319,21 +329,31 @@ bool MMG_TrackableServer::GetServerListInfo(std::vector<MMG_TrackableServerFullI
 	// Loop through each master list entry and convert the structures
 	for (auto& server : this->m_ServerList)
 	{
+		MMG_TrackableServerFullInfo fullInfo;
+		MMG_TrackableServerBriefInfo briefInfo;
+
 		// Full tracker information
 		if (aFullInfo)
 		{
-			MMG_TrackableServerFullInfo fullInfo;
-
 			fullInfo.m_GameVersion			= server.m_Info.m_GameVersion;
 			fullInfo.m_ProtocolVersion		= PROTO_1012;
 			fullInfo.m_CurrentMapHash		= server.m_Heartbeat.m_CurrentMapHash;
 			fullInfo.m_CycleHash			= 0;// TODO
 			wcscpy_s(fullInfo.m_ServerName, (const wchar_t *)server.m_Info.m_ServerName);
 			fullInfo.m_ServerReliablePort	= server.m_Info.m_ServerReliablePort;
-			fullInfo.gapc4					= 0;// TODO
-			fullInfo._bf198					= 0;// TODO
+
+			//fullInfo.somebits.bitfield1		= server.m_Info.somebits.MaxPlayers;	//TODO
+			fullInfo.somebits.bitfield2			= server.m_Heartbeat.m_NumPlayers;
+			//fullInfo.somebits.bitfield3		= 0;	//TODO
+			fullInfo.somebits2.bitfield1		= server.m_Info.m_ServerType;
+			fullInfo.somebits2.bitfield2		= server.m_Info.somebits.Ranked;
+			fullInfo.somebits2.RankBalanceTeams	= server.m_Info.m_IsRankBalanced;
+			fullInfo.somebits2.HasDomMaps		= server.m_Info.m_HasDominationMaps;
+			fullInfo.somebits2.HasAssaultMaps	= server.m_Info.m_HasAssaultMaps;
+			fullInfo.somebits2.HasTugOfWarMaps	= server.m_Info.m_HasTowMaps;
+
 			fullInfo.m_ServerType			= server.m_Info.m_ServerType;
-			fullInfo.m_IP					= 0x0100007F;//sv->m_Info.m_Ip;
+			fullInfo.m_IP					= server.m_Info.m_Ip;
 			fullInfo.m_ModId				= server.m_Info.m_ModId;
 			fullInfo.m_MassgateCommPort		= server.m_Info.m_MassgateCommPort;
 			fullInfo.m_GameTime				= server.m_Heartbeat.m_GameTime;
@@ -341,8 +361,9 @@ bool MMG_TrackableServer::GetServerListInfo(std::vector<MMG_TrackableServerFullI
 			fullInfo.m_CurrentLeader		= server.m_Heartbeat.m_CurrentLeader;
 			fullInfo.m_HostProfileId		= server.m_Info.m_HostProfileId;
 			fullInfo.m_WinnerTeam			= 0;
-			// TODO: m_Players
-			fullInfo.m_Ping					= 51;// TODO
+
+			// superfluous, it seems the client requests this info directly from the server
+			// fullInfo.m_Players[i].m_ProfileId, fullInfo.m_Players[i].m_Score
 
 			aFullInfo->push_back(fullInfo);
 		}
@@ -350,15 +371,13 @@ bool MMG_TrackableServer::GetServerListInfo(std::vector<MMG_TrackableServerFullI
 		// Brief tracker information
 		if (aBriefInfo)
 		{
-			MMG_TrackableServerBriefInfo briefInfo;
-
-			wcscpy_s(briefInfo.m_GameName, (const wchar_t *)server.m_Info.m_ServerName);
-			briefInfo.m_IP					= 0x0100007F;//sv->m_Info.m_Ip;
-			briefInfo.m_ModId				= server.m_Info.m_ModId;
-			briefInfo.m_ServerId			= server.m_Info.m_ServerId;
-			briefInfo.m_MassgateCommPort	= server.m_Info.m_MassgateCommPort;
-			briefInfo.m_CycleHash			= 0;// TODO
-			briefInfo.m_ServerType			= server.m_Info.m_ServerType;
+			wcscpy_s(briefInfo.m_GameName, (const wchar_t *)fullInfo.m_ServerName);
+			briefInfo.m_IP					= fullInfo.m_IP;
+			briefInfo.m_ModId				= fullInfo.m_ModId;
+			briefInfo.m_ServerId			= fullInfo.m_ServerId;
+			briefInfo.m_MassgateCommPort	= fullInfo.m_MassgateCommPort;
+			briefInfo.m_CycleHash			= fullInfo.m_CycleHash;
+			briefInfo.m_ServerType			= fullInfo.m_ServerType;
 			briefInfo.m_IsRankBalanced		= server.m_Info.m_IsRankBalanced;
 
 			aBriefInfo->push_back(briefInfo);

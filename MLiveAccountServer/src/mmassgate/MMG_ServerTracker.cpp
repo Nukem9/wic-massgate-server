@@ -1,14 +1,5 @@
 #include "../stdafx.h"
 
-MMG_ServerTracker::Pinger::Pinger()
-{
-}
-
-bool MMG_ServerTracker::PrivHandlePingers()
-{
-	return true;
-}
-
 MMG_ServerTracker::MMG_ServerTracker()
 {
 }
@@ -84,13 +75,9 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			if(filters.HasFlag(DEDICATED_FLAG))
 				printf("activefilters has DEDICATED_FLAG\n");
 
-			filters.PrintFilters(); //debug purposes
+			//filters.PrintFilters(); //debug purposes
 
 			// list of matched servers retrieved from global list, currently disregarding filters
-			// NOTE: all servers are sent to the client
-			// TODO:	- create list of servers using filters (MMG_TrackableServerFullInfo)
-			//			- build MMG_TrackableServerBriefInfo from MMG_TrackableServerFullInfo
-			// temporary
 			uint serverCount;
 			std::vector<MMG_TrackableServerFullInfo> serverFullInfo;
 			std::vector<MMG_TrackableServerBriefInfo> serverBriefInfo;
@@ -102,7 +89,7 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			responseMessage.WriteUInt(serverCount);
 
 			//send matched server list
-			for (int i = 0; i < serverCount; i++)
+			for (uint i = 0; i < serverCount; i++)
 			{
 				//write short server info to stream
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_SHORT_SERVER_INFO);

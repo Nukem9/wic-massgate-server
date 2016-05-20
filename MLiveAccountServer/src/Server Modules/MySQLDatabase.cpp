@@ -73,17 +73,17 @@ bool MySQLDatabase::ReadConfig()
 
 	file.close();
 
-	host = (char*)malloc(settings[0].size() + 1);
-	memcpy((char*)host, settings[0].c_str(), settings[0].size() + 1);
+	this->host = (char*)malloc(settings[0].size() + 1);
+	memcpy((char*)this->host, settings[0].c_str(), settings[0].size() + 1);
 
-	user = (char*)malloc(settings[1].size() + 1);
-	memcpy((char*)user, settings[1].c_str(), settings[1].size() + 1);
+	this->user = (char*)malloc(settings[1].size() + 1);
+	memcpy((char*)this->user, settings[1].c_str(), settings[1].size() + 1);
 
-	pass = (char*)malloc(settings[2].size() + 1);
-	memcpy((char*)pass, settings[2].c_str(), settings[2].size() + 1);
+	this->pass = (char*)malloc(settings[2].size() + 1);
+	memcpy((char*)this->pass, settings[2].c_str(), settings[2].size() + 1);
 
-	db = (char*)malloc(settings[3].size() + 1);
-	memcpy((char*)db, settings[3].c_str(), settings[3].size() + 1);
+	this->db = (char*)malloc(settings[3].size() + 1);
+	memcpy((char*)this->db, settings[3].c_str(), settings[3].size() + 1);
 
 	return true;
 }
@@ -99,7 +99,7 @@ bool MySQLDatabase::ConnectDatabase()
 	mysql_options(this->m_Connection, MYSQL_SET_CHARSET_NAME, this->charset_name);
 
 	// attempt connection to the database
-	if (mysql_real_connect(this->m_Connection, host, user, pass, db, 0, NULL, 0) == NULL)
+	if (mysql_real_connect(this->m_Connection, this->host, this->user, this->pass, this->db, 0, NULL, 0) == NULL)
 	{
 		DebugLog(L_ERROR, "%s", mysql_error(this->m_Connection));
 		mysql_close(this->m_Connection);
@@ -109,7 +109,7 @@ bool MySQLDatabase::ConnectDatabase()
 	}
 
 	DatabaseLog("client version: %s started", mysql_get_client_info());
-	DatabaseLog("connection to %s ok", host);
+	DatabaseLog("connection to %s ok", this->host);
 
 	return true;
 }
@@ -141,7 +141,7 @@ bool MySQLDatabase::TestDatabase()
 		mysql_free_result(result);
 
 		// set maintenance mode, server will most likely need attending if it gets to this point.
-		DatabaseLog("connection to %s lost, check the MySQL server.", host);
+		DatabaseLog("connection to %s lost, check the MySQL server.", this->host);
 
 		MMG_AccountProtocol::ourInstance->m_MaintenanceMode = true;
 		SvClientManager::ourInstance->EmergencyDisconnectAll();
@@ -169,7 +169,7 @@ bool MySQLDatabase::PingDatabase()
 			//connection lost
 			//mysql_ping will attempt to reconnect automatically, see notes in header.
 
-			DatabaseLog("connection to %s lost, attempting reconnect", host);
+			DatabaseLog("connection to %s lost, attempting reconnect", this->host);
 			MMG_AccountProtocol::ourInstance->m_MaintenanceMode = true;
 			SvClientManager::ourInstance->EmergencyDisconnectAll();
 		}
@@ -1188,7 +1188,7 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 
 	query.Bind(&param[0], &profileId);		//profileid
 
-	query.Bind(&results[0], &id);		//mg_friends.friendprofileid
+	query.Bind(&results[0], &id);		//mg_ignored.ignoredprofileid
 
 	if(!query.StmtExecute(param, results))
 	{
@@ -1251,8 +1251,8 @@ bool MySQLDatabase::AddIgnoredProfile(const uint profileId, uint ignoredProfileI
 
 	memset(param, 0, sizeof(param));
 
-	query.Bind(&param[0], &profileId);			//mg_friends.profileid
-	query.Bind(&param[1], &ignoredProfileId);	//mg_friends.ignoredprofileid
+	query.Bind(&param[0], &profileId);			//mg_ignored.profileid
+	query.Bind(&param[1], &ignoredProfileId);	//mg_ignored.ignoredprofileid
 
 	if (!query.StmtExecute(param))
 	{
@@ -1284,8 +1284,8 @@ bool MySQLDatabase::RemoveIgnoredProfile(const uint profileId, uint ignoredProfi
 
 	memset(param, 0, sizeof(param));
 
-	query.Bind(&param[0], &profileId);			//mg_friends.profileid
-	query.Bind(&param[1], &ignoredProfileId);	//mg_friends.ignoredprofileid
+	query.Bind(&param[0], &profileId);			//mg_ignored.profileid
+	query.Bind(&param[1], &ignoredProfileId);	//mg_ignored.ignoredprofileid
 
 	if (!query.StmtExecute(param))
 	{
