@@ -194,6 +194,114 @@ bool MySQLDatabase::InitializeSchema()
 	return true;
 }
 
+bool MySQLDatabase::SetStatusOffline(const uint profileId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+		return false;
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET onlinestatus = 0 WHERE id = ?");
+
+	// prepared statement binding structures
+	MYSQL_BIND param[1];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+
+	// query specific variables
+	bool querySuccess;
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], &profileId);
+
+	// execute prepared statement
+	if(!query.StmtExecute(param))
+	{
+		DatabaseLog("SetStatusOffline() failed: profile id(%d)", profileId);
+		querySuccess = false;
+	}
+	else
+	{
+		DatabaseLog("SetStatusOffline() success: profile id(%d)", profileId);
+		querySuccess = true;
+	}
+
+	return querySuccess;
+}
+
+bool MySQLDatabase::SetStatusOnline(const uint profileId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+		return false;
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET onlinestatus = 1 WHERE id = ?");
+
+	// prepared statement binding structures
+	MYSQL_BIND param[1];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+
+	// query specific variables
+	bool querySuccess;
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], &profileId);
+
+	// execute prepared statement
+	if(!query.StmtExecute(param))
+	{
+		DatabaseLog("SetStatusOnline() failed: profile id(%d)", profileId);
+		querySuccess = false;
+	}
+	else
+	{
+		DatabaseLog("SetStatusOnline() success: profile id(%d)", profileId);
+		querySuccess = true;
+	}
+
+	return querySuccess;
+}
+
+bool MySQLDatabase::SetStatusPlaying(const uint profileId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+		return false;
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET onlinestatus = 2 WHERE id = ?");
+
+	// prepared statement binding structures
+	MYSQL_BIND param[1];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+
+	// query specific variables
+	bool querySuccess;
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], &profileId);
+
+	// execute prepared statement
+	if(!query.StmtExecute(param))
+	{
+		DatabaseLog("SetStatusPlaying() failed: profile id(%d)", profileId);
+		querySuccess = false;
+	}
+	else
+	{
+		DatabaseLog("SetStatusPlaying() success: profile id(%d)", profileId);
+		querySuccess = true;
+	}
+
+	return querySuccess;
+}
+
 bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 {
 	// test the connection before proceeding, disconnects everyone on fail

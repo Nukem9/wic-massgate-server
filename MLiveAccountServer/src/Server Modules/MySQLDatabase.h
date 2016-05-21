@@ -114,6 +114,11 @@ public:
 	bool	TestDatabase		();
 	bool	PingDatabase		();
 	bool	InitializeSchema	();
+
+	//AccountProxy
+	bool	SetStatusOffline	(const uint profileId);
+	bool	SetStatusOnline		(const uint profileId);
+	bool	SetStatusPlaying	(const uint profileId);
 	
 	//accounts
 	bool	CheckIfEmailExists	(const char *email, uint *dstId);

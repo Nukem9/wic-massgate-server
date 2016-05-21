@@ -282,10 +282,23 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUInt(randomZero))
 				return false;
 
-			//TODO: is there a response for the client?
-			// need some way to tell every other client that someone is online
-			aClient->GetProfile()->m_OnlineStatus = 1;
-			aClient->SetLoginStatus(true);
+			// not sure if this is right
+			MMG_AccountProxy::ourInstance->SetClientOnline(aClient);
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_SET_STATUS_PLAYING:
+		{
+			DebugLog(L_INFO, "MESSAGING_SET_STATUS_PLAYING:");
+
+			//IDA wic.exe sub_7A1290 MMG_Messaging::SetStatusPlaying
+
+			//handle padding
+			uint randomZero;
+			if (!aMessage->ReadUInt(randomZero) || !aMessage->ReadUInt(randomZero))
+				return false;
+
+			MMG_AccountProxy::ourInstance->SetClientPlaying(aClient);
 		}
 		break;
 

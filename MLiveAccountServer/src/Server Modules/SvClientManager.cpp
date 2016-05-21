@@ -258,8 +258,37 @@ void SvClientManager::DisconnectClient(SvClient *aClient)
 
 void SvClientManager::EmergencyDisconnectAll()
 {
+	// i think this is wrong
 	for(uint i = 0; i < this->m_ClientMaxCount; i++)
-		this->m_Clients[i].Reset();
+	{
+		SvClient *aClient = &this->m_Clients[i];
+		
+		if (!aClient->m_Valid)
+			continue;
+
+		aClient->Reset();
+	}
+}
+
+bool SvClientManager::SendDataAll(MN_WriteMessage *aMessage, uint skipProfileId)
+{
+	// i think this is wrong
+	for(uint i = 0; i < this->m_ClientMaxCount; i++)
+	{
+		SvClient *aClient = &this->m_Clients[i];
+
+		if (!aClient->m_Valid || !aClient->m_IsPlayer)
+			continue;
+
+		// ugly
+		if (skipProfileId == aClient->GetProfile()->m_ProfileId)
+			continue;
+
+		if (!aClient->SendData(aMessage))
+			return false;
+	}
+
+	return true;
 }
 
 uint SvClientManager::GetClientCount()

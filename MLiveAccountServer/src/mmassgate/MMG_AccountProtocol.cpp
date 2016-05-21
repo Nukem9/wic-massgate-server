@@ -258,6 +258,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				{
 					// Update the maximum client timeout
 					aClient->SetLoginStatus(true);
+					aClient->SetIsPlayer(true);
 					aClient->SetTimeout(WIC_LOGGEDIN_NET_TIMEOUT);
 
 					cryptMessage.WriteUChar(AuthSuccess);
@@ -403,6 +404,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 					// Update the maximum client timeout
 					aClient->SetLoginStatus(true);
+					aClient->SetIsPlayer(true);
 					aClient->SetTimeout(WIC_LOGGEDIN_NET_TIMEOUT);
 				}
 
@@ -412,6 +414,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				cryptMessage.WriteUShort(0);			// auth.myLatestVersion
 
 				// Write the profile info stream
+				myProfile->m_OnlineStatus = 1;
 				myProfile->ToStream(&cryptMessage);
 
 				// TigerMD5 of ...? (possibly crypt keys)

@@ -86,6 +86,7 @@ public:
 	void		DisconnectClient(SvClient *aClient);
 
 	void		EmergencyDisconnectAll();
+	bool		SendDataAll		(MN_WriteMessage *aMessage, uint skipProfileId);
 
 	uint		GetClientCount	();
 

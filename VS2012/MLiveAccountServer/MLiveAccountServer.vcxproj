@@ -113,6 +113,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\misc\stdafx.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\misc\wsaerror.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProxy.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.h" />
@@ -196,6 +197,7 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\misc\wsaerror.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\MLiveAccountServer.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProxy.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.cpp" />
