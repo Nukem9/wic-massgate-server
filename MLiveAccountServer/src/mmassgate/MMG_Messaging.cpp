@@ -298,8 +298,20 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUChar(randomZero))
 				return false;
 
-			//TODO: i dont know what these are
-			//DebugBreak();
+			//TODO: i dont know what these are (resolution, ip/mac address, RAM)?
+			DebugLog(L_INFO, "MESSAGING_GET_CLIENT_METRICS:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS);
+
+			//char key[16] = "";
+			//char value[96] = "";
+			
+			//responseMessage.WriteUChar(1);
+			//responseMessage.WriteUInt(0);
+			//responseMessage.WriteString(key, ARRAYSIZE(key));
+			//responseMessage.WriteString(value, ARRAYSIZE(value));
+
+			//if (!aClient->SendData(&responseMessage))
+			//	return false;
 		}
 		break;
 
@@ -460,29 +472,16 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_SET_EDITABLES_REQ:
 		{
-			DebugLog(L_INFO, "MESSAGING_PROFILE_SET_EDITABLES_REQ: Sending information");
+			DebugLog(L_INFO, "MESSAGING_PROFILE_SET_EDITABLES_REQ:");
 
-			/*// read message byte by byte
-			uchar aUChar[6];
-			for (int i=0;i<6;i++)
-				aMessage->ReadUChar(aUChar[i]);
-			*/
-			
-			// there might be something else in the message, however that tab is not accessible yet
-			MMG_ProfileEditableVariablesProtocol myNewEditables;
-			myNewEditables.FromStream(aMessage);
-			
-			// to do: save strings to profile (or profile related) database
+			MMG_ProfileEditableVariablesProtocol::GetRsp myResponse;
 
-			// to do: read freshly saved strings from profile (or profile related) database
+			// TODO: cant get the edit tab to enable
+			// read profileid, new motto, new homepage
 
-			MMG_ProfileEditableVariablesProtocol myProfileEditableVariables;
-			wcscpy(myProfileEditableVariables.m_Motto, L"Hello!");
-			wcscpy(myProfileEditableVariables.m_Homepage, L"Bye!");
-			
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GET_EDITABLES_RSP:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_RSP);
-			
-			myProfileEditableVariables.ToStream(&responseMessage);
+			myResponse.ToStream(&responseMessage);
 
 			if (!aClient->SendData(&responseMessage))
 				return false;
@@ -491,20 +490,23 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_REQ:
 		{
-			DebugLog(L_INFO, "MESSAGING_PROFILE_GET_EDITABLES_REQ: Sending information");
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GET_EDITABLES_REQ:");
 
-			uint ProfileId = 0;
-			aMessage->ReadUInt(ProfileId);
+			uint profileId;
+			if(!aMessage->ReadUInt(profileId))
+				return false;
 
-			// query database with ProfileId for saved editables
+			MMG_ProfileEditableVariablesProtocol::GetRsp myResponse;
 
-			MMG_ProfileEditableVariablesProtocol myProfileEditableVariables;
-			wcscpy(myProfileEditableVariables.m_Motto, L"Hi to everyone");
-			wcscpy(myProfileEditableVariables.m_Homepage, L"GL & HF");
-			
+#ifndef USING_MYSQL_DATABASE
+			wcscpy(myResponse.motto, L"");
+			wcscpy(myResponse.homepage, L"");
+#else
+			MySQLDatabase::ourInstance->QueryEditableVariables(profileId, myResponse.motto, myResponse.homepage);
+#endif
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GET_EDITABLES_RSP:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_RSP);
-			
-			myProfileEditableVariables.ToStream(&responseMessage);
+			myResponse.ToStream(&responseMessage);
 
 			if (!aClient->SendData(&responseMessage))
 				return false;

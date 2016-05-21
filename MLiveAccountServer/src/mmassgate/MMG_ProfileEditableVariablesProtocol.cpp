@@ -2,25 +2,27 @@
 
 MMG_ProfileEditableVariablesProtocol::MMG_ProfileEditableVariablesProtocol()
 {
-	memset(this->m_Motto, 0, sizeof(this->m_Motto));
-	memset(this->m_Homepage, 0, sizeof(this->m_Homepage));
-	
 }
 
-void MMG_ProfileEditableVariablesProtocol::ToStream(MN_WriteMessage *aMessage)
+void MMG_ProfileEditableVariablesProtocol::GetRsp::ToStream(MN_WriteMessage *aMessage)
 {
-	aMessage->WriteString(this->m_Motto);
-	aMessage->WriteString(this->m_Homepage);
-	
+	aMessage->WriteString(this->motto);
+	aMessage->WriteString(this->homepage);
 }
 
-bool MMG_ProfileEditableVariablesProtocol::FromStream(MN_ReadMessage *aMessage)
+bool MMG_ProfileEditableVariablesProtocol::GetRsp::FromStream(MN_ReadMessage *aMessage)
 {
-	if (!aMessage->ReadString(this->m_Motto, ARRAYSIZE(this->m_Motto)))
+	if (!aMessage->ReadString(this->motto, ARRAYSIZE(this->motto)))
 		return false;
 
-	if (!aMessage->ReadString(this->m_Homepage, ARRAYSIZE(this->m_Homepage)))
+	if (!aMessage->ReadString(this->homepage, ARRAYSIZE(this->homepage)))
 		return false;
 
 	return true;
+}
+
+MMG_ProfileEditableVariablesProtocol::GetRsp::GetRsp()
+{
+	memset(this->motto, 0, sizeof(this->motto));
+	memset(this->homepage, 0, sizeof(this->homepage));
 }

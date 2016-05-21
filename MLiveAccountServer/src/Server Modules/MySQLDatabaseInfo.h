@@ -6,7 +6,7 @@ static const char *MySQLTableValues[] =
 
 	"CREATE TABLE mg_utils ("
 		"poll tinyint(3) unsigned not null"
-	");",
+	") ENGINE=MyISAM;",
 
 	"INSERT INTO mg_utils (poll) VALUES ('1');",
 
@@ -32,7 +32,7 @@ static const char *MySQLTableValues[] =
 		"activeprofileid int(10) unsigned not null,"
 		"isbanned tinyint(3) unsigned not null,"
 		"PRIMARY KEY (id)"
-	");",
+	") ENGINE=MyISAM AUTO_INCREMENT=10000;",
 
 	"CREATE TABLE mg_cdkeys ("
 		"id int(10) unsigned not null auto_increment,"
@@ -42,7 +42,7 @@ static const char *MySQLTableValues[] =
 		"cipherkeys2 int(10) not null,"
 		"cipherkeys3 int(10) not null,"
 		"PRIMARY KEY (id)"
-	");",
+	") ENGINE=MyISAM AUTO_INCREMENT=10000;",
 	
 	"CREATE TABLE mg_profiles ("
 		"id int(10) unsigned not null auto_increment,"
@@ -57,25 +57,25 @@ static const char *MySQLTableValues[] =
 		"motto varchar(512),"
 		"homepage varchar(512),"
 		"PRIMARY KEY (id)"
-	");",
+	") ENGINE=MyISAM AUTO_INCREMENT=20000;",
 
 	"CREATE TABLE mg_friends ("
 		"id int(10) unsigned not null auto_increment,"
 		"profileid int(10) unsigned not null,"
 		"friendprofileid int(10) unsigned not null,"
 		"PRIMARY KEY (id)"
-	");",
+	") ENGINE=MyISAM;",
 
 	"CREATE TABLE mg_ignored ("
 		"id int(10) unsigned not null auto_increment,"
 		"profileid int(10) unsigned not null,"
 		"ignoredprofileid int(10) unsigned not null,"
 		"PRIMARY KEY (id)"
-	");",
+	") ENGINE=MyISAM;",
 
 	"CREATE TABLE mg_clans ("
 		"id int(10) unsigned not null auto_increment,"
 		"name varchar(25) not null,"
 		"PRIMARY KEY (id)"
-	");",
+	") ENGINE=MyISAM AUTO_INCREMENT=20000;",
 };

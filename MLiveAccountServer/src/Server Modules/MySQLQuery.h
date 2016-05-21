@@ -106,27 +106,24 @@ public:
 	}
 
 	//VARCHAR (multibyte)
-	void Bind(MYSQL_BIND *param, const char *Value, ulong *str_length)
+	void Bind(MYSQL_BIND *param, const char *Value, ulong *Length)
 	{
 		param->buffer_type = MYSQL_TYPE_VAR_STRING;
 		param->buffer = (char *)Value;
-		param->buffer_length = 100; //temporary
+		param->buffer_length = *Length;
 		param->is_null = (my_bool *)0;
-		param->length = str_length;
-
-		*str_length = strlen(Value);
+		param->length = Length;
 	}
 
 	//VARCHAR (unicode)
-	void Bind(MYSQL_BIND *param, const wchar_t *Value, ulong *str_length)
+	void Bind(MYSQL_BIND *param, const wchar_t *Value, ulong *Length)
 	{
+		*Length <<= 1;	// multiply by 2, to save widechar properly.
 		param->buffer_type = MYSQL_TYPE_VAR_STRING;
 		param->buffer = (wchar_t *)Value;
-		param->buffer_length = 100; //temporary
+		param->buffer_length = *Length;
 		param->is_null = (my_bool *)0;
-		param->length = str_length;
-
-		*str_length = wcslen(Value) * 2;
+		param->length = Length;
 	}
 
 	//TIME - MYSQL_TYPE_TIME

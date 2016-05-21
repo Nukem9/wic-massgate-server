@@ -7,7 +7,7 @@
 	MySQL C API Prepared Statements
 	https://dev.mysql.com/doc/refman/5.7/en/c-api-prepared-statements.html
 
-	NOTES: -taken directly from the documentation
+	Taken directly from the documentation:
 	1)	To obtain a statement handle, pass a MYSQL connection handler to mysql_stmt_init(), which returns a pointer to a MYSQL_STMT data structure. 
 		This structure is used for further operations with the statement. 
 		To specify the statement to prepare, pass the MYSQL_STMT pointer and the statement string to mysql_stmt_prepare().
@@ -37,18 +37,17 @@
 	https://dev.mysql.com/doc/refman/5.7/en/mysql-thread-init.html
 	https://dev.mysql.com/doc/refman/5.7/en/mysql-thread-end.html
 
+	Notes:
 	The MySQLQuery class is basically a wrapper that utilises all of the functions needed to execute a prepared statement
-	at the moment massgate connects to the database on startup and does not check to see if a connection exists when 
-	executing statements, errors are not handled correctly and massgate will most likely crash if the database connection
-	is lost.
+	Massgate connects to the database on startup and leaves the connection open, periodically
+	pinging it to keep it from dropping due to inactivity.
 
-	now massgate uses the open connection, rather then opening and closing new connections to perform queries, like it 
-	was before.	the original code is commented just in case is needs to be put back, but at this stage we cant afford 
-	to keep opening and closing the database connection.
-	
 	There could be an issue when clients start querying the database at the same time.
+	so far there have been no data corruptions.
 
-	A thread can execute multiple queries on the same connection.
+	the ping function can affect the connection state, more info:
+			http://dev.mysql.com/doc/refman/5.7/en/mysql-ping.html
+			http://dev.mysql.com/doc/refman/5.7/en/auto-reconnect.html
 
 	TODO:
 	- better error handling if database loses connection
@@ -56,9 +55,6 @@
 	- handle communication options properly
 	- save password hash, compatible with phpbb or some other forum
 	- CreateUserAccount, CreateUserProfile, DeleteUserProfile and QueryUserProfile are a little messy but are sufficient for now
-	- the ping function can affect the connection state, more info:
-			http://dev.mysql.com/doc/refman/5.7/en/mysql-ping.html
-			http://dev.mysql.com/doc/refman/5.7/en/auto-reconnect.html
 
 */
 
@@ -143,4 +139,6 @@ public:
 	bool	AddIgnoredProfile		(const uint profileId, uint ignoredProfileId);
 	bool	RemoveIgnoredProfile	(const uint profileId, uint ignoredProfileId);
 	bool	QueryProfileName	(const uint profileId, MMG_Profile *profile);
+	bool	QueryEditableVariables	(const uint profileId, wchar_t *dstMotto, wchar_t *dstHomepage);
+	bool	SaveEditableVariables	(const uint profileId, const wchar_t *motto, const wchar_t *homepage);
 };

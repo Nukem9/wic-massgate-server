@@ -1,11 +1,19 @@
 #pragma once
 
-class MMG_ProfileEditableVariablesProtocol : public MMG_IStreamable
+CLASS_SINGLE(MMG_ProfileEditableVariablesProtocol) 
 {
 public:
-	wchar_t m_Motto[256];
-	wchar_t m_Homepage[256];
-	
+	class GetRsp : public MMG_IStreamable
+	{
+	public:
+		wchar_t motto[WIC_MOTTO_MAX_LENGTH];
+		wchar_t homepage[WIC_HOMEPAGE_MAX_LENGTH];
+
+		GetRsp();
+		void ToStream	(MN_WriteMessage *aMessage);
+		bool FromStream	(MN_ReadMessage *aMessage);
+	};
+
 private:
 
 public:
