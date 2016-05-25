@@ -10,16 +10,38 @@ DWORD WINAPI MySQLDatabase::PingThread(LPVOID lpArg)
 	return ((MySQLDatabase*)lpArg)->PingDatabase();
 }
 
+bool MySQLDatabase::EmergencyMassgateDisconnect()
+{
+	// set maintenance mode, server will most likely need attending if it gets to this point.
+	DatabaseLog("connection to %s lost, check the MySQL server.", this->host);
+
+	MMG_AccountProtocol::ourInstance->m_MaintenanceMode = true;
+	SvClientManager::ourInstance->EmergencyDisconnectAll();
+	return true;
+}
+
 bool MySQLDatabase::Initialize()
 {
-	if (!ReadConfig())
+	// check if client version started
+	const char *info = mysql_get_client_info();
+
+	if (!info)
 		return false;
 
-	if (!ConnectDatabase())
+	DatabaseLog("MySQL client version: %s started", info);
+
+	// read mysql configuration from file
+	if (!this->ReadConfig())
 		return false;
 
-	//create a thread to 'ping' the database every 5 hours, preventing timeout.
-	this->m_PingThreadHandle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) PingThread, this, 0, NULL);
+	if (this->ConnectDatabase())
+	{
+		DatabaseLog("Connected to server MySQL %s on '%s'", mysql_get_server_info(this->m_Connection), this->host);
+		//this->PrintStatus();
+
+		//create a thread to 'ping' the database every 5 hours, preventing timeout.
+		this->m_PingThreadHandle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) PingThread, this, 0, NULL);
+	}
 
 	return true;
 }
@@ -27,24 +49,21 @@ bool MySQLDatabase::Initialize()
 void MySQLDatabase::Unload()
 {
 	TerminateThread(this->m_PingThreadHandle, 0);
-	this->m_PingThreadHandle = nullptr;
+	this->m_PingThreadHandle = NULL;
 
 	mysql_close(this->m_Connection);
-	mysql_thread_end();
-	this->m_Connection = nullptr;
+	this->m_Connection = NULL;
+	this->isConnected = false;
 
-	if(this->host)
-	{
-		free((char*)this->host);
-		free((char*)this->user);
-		free((char*)this->pass);
-		free((char*)this->db);
+	if (this->host) free((char*)this->host);
+	if (this->user) free((char*)this->user);
+	if (this->pass) free((char*)this->pass);
+	if (this->db) free((char*)this->db);
 
-		this->host = nullptr;
-		this->user = nullptr;
-		this->pass = nullptr;
-		this->db = nullptr;
-	}
+	this->host = NULL;
+	this->user = NULL;
+	this->pass = NULL;
+	this->db = NULL;
 }
 
 bool MySQLDatabase::ReadConfig()
@@ -99,58 +118,102 @@ bool MySQLDatabase::ConnectDatabase()
 	mysql_options(this->m_Connection, MYSQL_SET_CHARSET_NAME, this->charset_name);
 
 	// attempt connection to the database
-	if (mysql_real_connect(this->m_Connection, this->host, this->user, this->pass, this->db, 0, NULL, 0) == NULL)
+	if (mysql_real_connect(this->m_Connection, this->host, this->user, this->pass, this->db, 0, NULL, CLIENT_REMEMBER_OPTIONS) == NULL)
 	{
-		DebugLog(L_ERROR, "%s", mysql_error(this->m_Connection));
+		DebugLog(L_WARN, "[Database]: %s", mysql_error(this->m_Connection));
+
 		mysql_close(this->m_Connection);
-		mysql_thread_end();
+		this->m_Connection = NULL;
+		this->isConnected = false;
 
 		return false;
 	}
 
-	DatabaseLog("client version: %s started", mysql_get_client_info());
-	DatabaseLog("connection to %s ok", this->host);
+	this->isConnected = true;
 
 	return true;
 }
 
+bool MySQLDatabase::HasConnection()
+{
+	return (this->m_Connection != NULL) && this->isConnected;
+}
+
+void MySQLDatabase::PrintStatus()
+{
+	if (!this->HasConnection())
+		return;
+
+	//connection type
+	const char *info = mysql_get_host_info(this->m_Connection);
+
+	const char *find = "via ";
+	size_t pos = (size_t)(strstr(info, find) - info) + strlen(find);
+
+	const char *hostname = this->host;
+	const char *type = info+pos;
+
+	// server version
+	const char *version = mysql_get_server_info(this->m_Connection);
+
+	// character set info
+	const char *charsetname = mysql_character_set_name(this->m_Connection);
+
+	MY_CHARSET_INFO charsetinfo;
+	mysql_get_character_set_info(this->m_Connection, &charsetinfo);
+
+	printf("\n");
+	printf("Connection Status\n");
+	printf("-----------------------------------\n");
+	printf("Hostname:         %s\n", hostname);
+	printf("Type:             %s\n", type);
+	printf("Version:          MySQL %s\n", version);
+	printf("Current Charset:  %s\n", charsetname);
+	printf("-----------------------------------\n");
+	printf("Default Client Charset\n");
+	printf("Charset:          %s\n", charsetinfo.name);
+	printf("Collation:        %s\n", charsetinfo.csname);
+	printf("-----------------------------------\n");
+}
+
 bool MySQLDatabase::TestDatabase()
 {
-	MYSQL_RES *result;
+	MYSQL_RES *result = NULL;
+
 	bool error_flag = false;
 
-	// execute a standard query on the database
-	if (mysql_query(this->m_Connection, "SELECT poll FROM mg_utils LIMIT 1"))
+	if (!this->HasConnection())
 		error_flag = true;
 
-	// must call mysql_store_result after calling mysql_query
-	result = mysql_store_result(this->m_Connection);
-
-	if (!result)
-		error_flag = true;
-	else
+	if (!error_flag)
 	{
-		// if there is only one field, query has executed successfully, no need to check the row
-		if(mysql_num_fields(result) != 1)
+		// execute a standard query on the database
+		if (mysql_query(this->m_Connection, "SELECT poll FROM mg_utils LIMIT 1"))
 			error_flag = true;
+
+		// must call mysql_store_result after calling mysql_query
+		if (!error_flag)
+			result = mysql_store_result(this->m_Connection);
+
+		if (!result)
+			error_flag = true;
+		else
+		{
+			// if there is only one field, query has executed successfully, no need to check the row
+			if(mysql_num_fields(result) != 1)
+				error_flag = true;
+
+			mysql_free_result(result);
+		}
 	}
 
-	// disconnect everyone
 	if (error_flag)
 	{
-		mysql_free_result(result);
-
-		// set maintenance mode, server will most likely need attending if it gets to this point.
-		DatabaseLog("connection to %s lost, check the MySQL server.", this->host);
-
-		MMG_AccountProtocol::ourInstance->m_MaintenanceMode = true;
-		SvClientManager::ourInstance->EmergencyDisconnectAll();
-
+		this->isConnected = false;
 		return false;
 	}
 
-	mysql_free_result(result);
-
+	this->isConnected = true;
 	return true;
 }
 
@@ -162,6 +225,7 @@ bool MySQLDatabase::PingDatabase()
 
 		if (mysql_ping(this->m_Connection) == 0)
 		{
+			this->isConnected = true;
 			MMG_AccountProtocol::ourInstance->m_MaintenanceMode = false;
 		}
 		else
@@ -170,8 +234,9 @@ bool MySQLDatabase::PingDatabase()
 			//mysql_ping will attempt to reconnect automatically, see notes in header.
 
 			DatabaseLog("connection to %s lost, attempting reconnect", this->host);
+
+			this->isConnected = false;
 			MMG_AccountProtocol::ourInstance->m_MaintenanceMode = true;
-			SvClientManager::ourInstance->EmergencyDisconnectAll();
 		}
 	}
 	
@@ -180,6 +245,9 @@ bool MySQLDatabase::PingDatabase()
 
 bool MySQLDatabase::InitializeSchema()
 {
+	if (!this->m_Connection)
+		return false;
+
 	// Go through each table entry
 	for(int i = 0; i < ARRAYSIZE(MySQLTableValues); i++)
 	{
@@ -198,7 +266,10 @@ bool MySQLDatabase::SetStatusOffline(const uint profileId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET onlinestatus = 0 WHERE id = ?");
@@ -234,7 +305,10 @@ bool MySQLDatabase::SetStatusOnline(const uint profileId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET onlinestatus = 1 WHERE id = ?");
@@ -270,7 +344,10 @@ bool MySQLDatabase::SetStatusPlaying(const uint profileId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET onlinestatus = 2 WHERE id = ?");
@@ -306,10 +383,13 @@ bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id FROM mg_accounts WHERE email = ?");
+	MySQLQuery query(this->m_Connection, "SELECT id FROM mg_accounts WHERE email = ? LIMIT 1");
 	
 	// prepared statement binding structures
 	MYSQL_BIND param[1], result[1];
@@ -359,10 +439,13 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id FROM mg_cdkeys WHERE cipherkeys0 = ? AND cipherkeys1 = ? AND cipherkeys2 = ? AND cipherkeys3 = ?");
+	MySQLQuery query(this->m_Connection, "SELECT id FROM mg_cdkeys WHERE cipherkeys0 = ? AND cipherkeys1 = ? AND cipherkeys2 = ? AND cipherkeys3 = ? LIMIT 1");
 
 	// prepared statement binding structures
 	MYSQL_BIND params[4], result[1];
@@ -414,7 +497,10 @@ bool MySQLDatabase::CreateUserAccount(const char *email, const wchar_t *password
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// *Step 1: insert account* //
 
@@ -497,13 +583,16 @@ bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uch
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	char *sql = "SELECT mg_accounts.id, mg_accounts.password, mg_accounts.activeprofileid, mg_accounts.isbanned, mg_cdkeys.id AS cdkeyid "
 				"FROM mg_accounts "
 				"JOIN mg_cdkeys "
 				"ON mg_accounts.id = mg_cdkeys.accountid "
-				"WHERE mg_accounts.email = ?";
+				"WHERE mg_accounts.email = ? LIMIT 1";
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, sql);
@@ -584,10 +673,13 @@ bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id FROM mg_profiles WHERE name = ?");
+	MySQLQuery query(this->m_Connection, "SELECT id FROM mg_profiles WHERE name = ? LIMIT 1");
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], result[1];
@@ -637,7 +729,10 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// *Step 1: create the profile as usual* //
 
@@ -695,7 +790,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 					"JOIN mg_accounts "
 					"ON mg_profiles.accountid = mg_accounts.id "
 					"WHERE mg_accounts.email = ? "
-					"ORDER BY lastlogindate DESC, id ASC";
+					"ORDER BY lastlogindate DESC, id ASC LIMIT 5";
 
 		// prepared statement wrapper object
 		MySQLQuery query2(this->m_Connection, sql2);
@@ -769,7 +864,14 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
+
+
+	//TODO:
+	// delete profiles' friends and ignorelist
 
 	//TODO: (when forum is implemented) 
 	//dont delete the profile, just rename the profile name
@@ -816,7 +918,7 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 					"JOIN mg_accounts "
 					"ON mg_profiles.accountid = mg_accounts.id "
 					"WHERE mg_accounts.email = ? "
-					"ORDER BY lastlogindate DESC, id ASC";
+					"ORDER BY lastlogindate DESC, id ASC LIMIT 5";
 
 		// prepared statement wrapper object
 		MySQLQuery query2(this->m_Connection, sql2);
@@ -918,12 +1020,15 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// *Step 1: get the requested profile* //
 	
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id, name, rank, clanid, rankinclan, commoptions FROM mg_profiles WHERE id = ?");
+	MySQLQuery query(this->m_Connection, "SELECT id, name, rank, clanid, rankinclan, commoptions FROM mg_profiles WHERE id = ? LIMIT 1");
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], results[6];
@@ -1069,14 +1174,17 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	char *sql = "SELECT mg_profiles.id, mg_profiles.name, mg_profiles.rank, mg_profiles.clanid, mg_profiles.rankinclan, mg_profiles.onlinestatus "
 				"FROM mg_profiles "
 				"JOIN mg_accounts "
 				"ON mg_profiles.accountid = mg_accounts.id "
 				"WHERE mg_accounts.email = ? "
-				"ORDER BY lastlogindate DESC, id ASC";
+				"ORDER BY lastlogindate DESC, id ASC LIMIT 5";
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, sql);
@@ -1116,7 +1224,7 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 		DatabaseLog("RetrieveUserProfiles() query failed: %s", email);
 		querySuccess = false;
 
-		MMG_Profile *tmp = new MMG_Profile();
+		MMG_Profile *tmp = new MMG_Profile[1];
 
 		tmp->m_ProfileId = 0;
 		wcscpy_s(tmp->m_Name, L"");
@@ -1136,7 +1244,7 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 
 		if (count < 1)
 		{
-			MMG_Profile *tmp = new MMG_Profile();
+			MMG_Profile *tmp = new MMG_Profile[1];
 
 			tmp->m_ProfileId = 0;
 			wcscpy_s(tmp->m_Name, L"");
@@ -1177,7 +1285,10 @@ bool MySQLDatabase::QueryUserOptions(const uint profileId, int *options)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	//TODO
 	return true;
@@ -1187,7 +1298,10 @@ bool MySQLDatabase::SaveUserOptions(const uint profileId, const int options)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET commoptions = ? WHERE id = ?");
@@ -1224,17 +1338,20 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT friendprofileid from mg_friends WHERE profileid = ?");
+	MySQLQuery query(this->m_Connection, "SELECT friendprofileid from mg_friends WHERE profileid = ? LIMIT 64");
 
 	// prepared statement binding structures
-	MYSQL_BIND param[1], results[2];
+	MYSQL_BIND param[1], result[1];
 
 	// initialize (zero) bind structures
 	memset(param, 0, sizeof(param));
-	memset(results, 0, sizeof(results));
+	memset(result, 0, sizeof(result));
 
 	// query specific variables
 	bool querySuccess;
@@ -1244,15 +1361,15 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 	query.Bind(&param[0], &profileId);		//profileid
 
 	// bind results
-	query.Bind(&results[0], &id);		//mg_friends.friendprofileid
+	query.Bind(&result[0], &id);		//mg_friends.friendprofileid
 
 	// execute prepared statement
-	if(!query.StmtExecute(param, results))
+	if(!query.StmtExecute(param, result))
 	{
 		DatabaseLog("QueryFriends() query failed: %s", profileId);
 		querySuccess = false;
 
-		uint *tmp = new uint();
+		uint *tmp = new uint[1];
 
 		*tmp = 0;
 
@@ -1267,7 +1384,7 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 
 		if (count < 1)
 		{
-			uint *tmp = new uint();
+			uint *tmp = new uint[1];
 
 			*tmp = 0;
 
@@ -1297,7 +1414,10 @@ bool MySQLDatabase::AddFriend(const uint profileId, uint friendProfileId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, "INSERT INTO mg_friends (profileid, friendprofileid) VALUES (?, ?)");
@@ -1337,7 +1457,10 @@ bool MySQLDatabase::RemoveFriend(const uint profileId, uint friendProfileId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, "DELETE FROM mg_friends WHERE profileid = ? AND friendprofileid = ?");
@@ -1374,7 +1497,10 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// TODO:
 	// this function is temporary
@@ -1384,7 +1510,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 	MySQLQuery query(this->m_Connection, "SELECT id from mg_profiles WHERE id <> ? LIMIT 100");
 
 	// prepared statement binding structures
-	MYSQL_BIND param[1], result[1];
+	MYSQL_BIND param[2], result[1];
 	
 	// initialize (zero) bind structures
 	memset(param, 0, sizeof(param));
@@ -1396,6 +1522,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 
 	// bind parameters to prepared statement
 	query.Bind(&param[0], &profileId);		//profileid
+	query.Bind(&param[1], &profileId);		//profileid
 
 	// bind results
 	query.Bind(&result[0], &id);			//mg_profiles.id
@@ -1406,7 +1533,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 		DatabaseLog("QueryAcquaintances() query failed: %s", profileId);
 		querySuccess = false;
 
-		uint *tmp = new uint();
+		uint *tmp = new uint[1];
 
 		*tmp = 0;
 
@@ -1421,7 +1548,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 
 		if (count < 1)
 		{
-			uint *tmp = new uint();
+			uint *tmp = new uint[1];
 
 			*tmp = 0;
 
@@ -1451,10 +1578,13 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT ignoredprofileid from mg_ignored WHERE profileid = ?");
+	MySQLQuery query(this->m_Connection, "SELECT ignoredprofileid from mg_ignored WHERE profileid = ? LIMIT 64");
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], result[1];
@@ -1479,7 +1609,7 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 		DatabaseLog("QueryIgnoredProfiles() query failed: %s", profileId);
 		querySuccess = false;
 
-		uint *tmp = new uint();
+		uint *tmp = new uint[1];
 
 		*tmp = 0;
 
@@ -1494,7 +1624,7 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 
 		if (count < 1)
 		{
-			uint *tmp = new uint();
+			uint *tmp = new uint[1];
 
 			*tmp = 0;
 
@@ -1524,7 +1654,10 @@ bool MySQLDatabase::AddIgnoredProfile(const uint profileId, uint ignoredProfileI
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, "INSERT INTO mg_ignored (profileid, ignoredprofileid) VALUES (?, ?)");
@@ -1564,7 +1697,10 @@ bool MySQLDatabase::RemoveIgnoredProfile(const uint profileId, uint ignoredProfi
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, "DELETE FROM mg_ignored WHERE profileid = ? AND ignoredprofileid = ?");
@@ -1597,14 +1733,17 @@ bool MySQLDatabase::RemoveIgnoredProfile(const uint profileId, uint ignoredProfi
 	return querySuccess;
 }
 
-bool MySQLDatabase::QueryProfileName (const uint profileId, MMG_Profile *profile)
+bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id, name, rank, clanid, rankinclan, onlinestatus FROM mg_profiles WHERE id = ?");
+	MySQLQuery query(this->m_Connection, "SELECT id, name, rank, clanid, rankinclan, onlinestatus FROM mg_profiles WHERE id = ? LIMIT 1");
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], results[6];
@@ -1679,14 +1818,28 @@ bool MySQLDatabase::QueryProfileName (const uint profileId, MMG_Profile *profile
 	return querySuccess;
 }
 
+bool MySQLDatabase::QueryProfileList(const size_t Count, const uint *profileIds, MMG_Profile *profiles)
+{
+	for (uint i = 0; i < Count; i++)
+	{
+		if (!this->QueryProfileName(profileIds[i], &profiles[i]))
+			return false;
+	}
+
+	return true;
+}
+
 bool MySQLDatabase::QueryEditableVariables(const uint profileId, wchar_t *dstMotto, wchar_t *dstHomepage)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT motto, homepage FROM mg_profiles WHERE id = ?");
+	MySQLQuery query(this->m_Connection, "SELECT motto, homepage FROM mg_profiles WHERE id = ? LIMIT 1");
 	
 	// prepared statement binding structures
 	MYSQL_BIND param[1], results[2];
@@ -1748,7 +1901,10 @@ bool MySQLDatabase::SaveEditableVariables(const uint profileId, const wchar_t *m
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
 		return false;
+	}
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET motto = ?, homepage = ? WHERE id = ?");

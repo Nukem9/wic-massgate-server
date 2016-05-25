@@ -53,7 +53,10 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 		addr.s_addr = ntohl(aClient->GetIPAddress());
 
 		// TODO: Notify MMG_AccountProxy
-		MMG_AccountProxy::ourInstance->SetClientOffline(aClient);
+		if (aClient->IsLoggedIn() && aClient->IsPlayer())
+		{
+			MMG_AccountProxy::ourInstance->SetClientOffline(aClient);
+		}
 
 		// TODO: Notify MMG_ServerTracker
 
@@ -62,6 +65,18 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 
 		return;
 	}
+	
+#ifdef USING_MYSQL_DATABASE
+	// check for database
+	if (!MySQLDatabase::ourInstance->HasConnection())
+	{
+		// set maintenance mode
+		printf("\n");
+		DebugLog(L_WARN, "[CRITICAL] Check the MySQL server.");
+		printf("\n");
+		MMG_AccountProtocol::ourInstance->m_MaintenanceMode = true;
+	}
+#endif
 
 	MN_ReadMessage message(8192);
 	if (!message.BuildMessage(aData, aDataLen))

@@ -229,6 +229,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 	else if (this->m_MaintenanceMode)
 	{
 		// Massgate/Server maintenance notice
+		DebugLog(L_INFO, "ACCOUNT_NOT_CONNECTED: Sending Maintenance Notice");
 		responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_NOT_CONNECTED;
 
 		this->WriteMaintenanceInformation(&cryptMessage);
@@ -269,7 +270,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					//if (!Database::QueryUserProfile(accProfileId, aClient->GetProfile()))
 					//	DebugLog(L_ERROR, "Failed to retrieve profile for valid account ");
 					wcscpy_s(aClient->GetProfile()->m_Name, L"Nukem");
-					aClient->GetProfile()->m_OnlineStatus = 1;
+					aClient->GetProfile()->m_OnlineStatus = WIC_PROFILE_STATUS_ONLINE;
 					aClient->GetProfile()->m_Rank = 18;
 					aClient->GetProfile()->m_ProfileId = 1234;
 					//aClient->GetProfile()->m_ClanId = 4321;
@@ -414,7 +415,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				cryptMessage.WriteUShort(0);			// auth.myLatestVersion
 
 				// Write the profile info stream
-				myProfile->m_OnlineStatus = 1;
+				myProfile->m_OnlineStatus = WIC_PROFILE_STATUS_ONLINE;
 				myProfile->ToStream(&cryptMessage);
 
 				// TigerMD5 of ...? (possibly crypt keys)
@@ -543,7 +544,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				wcscpy_s(myProfile->m_Name, L"Nukem");
 				myProfile->m_ProfileId = 1234;
 				//myProfile->m_ClanId = 4321;
-				myProfile->m_OnlineStatus = 0;
+				myProfile->m_OnlineStatus = WIC_PROFILE_STATUS_OFFLINE;
 				myProfile->m_Rank = 18;
 				//myProfile->m_RankInClan = 1;
 
@@ -551,7 +552,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				myProfile->ToStream(&cryptMessage);
 #else
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
-				MMG_Profile *myProfiles;
+				MMG_Profile *myProfiles = NULL;
 
 				wchar_t myPassword[WIC_PASSWORD_MAX_LENGTH];
 				memset(myPassword, 0, sizeof(myPassword));
@@ -595,10 +596,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 						myStatusCode = AuthSuccess;
 						mySuccessFlag = 1;
 
-						if (myProfileCount < 1)
-							lastUsedId = myProfiles->m_ProfileId;
-						else
-							lastUsedId = myProfiles[0].m_ProfileId;	//myAuthToken->m_ProfileId
+						lastUsedId = myProfiles[0].m_ProfileId;	//myAuthToken->m_ProfileId
 					}
 					else
 					{
@@ -621,10 +619,8 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myProfiles[i].ToStream(&cryptMessage);
 				}
 
-				if(myProfileCount > 0)
-					delete [] myProfiles;
-
-				myProfiles = nullptr;
+				delete [] myProfiles;
+				myProfiles = NULL;
 #endif
 			}
 			break;
@@ -637,7 +633,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_RETRIEVE_PROFILES_RSP;
 
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
-				MMG_Profile *myProfiles;
+				MMG_Profile *myProfiles = NULL;
 
 				wchar_t myPassword[WIC_PASSWORD_MAX_LENGTH];
 				memset(myPassword, 0, sizeof(myPassword));
@@ -710,10 +706,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				if (RetrieveProfilesQueryOK && mySuccessFlag)
 				{
-					if (myProfileCount < 1)
-						lastUsedId = myProfiles->m_ProfileId;
-					else
-						lastUsedId = myProfiles[0].m_ProfileId;	//myAuthToken->m_ProfileId
+					lastUsedId = myProfiles[0].m_ProfileId;	//myAuthToken->m_ProfileId
 				}
 				else
 				{
@@ -735,10 +728,8 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myProfiles[i].ToStream(&cryptMessage);
 				}
 
-				if(myProfileCount > 0)
-					delete [] myProfiles;
-
-				myProfiles = nullptr;
+				delete [] myProfiles;
+				myProfiles = NULL;
 #endif
 			}
 			break;

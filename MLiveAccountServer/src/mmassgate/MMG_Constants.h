@@ -54,6 +54,11 @@ enum WIC_REVISION_VER
 #define MODIFY_PROFILE_ADD			6382692
 #define MODIFY_PROFILE_DELETE		6579564
 
+// profile online status
+#define WIC_PROFILE_STATUS_OFFLINE	0
+#define WIC_PROFILE_STATUS_ONLINE	1
+#define WIC_PROFILE_STATUS_PLAYING	2	//anything > 2 is valid
+
 // Ports
 #define WIC_HTTP_PORT				80
 

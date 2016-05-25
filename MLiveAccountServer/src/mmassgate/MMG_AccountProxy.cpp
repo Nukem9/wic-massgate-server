@@ -12,9 +12,10 @@ bool MMG_AccountProxy::SetClientOffline(SvClient *aClient)
 
 	MMG_Profile *myProfile = aClient->GetProfile();
 
-	myProfile->m_OnlineStatus = 0;
+	myProfile->m_OnlineStatus = WIC_PROFILE_STATUS_OFFLINE;
 
 #ifdef USING_MYSQL_DATABASE
+	// TODO: remove m_OnlineStatus from database
 	MySQLDatabase::ourInstance->SetStatusOffline(myProfile->m_ProfileId);
 #endif
 
@@ -34,9 +35,10 @@ bool MMG_AccountProxy::SetClientOnline(SvClient *aClient)
 
 	MMG_Profile *myProfile = aClient->GetProfile();
 
-	myProfile->m_OnlineStatus = 1;
+	myProfile->m_OnlineStatus = WIC_PROFILE_STATUS_ONLINE;
 
 #ifdef USING_MYSQL_DATABASE
+	// TODO: remove m_OnlineStatus from database
 	MySQLDatabase::ourInstance->SetStatusOnline(myProfile->m_ProfileId);
 #endif
 
@@ -56,9 +58,10 @@ bool MMG_AccountProxy::SetClientPlaying(SvClient *aClient)
 
 	MMG_Profile *myProfile = aClient->GetProfile();
 
-	myProfile->m_OnlineStatus = 2;
+	myProfile->m_OnlineStatus = WIC_PROFILE_STATUS_PLAYING;
 
 #ifdef USING_MYSQL_DATABASE
+	// TODO: remove m_OnlineStatus from database
 	MySQLDatabase::ourInstance->SetStatusPlaying(myProfile->m_ProfileId);
 #endif
 

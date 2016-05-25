@@ -39,21 +39,75 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 #ifndef USING_MYSQL_DATABASE
 
-				//handle profiles (count). unnecessary really, since count is going to be 0 if youre not using the database
+			//handle profiles (count).
+
+			MMG_Profile friends[2];
+
+			friends[0].m_ProfileId = 1235;
+			friends[1].m_ProfileId = 1236;
+
+			wcscpy_s(friends[0].m_Name, L"tenerefis");
+			wcscpy_s(friends[1].m_Name, L"HouseBee");
+
+			friends[0].m_OnlineStatus = WIC_PROFILE_STATUS_ONLINE;
+
+			friends[0].m_Rank = 18;
+			friends[1].m_Rank = 18;
+
+			//friends[0].m_ClanId = 4321;
+			//friends[1].m_ClanId = 4321;
+
+			//friends[0].m_RankInClan = 2;
+			//friends[1].m_RankInClan = 3;
+			
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+			friends[0].ToStream(&responseMessage);
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+			friends[1].ToStream(&responseMessage);
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
 #else
+			uint *profildIds = NULL;
+			MMG_Profile *myFriends = NULL;
+
+			profildIds = (uint*)malloc(count * sizeof(uint));
+			memset(profildIds, 0, count * sizeof(uint));
+
+			myFriends = new MMG_Profile[count];
+
+			//read profile ids from message
 			for (int i = 0; i < count; i++)
 			{
-				MMG_Profile myFriend;
-
-				uint id;
-				if (!aMessage->ReadUInt(id))
+				if (!aMessage->ReadUInt(profildIds[i]))
 					return false;
-
-				bool QueryOK = MySQLDatabase::ourInstance->QueryProfileName(id, &myFriend);
-
-				if(QueryOK)
-					this->SendProfileName(aClient, &responseMessage, &myFriend);
 			}
+
+			// query database
+			MySQLDatabase::ourInstance->QueryProfileList(count, profildIds, myFriends);
+
+			// write profiles to stream
+			for (int i = 0; i < count; i++)
+			{
+				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+				myFriends[i].ToStream(&responseMessage);
+			}
+
+			delete [] myFriends;
+			myFriends = NULL;
+
+			// send packet
+			if (!aClient->SendData(&responseMessage))
+			{
+				free(profildIds);
+				profildIds = NULL;
+
+				return false;
+			}
+
+			free(profildIds);
+			profildIds = NULL;
 #endif
 		}
 		break;
@@ -88,8 +142,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			this->SendStartupSequenceComplete(aClient, &responseMessage);
 			*/
 
-			this->SendFriend(aClient, &responseMessage);
-			this->SendAcquaintance(aClient, &responseMessage);
+			this->SendFriendsAcquaintances(aClient, &responseMessage);
 		}
 		break;
 
@@ -126,7 +179,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			DebugLog(L_INFO, "MESSAGING_REMOVE_FRIEND_RESPONSE:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_REMOVE_FRIEND_RESPONSE);
-			responseMessage.WriteUInt(profileId);	//NOTE: might not be profileId
+			responseMessage.WriteUInt(profileId);
 			aClient->SendData(&responseMessage);
 		}
 		break;
@@ -293,11 +346,21 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			//IDA wic.exe sub_7A1290 MMG_Messaging::SetStatusPlaying
 
-			//handle padding
-			uint randomZero;
-			if (!aMessage->ReadUInt(randomZero) || !aMessage->ReadUInt(randomZero))
+			uint serverId;
+			if (!aMessage->ReadUInt(serverId))
 				return false;
 
+			//handle padding
+			uint randomZero;
+			if (!aMessage->ReadUInt(randomZero))
+				return false;
+
+			// TODO:
+			// serverId is used for when a player joins another players game
+			// for some reason there is an anomaly where the online status of the 'playing' profile is set to this serverId
+			// it is important to note, a few delimiters are sent between client<->massgate<->ds beforehand for authentication
+			// the authentication will involve checking authtoken/credentials and the unused antispoof token in MMG_AccountProtocol
+			// also before this can be implemented, the onlinestatus dependency needs to be removed from the database
 			MMG_AccountProxy::ourInstance->SetClientPlaying(aClient);
 		}
 		break;
@@ -588,6 +651,15 @@ bool MMG_Messaging::SendProfileName(SvClient *aClient, MN_WriteMessage	*aMessage
 	return aClient->SendData(aMessage);
 }
 
+bool MMG_Messaging::SendFriendsAcquaintances(SvClient *aClient, MN_WriteMessage *aMessage)
+{
+	//send acquaintances first, otherwise it screws up the contacts list
+	this->SendAcquaintance(aClient, aMessage);
+	this->SendFriend(aClient, aMessage);
+
+	return true;
+}
+
 bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 {
 	DebugLog(L_INFO, "MESSAGING_GET_FRIENDS_RESPONSE:");
@@ -595,13 +667,15 @@ bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 
 #ifndef USING_MYSQL_DATABASE
 	//write uint (num friends)
-	aMessage->WriteUInt(0);
+	aMessage->WriteUInt(2);
+	aMessage->WriteUInt(1235);
+	aMessage->WriteUInt(1236);
 
 	//for each friend
 		//write uint (profile id)
 #else
-	uint friendCount=0;
-	uint *myFriends;
+	uint friendCount = 0;
+	uint *myFriends = NULL;
 
 	bool QueryOK = MySQLDatabase::ourInstance->QueryFriends(aClient->GetProfile()->m_ProfileId, &friendCount, &myFriends);
 
@@ -619,10 +693,8 @@ bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 		aMessage->WriteUInt(0);
 	}
 
-	if(friendCount > 0)
-		delete [] myFriends;
-
-	myFriends = nullptr;
+	delete [] myFriends;
+	myFriends = NULL;
 #endif
 
 	return aClient->SendData(aMessage);
@@ -635,6 +707,11 @@ bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessag
 
 #ifndef USING_MYSQL_DATABASE
 	//write uint (num acquaitances)
+	aMessage->WriteUInt(2);
+
+	aMessage->WriteUInt(1235);
+	aMessage->WriteUInt(0);
+	aMessage->WriteUInt(1236);
 	aMessage->WriteUInt(0);
 
 	//for each acquaintance
@@ -645,8 +722,8 @@ bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessag
 	//NOTE: this does not return acquaintances just yet, at the moment it sends
 	//everyone currently registered.
 
-	uint acquaintanceCount=0;
-	uint *myAcquaintances;
+	uint acquaintanceCount = 0;
+	uint *myAcquaintances = NULL;
 
 	bool QueryOK = MySQLDatabase::ourInstance->QueryAcquaintances(aClient->GetProfile()->m_ProfileId, &acquaintanceCount, &myAcquaintances);
 
@@ -664,11 +741,9 @@ bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessag
 	{
 		aMessage->WriteUInt(0);
 	}
-
-	if(acquaintanceCount > 0)
-		delete [] myAcquaintances;
-
-	myAcquaintances = nullptr;
+	
+	delete [] myAcquaintances;
+	myAcquaintances = NULL;
 #endif
 
 	return aClient->SendData(aMessage);
@@ -753,8 +828,8 @@ bool MMG_Messaging::SendProfileIgnoreList(SvClient *aClient, MN_WriteMessage *aM
 	//for each ignored profile
 		//write uint (profile id)
 #else
-	uint ignoredCount=0;
-	uint *myIgnoreList;
+	uint ignoredCount = 0;
+	uint *myIgnoreList = NULL;
 
 	bool QueryOK = MySQLDatabase::ourInstance->QueryIgnoredProfiles(aClient->GetProfile()->m_ProfileId, &ignoredCount, &myIgnoreList);
 
@@ -772,10 +847,8 @@ bool MMG_Messaging::SendProfileIgnoreList(SvClient *aClient, MN_WriteMessage *aM
 		aMessage->WriteUInt(0);
 	}
 
-	if(ignoredCount > 0)
-		delete [] myIgnoreList;
-
-	myIgnoreList = nullptr;
+	delete [] myIgnoreList;
+	myIgnoreList = NULL;
 #endif
 
 	return aClient->SendData(aMessage);

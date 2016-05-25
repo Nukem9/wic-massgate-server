@@ -34,6 +34,8 @@ public:
 	void			UpdateActivity	();
 	bool			IsActive		();
 	bool			IsLoggedIn		();
+	bool			IsPlayer		();
+	bool			IsServer		();
 
 	void			SetTimeout		(uint aTimeout);
 	void			SetSocket		(SOCKET aSocket);

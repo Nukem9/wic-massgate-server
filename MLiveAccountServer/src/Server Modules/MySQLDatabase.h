@@ -50,11 +50,17 @@
 			http://dev.mysql.com/doc/refman/5.7/en/auto-reconnect.html
 
 	TODO:
-	- better error handling if database loses connection
 		experience "experience int(10) unsigned not null,"
+	- better error handling of queries (ie querySuccess)
+		- CreateUserAccount
+		- CreateUserProfile
+		- DeleteUserProfile
+		- QueryUserProfile
 	- handle communication options properly
+	- create a global 'logged in' player list/map
+		move account database queries to Query::FromStream
+		remove online status from database
 	- save password hash, compatible with phpbb or some other forum
-	- CreateUserAccount, CreateUserProfile, DeleteUserProfile and QueryUserProfile are a little messy but are sufficient for now
 
 */
 
@@ -73,6 +79,7 @@ private:
 
 	// mysql connection object
 	MYSQL *m_Connection;
+	bool isConnected;
 
 	// mysql connection options
 	my_bool reconnect;
@@ -89,12 +96,13 @@ private:
 public:
 	MySQLDatabase()
 	{
-		this->host = nullptr;
-		this->user = nullptr;
-		this->pass = nullptr;
-		this->db = nullptr;
+		this->host = NULL;
+		this->user = NULL;
+		this->pass = NULL;
+		this->db = NULL;
 
-		this->m_Connection = nullptr;
+		this->m_Connection = NULL;
+		this->isConnected = false;
 
 		// mysql connection options
 		this->reconnect = 1;
@@ -104,13 +112,22 @@ public:
 		this->sleep_interval_s = 18000;		// 5 hours
 		this->sleep_interval_ms = this->sleep_interval_s * 1000;
 
-		this->m_PingThreadHandle = nullptr;
+		this->m_PingThreadHandle = NULL;
 	}
+
+	~MySQLDatabase()
+	{
+		this->Unload();
+	}
+
+	bool	EmergencyMassgateDisconnect		();
 
 	bool	Initialize			();
 	void	Unload				();
 	bool	ReadConfig			();
 	bool	ConnectDatabase		();
+	bool	HasConnection		();
+	void	PrintStatus			();
 	bool	TestDatabase		();
 	bool	PingDatabase		();
 	bool	InitializeSchema	();
@@ -144,6 +161,7 @@ public:
 	bool	AddIgnoredProfile		(const uint profileId, uint ignoredProfileId);
 	bool	RemoveIgnoredProfile	(const uint profileId, uint ignoredProfileId);
 	bool	QueryProfileName	(const uint profileId, MMG_Profile *profile);
+	bool	QueryProfileList	(const size_t Count, const uint *profileId, MMG_Profile *profiles);
 	bool	QueryEditableVariables	(const uint profileId, wchar_t *dstMotto, wchar_t *dstHomepage);
 	bool	SaveEditableVariables	(const uint profileId, const wchar_t *motto, const wchar_t *homepage);
 };

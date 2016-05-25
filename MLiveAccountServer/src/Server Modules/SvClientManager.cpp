@@ -32,6 +32,16 @@ bool SvClient::IsLoggedIn()
 	return this->m_LoggedIn;
 }
 
+bool SvClient::IsPlayer()
+{
+	return this->m_IsPlayer;
+}
+
+bool SvClient::IsServer()
+{
+	return this->m_IsServer;
+}
+
 void SvClient::SetTimeout(uint aTimeout)
 {
 	InterlockedExchange((volatile LONG *)&this->m_TimeoutTime, aTimeout);
@@ -266,7 +276,7 @@ void SvClientManager::EmergencyDisconnectAll()
 		if (!aClient->m_Valid)
 			continue;
 
-		aClient->Reset();
+		this->DisconnectClient(aClient);
 	}
 }
 
@@ -277,7 +287,7 @@ bool SvClientManager::SendDataAll(MN_WriteMessage *aMessage, uint skipProfileId)
 	{
 		SvClient *aClient = &this->m_Clients[i];
 
-		if (!aClient->m_Valid || !aClient->m_IsPlayer)
+		if (!aClient->m_Valid || !aClient->m_LoggedIn || !aClient->m_IsPlayer)
 			continue;
 
 		// ugly

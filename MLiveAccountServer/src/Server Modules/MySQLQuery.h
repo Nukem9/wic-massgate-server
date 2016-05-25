@@ -6,25 +6,28 @@ private:
 	MYSQL_STMT *m_Statement;
 
 public:
-	MySQLQuery(MYSQL *con, const char *SQLText) : m_Statement(nullptr)
+	MySQLQuery(MYSQL *conn, const char *SQLText) : m_Statement(NULL)
 	{
-		this->m_Statement = nullptr;
-
-		this->m_Statement = mysql_stmt_init(con);
+		this->m_Statement = mysql_stmt_init(conn);
 		
 		if (!this->m_Statement)
-			DebugLog(L_ERROR, "mysql_stmt_init(), out of memory.");
-
-		if (mysql_stmt_prepare(this->m_Statement, SQLText, strlen(SQLText)) != 0)
 		{
-			DebugLog(L_ERROR, "mysql_stmt_prepare(), invalid SQL statement.");
-			DebugLog(L_ERROR, "%s", mysql_stmt_error(this->m_Statement));
+			DebugLog(L_WARN, "mysql_stmt_init(), out of memory.");
+			return;
+		}
+
+		if (mysql_stmt_prepare(this->m_Statement, SQLText, strlen(SQLText)))
+		{
+			DebugLog(L_WARN, "mysql_stmt_prepare(), invalid SQL statement.");
+			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
+			return;
 		}
 	}
 
 	virtual ~MySQLQuery()
 	{
 		this->Finalize();
+		this->m_Statement = NULL;
 	}
 
 	MYSQL_STMT *GetStatement()
@@ -37,7 +40,7 @@ public:
 	void Bind(MYSQL_BIND *param, const uchar *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_TINY;
-		param->buffer = (uchar *)Value;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
@@ -46,7 +49,7 @@ public:
 	void Bind(MYSQL_BIND *param, const int *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_LONG;
-		param->buffer = (int *)Value;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
@@ -55,7 +58,7 @@ public:
 	void Bind(MYSQL_BIND *param, const uint *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_LONG;
-		param->buffer = (uint *)Value;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
@@ -64,7 +67,7 @@ public:
 	void Bind(MYSQL_BIND *param, const ulong *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_LONG;
-		param->buffer = (ulong *)Value;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
@@ -73,7 +76,7 @@ public:
 	void Bind(MYSQL_BIND *param, const __int64 *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_LONGLONG;
-		param->buffer = (__int64 *)Value;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
@@ -82,7 +85,7 @@ public:
 	void Bind(MYSQL_BIND *param, const uint64 *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_LONGLONG;
-		param->buffer = (uint64 *)Value;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
@@ -91,7 +94,7 @@ public:
 	void Bind(MYSQL_BIND *param, const float *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_FLOAT;
-		param->buffer = (float *)Value;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
@@ -100,7 +103,7 @@ public:
 	void Bind(MYSQL_BIND *param, const double *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_DOUBLE;
-		param->buffer = (double *)Value;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
@@ -109,7 +112,7 @@ public:
 	void Bind(MYSQL_BIND *param, const char *Value, ulong *Length)
 	{
 		param->buffer_type = MYSQL_TYPE_VAR_STRING;
-		param->buffer = (char *)Value;
+		param->buffer = (void *)Value;
 		param->buffer_length = *Length;
 		param->is_null = (my_bool *)0;
 		param->length = Length;
@@ -120,44 +123,44 @@ public:
 	{
 		*Length <<= 1;	// multiply by 2, to save widechar properly.
 		param->buffer_type = MYSQL_TYPE_VAR_STRING;
-		param->buffer = (wchar_t *)Value;
+		param->buffer = (void *)Value;
 		param->buffer_length = *Length;
 		param->is_null = (my_bool *)0;
 		param->length = Length;
 	}
 
 	//TIME - MYSQL_TYPE_TIME
-	void BindTime(MYSQL_BIND *param, MYSQL_TIME *datetime)
+	void BindTime(MYSQL_BIND *param, MYSQL_TIME *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_TIME;
-		param->buffer = (MYSQL_TIME *)datetime;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
 
 	//DATE - MYSQL_TYPE_DATE
-	void BindDate(MYSQL_BIND *param, MYSQL_TIME *datetime)
+	void BindDate(MYSQL_BIND *param, MYSQL_TIME *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_DATE;
-		param->buffer = (MYSQL_TIME *)datetime;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
 
 	//DATETIME - MYSQL_TYPE_DATETIME
-	void BindDateTime(MYSQL_BIND *param, MYSQL_TIME *datetime)
+	void BindDateTime(MYSQL_BIND *param, MYSQL_TIME *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_DATETIME;
-		param->buffer = (MYSQL_TIME *)datetime;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
 
 	//TIMESTAMP - MYSQL_TYPE_TIMESTAMP
-	void BindTimeStamp(MYSQL_BIND *param, MYSQL_TIME *datetime)
+	void BindTimeStamp(MYSQL_BIND *param, MYSQL_TIME *Value)
 	{
 		param->buffer_type = MYSQL_TYPE_TIMESTAMP;
-		param->buffer = (MYSQL_TIME *)datetime;
+		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
@@ -168,7 +171,7 @@ public:
 		//mysql_stmt_send_long_data(stmt, 2, (const char*)Data, Length)
 
 		param->buffer_type = MYSQL_TYPE_BLOB;
-		param->buffer = (voidptr_t *)Data;
+		param->buffer = (void *)Data;
 		param->buffer_length = *Length;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
@@ -178,30 +181,48 @@ public:
 	void BindNull(MYSQL_BIND *param)
 	{
 		param->buffer_type = MYSQL_TYPE_NULL;
-		//param->buffer = (char *)nullptr;
+		param->buffer = (void *)NULL;
 		param->is_null = (my_bool *)1;
 		param->length = 0;
+	}
+
+	bool StmtExecute()
+	{
+		if (!this->m_Statement)
+		{
+			DebugLog(L_WARN, "StmtExecute(): NULL statement handle.");
+			return false;
+		}
+
+		if (mysql_stmt_execute(this->m_Statement))
+		{
+			DebugLog(L_WARN, "StmtExecute(): mysql_stmt_execute() failed.");
+			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
+			return false;
+		}
+
+		return true;
 	}
 
 	bool StmtExecute(MYSQL_BIND *param)
 	{
 		if (!this->m_Statement)
 		{
-			DebugLog(L_ERROR, "StmtExecute(param): this->m_Statement is NULL");
+			DebugLog(L_WARN, "StmtExecute(1): NULL statement handle.");
 			return false;
 		}
 
 		if (mysql_stmt_bind_param(this->m_Statement, param))
 		{
-			DebugLog(L_ERROR, "StmtExecute(param): mysql_stmt_bind_param() failed.");
-			DebugLog(L_ERROR, "%s", mysql_stmt_error(this->m_Statement));
+			DebugLog(L_WARN, "StmtExecute(1): mysql_stmt_bind_param() failed.");
+			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
 			return false;
 		}
 
 		if (mysql_stmt_execute(this->m_Statement))
 		{
-			DebugLog(L_ERROR, "StmtExecute(param): mysql_stmt_execute() failed.");
-			DebugLog(L_ERROR, "%s", mysql_stmt_error(this->m_Statement));
+			DebugLog(L_WARN, "StmtExecute(1): mysql_stmt_execute() failed.");
+			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
 			return false;
 		}
 		
@@ -212,36 +233,36 @@ public:
 	{
 		if (!this->m_Statement)
 		{
-			DebugLog(L_ERROR, "StmtExecute(param, result): this->m_Statement is NULL");
+			DebugLog(L_WARN, "StmtExecute(2): NULL statement handle.");
 			return false;
 		}
 
 		if (mysql_stmt_bind_param(this->m_Statement, param))
 		{
-			DebugLog(L_ERROR, "StmtExecute(param, result): mysql_stmt_bind_param() failed.");
-			DebugLog(L_ERROR, "%s", mysql_stmt_error(this->m_Statement));
+			DebugLog(L_WARN, "StmtExecute(2): mysql_stmt_bind_param() failed.");
+			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
 			return false;
 		}
 
 		if (mysql_stmt_bind_result(this->m_Statement, result))
 		{
-			DebugLog(L_ERROR, "StmtExecute(param, result): mysql_stmt_bind_result() failed.");
-			DebugLog(L_ERROR, "%s", mysql_stmt_error(this->m_Statement));
+			DebugLog(L_WARN, "StmtExecute(2): mysql_stmt_bind_result() failed.");
+			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
 			return false;
 		}
 
 		if (mysql_stmt_execute(this->m_Statement))
 		{
-			DebugLog(L_ERROR, "StmtExecute(param, result): mysql_stmt_execute() failed.");
-			DebugLog(L_ERROR, "%s", mysql_stmt_error(this->m_Statement));
+			DebugLog(L_WARN, "StmtExecute(2): mysql_stmt_execute() failed.");
+			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
 			return false;
 		}
 
 		//this step is optional, but in order to use mysql_stmt_num_rows() then mysql_stmt_store_result() must be called
 		if (mysql_stmt_store_result(this->m_Statement))
 		{
-			DebugLog(L_ERROR, "StmtExecute(param, result): mysql_stmt_store_result() failed.");
-			DebugLog(L_ERROR, "%s", mysql_stmt_error(this->m_Statement));
+			DebugLog(L_WARN, "StmtExecute(2): mysql_stmt_store_result() failed.");
+			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
 			return false;
 		}
 		
@@ -250,41 +271,52 @@ public:
 
 	bool StmtFetch()
 	{
-		if(this->m_Statement)
+		if (!this->m_Statement)
 		{
-			if (mysql_stmt_fetch(this->m_Statement))
-				return false;
+			DebugLog(L_WARN, "StmtFetch(): NULL statement handle.");
+			return false;
 		}
-		
-		return true;
+
+		return mysql_stmt_fetch(this->m_Statement) == 0;
 	}
 
 	int Step()
 	{
-		if (this->m_Statement)
+		if (!this->m_Statement)
 		{
-			if (mysql_stmt_execute(this->m_Statement))
-			{
-				DebugLog(L_ERROR, "Step(): mysql_stmt_execute() failed.");
-				DebugLog(L_ERROR, "%s", mysql_stmt_error(this->m_Statement));
-				return false;
-			}
+			DebugLog(L_WARN, "Step(): NULL statement handle.");
+			return 0;
 		}
 
-		return true;
+		if (mysql_stmt_execute(this->m_Statement))
+		{
+			DebugLog(L_WARN, "Step(): mysql_stmt_execute() failed.");
+			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
+			return 0;
+		}
+
+		return 1;
 	}
 
 	void Finalize()
 	{
-		if (this->m_Statement)
+		if (!this->m_Statement)
 		{
-			if (mysql_stmt_close(this->m_Statement))
-			{
-				DebugLog(L_ERROR, "Finalize(): mysql_stmt_close() failed.");
-				DebugLog(L_ERROR, "%s", mysql_stmt_error(this->m_Statement));
-			}
+			DebugLog(L_WARN, "Finalize(): NULL statement handle.");
+			return;
 		}
-		
-		this->m_Statement = nullptr;
+
+		if (mysql_stmt_free_result(this->m_Statement))
+		{
+			DebugLog(L_WARN, "Finalize(): mysql_stmt_free_result() failed.");
+			return;
+		}
+
+		if (mysql_stmt_close(this->m_Statement))
+		{
+			DebugLog(L_WARN, "Finalize(): mysql_stmt_close() failed.");
+			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
+			return;
+		}
 	}
 };
