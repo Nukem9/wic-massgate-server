@@ -70,14 +70,14 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 #else
 			uint *profildIds = NULL;
-			MMG_Profile *myFriends = NULL;
+			MMG_Profile *profileList = NULL;
 
 			profildIds = (uint*)malloc(count * sizeof(uint));
 			memset(profildIds, 0, count * sizeof(uint));
 
-			myFriends = new MMG_Profile[count];
+			profileList = new MMG_Profile[count];
 
-			//read profile ids from message
+			// read profile ids from message
 			for (int i = 0; i < count; i++)
 			{
 				if (!aMessage->ReadUInt(profildIds[i]))
@@ -85,29 +85,24 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			}
 
 			// query database
-			MySQLDatabase::ourInstance->QueryProfileList(count, profildIds, myFriends);
+			MySQLDatabase::ourInstance->QueryProfileList(count, profildIds, profileList);
 
 			// write profiles to stream
 			for (int i = 0; i < count; i++)
 			{
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
-				myFriends[i].ToStream(&responseMessage);
+				profileList[i].ToStream(&responseMessage);
 			}
 
-			delete [] myFriends;
-			myFriends = NULL;
-
-			// send packet
-			if (!aClient->SendData(&responseMessage))
-			{
-				free(profildIds);
-				profildIds = NULL;
-
-				return false;
-			}
+			delete [] profileList;
+			profileList = NULL;
 
 			free(profildIds);
 			profildIds = NULL;
+
+			// send packet
+			if (!aClient->SendData(&responseMessage))
+				return false;
 #endif
 		}
 		break;
