@@ -86,6 +86,8 @@ private:
 	char *bind_interface;
 	char *charset_name;
 
+	unsigned long sleep_interval_h;
+	unsigned long sleep_interval_m;
 	unsigned long sleep_interval_s;		//connection timeout for a default mysql install is 28800 seconds (8 hours)
 	unsigned long sleep_interval_ms;
 
@@ -109,7 +111,9 @@ public:
 		this->bind_interface = "localhost";
 		this->charset_name = "latin1";		//TODO: change to utf8
 
-		this->sleep_interval_s = 18000;		// 5 hours
+		this->sleep_interval_h = 5;
+		this->sleep_interval_m = this->sleep_interval_h * 60;
+		this->sleep_interval_s = this->sleep_interval_m * 60;
 		this->sleep_interval_ms = this->sleep_interval_s * 1000;
 
 		this->m_PingThreadHandle = NULL;
@@ -120,16 +124,19 @@ public:
 		this->Unload();
 	}
 
+private:
 	bool	EmergencyMassgateDisconnect		();
 
-	bool	Initialize			();
-	void	Unload				();
-	bool	ReadConfig			();
+	bool	ReadConfig			(const char *filename);
 	bool	ConnectDatabase		();
-	bool	HasConnection		();
 	void	PrintStatus			();
 	bool	TestDatabase		();
 	bool	PingDatabase		();
+
+public:
+	bool	Initialize			();
+	void	Unload				();
+	bool	HasConnection		();
 	bool	InitializeSchema	();
 
 	//AccountProxy

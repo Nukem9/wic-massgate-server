@@ -2,12 +2,8 @@
 
 #define GeoIPLog(format, ...) DebugLog(L_INFO, "[GeoIP]: "format, __VA_ARGS__)
 
-#define TOTAL_RECORDS 130899
-
 namespace GeoIP
 {
-	GEOIP_DATA data[TOTAL_RECORDS];
-
 	bool Initialize()
 	{
 		memset(data, 0, sizeof(data));

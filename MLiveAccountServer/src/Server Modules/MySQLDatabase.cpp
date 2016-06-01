@@ -1,8 +1,5 @@
 #include "../stdafx.h"
 
-#include <fstream>
-#include <string>
-
 #define DatabaseLog(format, ...) DebugLog(L_INFO, "[Database]: "format, __VA_ARGS__)
 
 DWORD WINAPI MySQLDatabase::PingThread(LPVOID lpArg)
@@ -31,7 +28,7 @@ bool MySQLDatabase::Initialize()
 	DatabaseLog("MySQL client version: %s started", info);
 
 	// read mysql configuration from file
-	if (!this->ReadConfig())
+	if (!this->ReadConfig("settings.ini"))
 		return false;
 
 	if (this->ConnectDatabase())
@@ -66,43 +63,58 @@ void MySQLDatabase::Unload()
 	this->db = NULL;
 }
 
-bool MySQLDatabase::ReadConfig()
+bool MySQLDatabase::ReadConfig(const char *filename)
 {
 	//might need to change working directory in property pages if it cant find the file
-	std::ifstream file("settings.ini", std::ios::in);
-	std::string line;
-	std::string settings[4];
+	FILE *file;
+	file = fopen(filename, "r");
 
-	int i=0;
-
-	if(file.is_open())
+	if(!file)
 	{
-		while(getline(file, line))
-		{
-			if(line.substr(0, 1)!="[" && line != "")
-			{
-				settings[i] = line;
-				i++;
-			}
-		}
-	} else {
-		DatabaseLog("could not open configuration file 'settings.ini'");
+		DatabaseLog("could not open configuration file '%s'", filename);
 		return false;
 	}
 
-	file.close();
+	const int bufferlen = 32;		// characters read per line
+	const int maxoptions = 4;		// number of options read from the file
+	int i = 0;
 
-	this->host = (char*)malloc(settings[0].size() + 1);
-	memcpy((char*)this->host, settings[0].c_str(), settings[0].size() + 1);
+	char line[bufferlen];
+	memset(line, 0, sizeof(line));
 
-	this->user = (char*)malloc(settings[1].size() + 1);
-	memcpy((char*)this->user, settings[1].c_str(), settings[1].size() + 1);
+	char settings[maxoptions][bufferlen];
+	memset(settings, 0, sizeof(settings));
 
-	this->pass = (char*)malloc(settings[2].size() + 1);
-	memcpy((char*)this->pass, settings[2].c_str(), settings[2].size() + 1);
+	while (fgets(line, bufferlen, file) && i < maxoptions)
+	{
+		// remove newline
+		if (strchr(line, 10))
+			line[strlen(line)-1] = 0;
 
-	this->db = (char*)malloc(settings[3].size() + 1);
-	memcpy((char*)this->db, settings[3].c_str(), settings[3].size() + 1);
+		// ignoring standard comment characters and header. 91 = '[', 47 = '/'
+		if (!strchr(line, 91) && !strchr(line, 47) && strlen(line))
+		{
+			strcpy(settings[i], line);
+			i++;
+		}
+
+		// reset the line buffer
+		memset(line, 0, bufferlen);
+	}
+
+	fclose(file);
+
+	this->host = (char*)malloc(strlen(settings[0]) + 1);
+	memcpy((char*)this->host, settings[0], strlen(settings[0]) + 1);
+
+	this->user = (char*)malloc(strlen(settings[1]) + 1);
+	memcpy((char*)this->user, settings[1], strlen(settings[1]) + 1);
+
+	this->pass = (char*)malloc(strlen(settings[2]) + 1);
+	memcpy((char*)this->pass, settings[2], strlen(settings[2]) + 1);
+
+	this->db = (char*)malloc(strlen(settings[3]) + 1);
+	memcpy((char*)this->db, settings[3], strlen(settings[3]) + 1);
 
 	return true;
 }
@@ -1510,7 +1522,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 	MySQLQuery query(this->m_Connection, "SELECT id from mg_profiles WHERE id <> ? LIMIT 100");
 
 	// prepared statement binding structures
-	MYSQL_BIND param[2], result[1];
+	MYSQL_BIND param[1], result[1];
 	
 	// initialize (zero) bind structures
 	memset(param, 0, sizeof(param));
@@ -1522,7 +1534,6 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 
 	// bind parameters to prepared statement
 	query.Bind(&param[0], &profileId);		//profileid
-	query.Bind(&param[1], &profileId);		//profileid
 
 	// bind results
 	query.Bind(&result[0], &id);			//mg_profiles.id
