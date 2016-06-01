@@ -60,17 +60,22 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			DebugLog(L_INFO, "SERVERTRACKER_USER_LIST_SERVERS:");
 
 			uint gameVersion;
-			aMessage->ReadUInt(gameVersion);
+			if (!aMessage->ReadUInt(gameVersion))
+				return false;
 
 			uint protocolVersion;
-			aMessage->ReadUInt(protocolVersion);
+			if (!aMessage->ReadUInt(protocolVersion))
+				return false;
 
 			ushort activefilters;
-			aMessage->ReadUShort(activefilters);
+			if (!aMessage->ReadUShort(activefilters))
+				return false;
 
 			// read server fiters from the client
-			ServerListFilters filters;
-			filters.ReadFilters(activefilters, aMessage);
+			ServerListFilters filters(activefilters);
+
+			if (!filters.FromStream(aMessage))
+				return false;
 
 			if(filters.HasFlag(DEDICATED_FLAG))
 				printf("activefilters has DEDICATED_FLAG\n");
@@ -123,7 +128,8 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			DebugLog(L_INFO, "SERVERTRACKER_USER_CYCLE_MAP_LIST_REQ:");
 
 			uint64 cycleHash;
-			aMessage->ReadUInt64(cycleHash);
+			if (!aMessage->ReadUInt64(cycleHash))
+				return false;
 
 			DebugLog(L_INFO, "hash: %llX", cycleHash);
 

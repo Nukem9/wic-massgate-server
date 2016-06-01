@@ -26,7 +26,7 @@ private:
 	ushort activefilters;
 
 public:
-	ServerListFilters()
+	ServerListFilters(ushort activefilters)
 	{
 		memset(this->gamemode, 0, sizeof(this->gamemode));
 		memset(this->mapname, 0, sizeof(this->mapname));
@@ -37,6 +37,8 @@ public:
 		this->population		= 0;
 		this->password			= 0;
 		this->mod				= 0;
+
+		this->activefilters = activefilters;
 	}
 
 	void PrintFilters()
@@ -84,10 +86,8 @@ public:
 			DebugLog(L_INFO, "mod flag set\t\t: %s", this->mod == 1 ? "No mods" : "Only mods");
 	}
 
-	bool ReadFilters(ushort activefilters, MN_ReadMessage *aMessage)
+	bool FromStream(MN_ReadMessage *aMessage)
 	{
-		this->activefilters = activefilters;
-
 		if (this->HasFlag(DEDICATED_FLAG) && !aMessage->ReadUChar(this->dedicated))
 			return false;
 
