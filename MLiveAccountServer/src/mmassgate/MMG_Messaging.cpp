@@ -40,11 +40,14 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 #ifndef USING_MYSQL_DATABASE
 
 			//handle profiles (count).
+			uint profileId1, profileId2;
+			if (!aMessage->ReadUInt(profileId2) || !aMessage->ReadUInt(profileId1))
+					return false;
 
 			MMG_Profile friends[2];
 
-			friends[0].m_ProfileId = 1235;
-			friends[1].m_ProfileId = 1236;
+			friends[0].m_ProfileId = profileId1;
+			friends[1].m_ProfileId = profileId2;
 
 			wcscpy_s(friends[0].m_Name, L"tenerefis");
 			wcscpy_s(friends[1].m_Name, L"HouseBee");
