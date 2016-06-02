@@ -274,123 +274,6 @@ bool MySQLDatabase::InitializeSchema()
 	return true;
 }
 
-bool MySQLDatabase::SetStatusOffline(const uint profileId)
-{
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
-	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET onlinestatus = 0 WHERE id = ?");
-
-	// prepared statement binding structures
-	MYSQL_BIND param[1];
-
-	// initialize (zero) bind structures
-	memset(param, 0, sizeof(param));
-
-	// query specific variables
-	bool querySuccess;
-
-	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);
-
-	// execute prepared statement
-	if(!query.StmtExecute(param))
-	{
-		DatabaseLog("SetStatusOffline() failed: profile id(%d)", profileId);
-		querySuccess = false;
-	}
-	else
-	{
-		DatabaseLog("SetStatusOffline() success: profile id(%d)", profileId);
-		querySuccess = true;
-	}
-
-	return querySuccess;
-}
-
-bool MySQLDatabase::SetStatusOnline(const uint profileId)
-{
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
-	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET onlinestatus = 1 WHERE id = ?");
-
-	// prepared statement binding structures
-	MYSQL_BIND param[1];
-
-	// initialize (zero) bind structures
-	memset(param, 0, sizeof(param));
-
-	// query specific variables
-	bool querySuccess;
-
-	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);
-
-	// execute prepared statement
-	if(!query.StmtExecute(param))
-	{
-		DatabaseLog("SetStatusOnline() failed: profile id(%d)", profileId);
-		querySuccess = false;
-	}
-	else
-	{
-		DatabaseLog("SetStatusOnline() success: profile id(%d)", profileId);
-		querySuccess = true;
-	}
-
-	return querySuccess;
-}
-
-bool MySQLDatabase::SetStatusPlaying(const uint profileId)
-{
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
-	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET onlinestatus = 2 WHERE id = ?");
-
-	// prepared statement binding structures
-	MYSQL_BIND param[1];
-
-	// initialize (zero) bind structures
-	memset(param, 0, sizeof(param));
-
-	// query specific variables
-	bool querySuccess;
-
-	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);
-
-	// execute prepared statement
-	if(!query.StmtExecute(param))
-	{
-		DatabaseLog("SetStatusPlaying() failed: profile id(%d)", profileId);
-		querySuccess = false;
-	}
-	else
-	{
-		DatabaseLog("SetStatusPlaying() success: profile id(%d)", profileId);
-		querySuccess = true;
-	}
-
-	return querySuccess;
-}
-
 bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
@@ -749,7 +632,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	// *Step 1: create the profile as usual* //
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "INSERT INTO mg_profiles (accountid, name, rank, clanid, rankinclan, commoptions, onlinestatus, lastlogindate, motto, homepage) VALUES (?, ?, 0, 0, 0, 992, 0, ?, NULL, NULL)");
+	MySQLQuery query(this->m_Connection, "INSERT INTO mg_profiles (accountid, name, rank, clanid, rankinclan, commoptions, lastlogindate, motto, homepage) VALUES (?, ?, 0, 0, 0, 992, ?, NULL, NULL)");
 	
 	// prepared statement binding structures
 	MYSQL_BIND params[3];
@@ -881,10 +764,6 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 		return false;
 	}
 
-
-	//TODO:
-	// delete profiles' friends and ignorelist
-
 	//TODO: (when forum is implemented) 
 	//dont delete the profile, just rename the profile name
 	//set an 'isdeleted' flag to 1
@@ -903,6 +782,7 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 
 	// query specific variables
 	bool query1Success, query2Success, query3Success;
+	bool query4Success, query5Success;
 	ulong count;
 	uint id;
 
@@ -1025,7 +905,59 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 		}
 	}
 
-	return query1Success && query2Success && query3Success;
+	// *Step 4: delete friends list for profile id* //
+
+	// prepared statement wrapper object
+	MySQLQuery query4(this->m_Connection, "DELETE FROM mg_friends WHERE profileid = ?");
+
+	// prepared statement binding structures
+	MYSQL_BIND param4[1];
+
+	// initialize (zero) bind structures
+	memset(param4, 0, sizeof(param4));
+
+	// bind parameters to prepared statement
+	query4.Bind(&param4[0], &profileId);		//profile id
+
+	// execute prepared statement
+	if (!query4.StmtExecute(param4))
+	{
+		DatabaseLog("DeleteUserProfile(query4) failed: profile id(%d)", email, profileId);
+		query4Success = false;
+	}
+	else
+	{
+		DatabaseLog("%s deleted friends list for profile id(%d)", email, profileId);
+		query4Success = true;
+	}
+
+	// *Step 5: delete ignore list for profile id* //
+
+	// prepared statement wrapper object
+	MySQLQuery query5(this->m_Connection, "DELETE FROM mg_ignored WHERE profileid = ?");
+
+	// prepared statement binding structures
+	MYSQL_BIND param5[1];
+
+	// initialize (zero) bind structures
+	memset(param5, 0, sizeof(param5));
+
+	// bind parameters to prepared statement
+	query5.Bind(&param5[0], &profileId);		//profile id
+
+	// execute prepared statement
+	if (!query5.StmtExecute(param5))
+	{
+		DatabaseLog("DeleteUserProfile(query5) failed: profile id(%d)", email, profileId);
+		query5Success = false;
+	}
+	else
+	{
+		DatabaseLog("%s deleted ignore list for profile id(%d)", email, profileId);
+		query5Success = true;
+	}
+
+	return query1Success && query2Success && query3Success && query4Success && query5Success;
 }
 
 bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId, MMG_Profile *profile, MMG_Options *options)
@@ -1191,7 +1123,7 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 		return false;
 	}
 
-	char *sql = "SELECT mg_profiles.id, mg_profiles.name, mg_profiles.rank, mg_profiles.clanid, mg_profiles.rankinclan, mg_profiles.onlinestatus "
+	char *sql = "SELECT mg_profiles.id, mg_profiles.name, mg_profiles.rank, mg_profiles.clanid, mg_profiles.rankinclan "
 				"FROM mg_profiles "
 				"JOIN mg_accounts "
 				"ON mg_profiles.accountid = mg_accounts.id "
@@ -1202,7 +1134,7 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 	MySQLQuery query(this->m_Connection, sql);
 
 	// prepared statement binding structures
-	MYSQL_BIND param[1], results[6];
+	MYSQL_BIND param[1], results[5];
 
 	// initialize (zero) bind structures
 	memset(param, 0, sizeof(param));
@@ -1216,7 +1148,7 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 	memset(name, 0, sizeof(name));
 	ulong nameLength = ARRAYSIZE(name);
 
-	uint id, clanid, onlinestatus;
+	uint id, clanid;
 	uchar rank, rankinclan;
 
 	// bind parameters to prepared statement
@@ -1228,7 +1160,6 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 	query.Bind(&results[2], &rank);					//mg_profiles.rank
 	query.Bind(&results[3], &clanid);				//mg_profiles.clanid
 	query.Bind(&results[4], &rankinclan);			//mg_profiles.rankinclan
-	query.Bind(&results[5], &onlinestatus);			//mg_profiles.onlinestatus, do we need this in the database?
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
@@ -1243,7 +1174,6 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 		tmp->m_Rank = 0;
 		tmp->m_ClanId = 0;
 		tmp->m_RankInClan = 0;
-		tmp->m_OnlineStatus = 0;
 
 		*profiles = tmp;
 		*dstProfileCount = 0;
@@ -1263,7 +1193,6 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 			tmp->m_Rank = 0;
 			tmp->m_ClanId = 0;
 			tmp->m_RankInClan = 0;
-			tmp->m_OnlineStatus = 0;
 
 			*profiles = tmp;
 			*dstProfileCount = 0;
@@ -1280,7 +1209,6 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 				tmp[i].m_Rank = rank;
 				tmp[i].m_ClanId = clanid;
 				tmp[i].m_RankInClan = rankinclan;
-				tmp[i].m_OnlineStatus = onlinestatus;
 
 				i++;
 			}
@@ -1754,10 +1682,10 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 	}
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id, name, rank, clanid, rankinclan, onlinestatus FROM mg_profiles WHERE id = ? LIMIT 1");
+	MySQLQuery query(this->m_Connection, "SELECT id, name, rank, clanid, rankinclan FROM mg_profiles WHERE id = ? LIMIT 1");
 
 	// prepared statement binding structures
-	MYSQL_BIND param[1], results[6];
+	MYSQL_BIND param[1], results[5];
 
 	// initialize (zero) bind structures
 	memset(param, 0, sizeof(param));
@@ -1770,7 +1698,7 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 	memset(name, 0, sizeof(name));
 	ulong nameLength = ARRAYSIZE(name);
 
-	uint id, clanid, onlinestatus;
+	uint id, clanid;
 	uchar rank, rankinclan;
 
 	// bind parameters to prepared statement
@@ -1782,7 +1710,6 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 	query.Bind(&results[2], &rank);				//mg_profiles.rank
 	query.Bind(&results[3], &clanid);			//mg_profiles.clanid
 	query.Bind(&results[4], &rankinclan);		//mg_profiles.rankinclan
-	query.Bind(&results[5], &onlinestatus);		//mg_profiles.onlinestatus
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
@@ -1795,7 +1722,6 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 		profile->m_Rank = 0;
 		profile->m_ClanId = 0;
 		profile->m_RankInClan = 0;
-		profile->m_OnlineStatus = 0;
 	}
 	else
 	{
@@ -1809,7 +1735,6 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 			profile->m_Rank = 0;
 			profile->m_ClanId = 0;
 			profile->m_RankInClan = 0;
-			profile->m_OnlineStatus = 0;
 		}
 		else
 		{
@@ -1822,7 +1747,6 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 			profile->m_Rank = rank;
 			profile->m_ClanId = clanid;
 			profile->m_RankInClan = rankinclan;
-			profile->m_OnlineStatus = onlinestatus;
 		}
 	}
 

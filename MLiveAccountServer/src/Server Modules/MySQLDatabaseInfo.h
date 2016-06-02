@@ -52,7 +52,6 @@ static const char *MySQLTableValues[] =
 		"clanid int(10) unsigned not null,"
 		"rankinclan tinyint(3) unsigned not null,"
 		"commoptions int(10) unsigned not null,"
-		"onlinestatus int(10) unsigned not null,"
 		"lastlogindate datetime not null,"
 		"motto varchar(512),"
 		"homepage varchar(512),"

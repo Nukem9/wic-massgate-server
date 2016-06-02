@@ -93,6 +93,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			// write profiles to stream
 			for (int i = 0; i < count; i++)
 			{
+				// determine profiles' online status
+				MMG_AccountProxy::ourInstance->CheckProfileOnlineStatus(&profileList[i]);
+
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 				profileList[i].ToStream(&responseMessage);
 			}
@@ -333,6 +336,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUInt(randomZero))
 				return false;
 
+			
 			// not sure if this is right
 			MMG_AccountProxy::ourInstance->SetClientOnline(aClient);
 		}
@@ -359,7 +363,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			// it is important to note, a few delimiters are sent between client<->massgate<->ds beforehand for authentication
 			// the authentication will involve checking authtoken/credentials and the unused antispoof token in MMG_AccountProtocol
 			// also before this can be implemented, the onlinestatus dependency needs to be removed from the database
-			MMG_AccountProxy::ourInstance->SetClientPlaying(aClient);
+			MMG_AccountProxy::ourInstance->SetProfileOnlineStatus(aClient, serverId);
 		}
 		break;
 
@@ -621,6 +625,14 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			DebugLog(L_INFO, "MESSAGING_IGNORELIST_GET_REQ:");
 
 			this->SendProfileIgnoreList(aClient, &responseMessage);
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_CLAN_COLOSSEUM_UNREGISTER_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_CLAN_COLOSSEUM_UNREGISTER_REQ:");
+
+			//TODO : no response required
 		}
 		break;
 

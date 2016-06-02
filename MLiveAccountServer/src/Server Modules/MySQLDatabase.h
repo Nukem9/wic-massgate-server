@@ -59,7 +59,6 @@
 	- handle communication options properly
 	- create a global 'logged in' player list/map
 		move account database queries to Query::FromStream
-		remove online status from database
 	- save password hash, compatible with phpbb or some other forum
 
 */
@@ -138,11 +137,6 @@ public:
 	void	Unload				();
 	bool	HasConnection		();
 	bool	InitializeSchema	();
-
-	//AccountProxy
-	bool	SetStatusOffline	(const uint profileId);
-	bool	SetStatusOnline		(const uint profileId);
-	bool	SetStatusPlaying	(const uint profileId);
 	
 	//accounts
 	bool	CheckIfEmailExists	(const char *email, uint *dstId);
