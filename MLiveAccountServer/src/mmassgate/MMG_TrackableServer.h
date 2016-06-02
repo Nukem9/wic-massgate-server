@@ -38,7 +38,7 @@ public:
 		}
 	};
 
-	std::list<Server> m_ServerList;
+	std::map<uint64, Server> m_ServerList;
 private:
 	MT_Mutex m_Mutex;
 

@@ -229,10 +229,16 @@ bool MMG_TrackableServer::AuthServer(SvClient *aClient, uint aKeySequence, ushor
 	// Add entry to master list
 	//
 	Server masterEntry(aClient->GetIPAddress(), aClient->GetPort());
+
+	// TODO
+	// small issue with m_Index being set to the size() of the map
+	// ie 2 indexes can have the value 4 if the size() of the map is 4
 	masterEntry.m_Index			= this->m_ServerList.size();
 	masterEntry.m_KeySequence	= aKeySequence;
 
-	this->m_ServerList.push_back(masterEntry);
+	//this->m_ServerList.push_back(masterEntry);
+	if (this->m_ServerList.find(masterEntry.m_Cookie.hash) == this->m_ServerList.end())
+		this->m_ServerList.insert(std::pair<uint64, Server>(masterEntry.m_Cookie.hash, masterEntry));
 
 	// Sanity check
 	assert(FindServer(aClient) != nullptr);
@@ -271,7 +277,8 @@ bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, MM
 	// Mark server list entry as valid and copy information over
 	aServer->m_Info				= *aStartupVars;
 	aServer->m_Valid			= true;
-	aServer->m_Info.m_ServerId	= aServer->m_Index + 1;
+	//aServer->m_Info.m_ServerId	= aServer->m_Index + 1;
+	aServer->m_Info.m_ServerId	= aServer->m_Cookie.hash;
 	return true;
 }
 
@@ -301,11 +308,18 @@ MMG_TrackableServer::Server *MMG_TrackableServer::FindServer(SvClient *aClient)
 	uint clientIp	= aClient->GetIPAddress();
 	uint clientPort = aClient->GetPort();
 
-	for (auto& server : this->m_ServerList)
+	/*for (auto& server : this->m_ServerList)
 	{
 		if (server.TestIPHash(clientIp, clientPort))
 			return &server;
 	}
+	*/
+
+	std::map<uint64, Server>::iterator iter;
+
+	iter = this->m_ServerList.find(clientIp ^ (clientPort + 0x1010101));
+	if (iter != this->m_ServerList.end())
+		return &iter->second;
 
 	return nullptr;
 }
@@ -326,9 +340,14 @@ bool MMG_TrackableServer::GetServerListInfo(std::vector<MMG_TrackableServerFullI
 	if (aCount)
 		*aCount = this->m_ServerList.size();
 
+	std::map<uint64, Server>::iterator iter;
+
 	// Loop through each master list entry and convert the structures
-	for (auto& server : this->m_ServerList)
+	//for (auto& server : this->m_ServerList)
+	for (iter = this->m_ServerList.begin(); iter != this->m_ServerList.end(); iter++)
 	{
+		auto server = iter->second;
+
 		MMG_TrackableServerFullInfo fullInfo;
 		MMG_TrackableServerBriefInfo briefInfo;
 
@@ -342,15 +361,15 @@ bool MMG_TrackableServer::GetServerListInfo(std::vector<MMG_TrackableServerFullI
 			wcscpy_s(fullInfo.m_ServerName, (const wchar_t *)server.m_Info.m_ServerName);
 			fullInfo.m_ServerReliablePort	= server.m_Info.m_ServerReliablePort;
 
-			fullInfo.bf_MaxPlayers				= 0;	//TODO: server.m_Heartbeat.m_MaxNumPlayers, this kicks the client if its not 0.
-			fullInfo.bf_PlayerCount				= server.m_Heartbeat.m_NumPlayers;
-			fullInfo.bf_SpectatorCount			= 0;	//TODO
-			fullInfo.bf_ServerType				= server.m_Info.m_ServerType;
-			fullInfo.bf_RankedFlag				= server.m_Info.somebits.Ranked;
-			fullInfo.bf_RankBalanceTeams		= server.m_Info.m_IsRankBalanced;
-			fullInfo.bf_HasDomMaps				= server.m_Info.m_HasDominationMaps;
-			fullInfo.bf_HasAssaultMaps			= server.m_Info.m_HasAssaultMaps;
-			fullInfo.bf_HasTugOfWarMaps			= server.m_Info.m_HasTowMaps;
+			fullInfo.bf_MaxPlayers			= 0;	//TODO: server.m_Heartbeat.m_MaxNumPlayers, this kicks the client if its not 0.
+			fullInfo.bf_PlayerCount			= server.m_Heartbeat.m_NumPlayers;
+			fullInfo.bf_SpectatorCount		= 0;	//TODO
+			fullInfo.bf_ServerType			= server.m_Info.m_ServerType;
+			fullInfo.bf_RankedFlag			= server.m_Info.somebits.Ranked;
+			fullInfo.bf_RankBalanceTeams	= server.m_Info.m_IsRankBalanced;
+			fullInfo.bf_HasDomMaps			= server.m_Info.m_HasDominationMaps;
+			fullInfo.bf_HasAssaultMaps		= server.m_Info.m_HasAssaultMaps;
+			fullInfo.bf_HasTugOfWarMaps		= server.m_Info.m_HasTowMaps;
 
 			fullInfo.m_ServerType			= server.m_Info.m_ServerType;
 			fullInfo.m_IP					= server.m_Info.m_Ip;
