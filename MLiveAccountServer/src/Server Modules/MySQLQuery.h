@@ -4,11 +4,13 @@ class MySQLQuery
 {
 private:
 	MYSQL_STMT *m_Statement;
+	bool m_StmtSuccess;
 
 public:
 	MySQLQuery(MYSQL *conn, const char *SQLText) : m_Statement(NULL)
 	{
 		this->m_Statement = mysql_stmt_init(conn);
+		this->m_StmtSuccess = false;
 		
 		if (!this->m_Statement)
 		{
@@ -28,6 +30,12 @@ public:
 	{
 		this->Finalize();
 		this->m_Statement = NULL;
+	}
+
+	// true if the statement executes successfully, presence of result set is irrelevant
+	bool Success()
+	{
+		return this->m_StmtSuccess;
 	}
 
 	MYSQL_STMT *GetStatement()
@@ -115,18 +123,17 @@ public:
 		param->buffer = (void *)Value;
 		param->buffer_length = *Length;
 		param->is_null = (my_bool *)0;
-		param->length = Length;
+		param->length = &param->buffer_length;		// param->length = Length;
 	}
 
 	//VARCHAR (unicode)
 	void Bind(MYSQL_BIND *param, const wchar_t *Value, ulong *Length)
 	{
-		*Length <<= 1;	// multiply by 2, to save widechar properly.
 		param->buffer_type = MYSQL_TYPE_VAR_STRING;
 		param->buffer = (void *)Value;
-		param->buffer_length = *Length;
+		param->buffer_length = (*Length) << 1;		// multiply by 2, to save widechar properly.
 		param->is_null = (my_bool *)0;
-		param->length = Length;
+		param->length = &param->buffer_length;		// param->length = Length;
 	}
 
 	//TIME - MYSQL_TYPE_TIME
@@ -201,6 +208,8 @@ public:
 			return false;
 		}
 
+		this->m_StmtSuccess = true;
+
 		return true;
 	}
 
@@ -225,6 +234,8 @@ public:
 			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
 			return false;
 		}
+
+		this->m_StmtSuccess = true;
 		
 		return true;
 	}
@@ -265,6 +276,8 @@ public:
 			DebugLog(L_WARN, "%s", mysql_stmt_error(this->m_Statement));
 			return false;
 		}
+
+		this->m_StmtSuccess = true;
 		
 		return true;
 	}
@@ -278,6 +291,28 @@ public:
 		}
 
 		return mysql_stmt_fetch(this->m_Statement) == 0;
+	}
+
+	unsigned long long StmtInsertId()
+	{
+		if (!this->m_Statement)
+		{
+			DebugLog(L_WARN, "StmtInsertId(): NULL statement handle.");
+			return 0;
+		}
+
+		return mysql_stmt_insert_id(this->m_Statement);
+	}
+
+	unsigned long long StmtNumRows()
+	{
+		if (!this->m_Statement)
+		{
+			DebugLog(L_WARN, "StmtNumRows(): NULL statement handle.");
+			return 0;
+		}
+
+		return mysql_stmt_num_rows(this->m_Statement);
 	}
 
 	int Step()

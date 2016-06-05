@@ -294,7 +294,6 @@ bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 	memset(result, 0, sizeof(result));
 
 	// query specific variables
-	bool querySuccess;
 	ulong emailLength = strlen(email);
 	uint id;
 
@@ -308,7 +307,6 @@ bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 	if(!query.StmtExecute(param, result))
 	{
 		DatabaseLog("CheckIfEmailExists() query failed: %s", email);
-		querySuccess = false;
 		*dstId = 0;
 	}
 	else
@@ -316,18 +314,16 @@ bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 		if (!query.StmtFetch())
 		{
 			DatabaseLog("email %s not found", email);
-			querySuccess = true;
 			*dstId = 0;
 		}
 		else
 		{
 			DatabaseLog("email %s found", email);
-			querySuccess = true;
 			*dstId = id;
 		}
 	}
 
-	return querySuccess;
+	return query.Success();
 }
 
 bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
@@ -350,7 +346,6 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	memset(result, 0, sizeof(result));
 
 	// query specific variables
-	bool querySuccess;
 	uint id;
 
 	// bind parameters to prepared statement
@@ -366,7 +361,6 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	if(!query.StmtExecute(params, result))
 	{
 		DatabaseLog("CheckIfCDKeyExists() query failed:");
-		querySuccess = false;
 		*dstId = 0;
 	}
 	else
@@ -374,18 +368,16 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 		if (!query.StmtFetch())
 		{
 			DatabaseLog("cipherkeys not found");
-			querySuccess = true;
 			*dstId = 0;
 		}
 		else
 		{
 			DatabaseLog("cipherkeys found");
-			querySuccess = true;
 			*dstId = id;
 		}
 	}
 
-	return querySuccess;
+	return query.Success();
 }
 
 bool MySQLDatabase::CreateUserAccount(const char *email, const wchar_t *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const ulong cipherKeys[])
@@ -409,7 +401,6 @@ bool MySQLDatabase::CreateUserAccount(const char *email, const wchar_t *password
 	memset(params, 0, sizeof(params));
 
 	// query specific variables
-	bool query1Success, query2Success;
 	ulong emailLength = strlen(email);
 	ulong passLength = wcslen(password);
 	ulong countryLength = strlen(country);
@@ -427,51 +418,44 @@ bool MySQLDatabase::CreateUserAccount(const char *email, const wchar_t *password
 	{
 		DatabaseLog("CreateUserAccount() query failed: %s", email);
 		account_insert_id = 0;
-		query1Success = false;
 	}
 	else
 	{
 		DatabaseLog("created account: %s", email);
-		account_insert_id = (uint)mysql_insert_id(this->m_Connection);
-		query1Success = true;
+		account_insert_id = (uint)query.StmtInsertId();
 	}
 
 	// *Step 2: insert cdkeys* //
 
-	if(query1Success)
+	// prepared statement wrapper object
+	MySQLQuery query2(this->m_Connection, "INSERT INTO mg_cdkeys (accountid, cipherkeys0, cipherkeys1, cipherkeys2, cipherkeys3) VALUES (?, ?, ?, ?, ?)");
+
+	// prepared statement binding structures
+	MYSQL_BIND params2[5];
+
+	// initialize (zero) bind structures
+	memset(params2, 0, sizeof(params2));
+
+	// bind parameters to prepared statement
+	query2.Bind(&params2[0], &account_insert_id);	
+	query2.Bind(&params2[1], &cipherKeys[0]);
+	query2.Bind(&params2[2], &cipherKeys[1]);
+	query2.Bind(&params2[3], &cipherKeys[2]);
+	query2.Bind(&params2[4], &cipherKeys[3]);
+
+	// execute prepared statement
+	if (!query2.StmtExecute(params2))
 	{
-		// prepared statement wrapper object
-		MySQLQuery query2(this->m_Connection, "INSERT INTO mg_cdkeys (accountid, cipherkeys0, cipherkeys1, cipherkeys2, cipherkeys3) VALUES (?, ?, ?, ?, ?)");
-
-		// prepared statement binding structures
-		MYSQL_BIND params2[5];
-
-		// initialize (zero) bind structures
-		memset(params2, 0, sizeof(params2));
-
-		// bind parameters to prepared statement
-		query2.Bind(&params2[0], &account_insert_id);	
-		query2.Bind(&params2[1], &cipherKeys[0]);
-		query2.Bind(&params2[2], &cipherKeys[1]);
-		query2.Bind(&params2[3], &cipherKeys[2]);
-		query2.Bind(&params2[4], &cipherKeys[3]);
-
-		// execute prepared statement
-		if (!query2.StmtExecute(params2))
-		{
-			DatabaseLog("CreateUserAccount() query2 failed: %s", email);
-			cdkey_insert_id = 0;
-			query2Success = false;
-		}
-		else
-		{
-			DatabaseLog("inserted cipherkeys: %s", email);
-			cdkey_insert_id = (uint)mysql_insert_id(this->m_Connection);
-			query2Success = true;
-		}
+		DatabaseLog("CreateUserAccount() query2 failed: %s", email);
+		cdkey_insert_id = 0;
+	}
+	else
+	{
+		DatabaseLog("inserted cipherkeys: %s", email);
+		cdkey_insert_id = (uint)query2.StmtInsertId();
 	}
 
-	return query1Success && query2Success;
+	return query.Success() && query2.Success();
 }
 
 bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken)
@@ -500,7 +484,6 @@ bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uch
 	memset(results, 0, sizeof(results));
 
 	// query specific variables
-	bool querySuccess;
 	ulong emailLength = strlen(email);
 	
 	wchar_t password[WIC_PASSWORD_MAX_LENGTH];
@@ -524,7 +507,6 @@ bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uch
 	if(!query.StmtExecute(param, results))
 	{
 		DatabaseLog("AuthUserAccount() query failed: %s", email);
-		querySuccess = false;
 
 		authToken->m_AccountId = 0;
 		authToken->m_ProfileId = 0;
@@ -538,7 +520,6 @@ bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uch
 		if (!query.StmtFetch())
 		{
 			DatabaseLog("account %s not found", email);
-			querySuccess = true;
 
 			authToken->m_AccountId = 0;
 			authToken->m_ProfileId = 0;
@@ -550,7 +531,6 @@ bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uch
 		else
 		{
 			DatabaseLog("account %s found", email);
-			querySuccess = true;
 
 			authToken->m_AccountId = id;
 			authToken->m_ProfileId = activeprofileid;
@@ -561,7 +541,7 @@ bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uch
 		}
 	}
 
-	return querySuccess;
+	return query.Success();
 }
 
 bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
@@ -673,7 +653,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	{
 		DatabaseLog("%s created profile %ws", email, name);
 		query1Success = true;
-		last_id = (uint)mysql_insert_id(this->m_Connection);
+		last_id = (uint)query.StmtInsertId();
 	}
 
 	// *Step 2: get profile count for current account* //
@@ -716,7 +696,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 		else
 		{
 			query2Success = true;
-			count = (ulong)mysql_stmt_num_rows(query2.GetStatement());
+			count = (ulong)query2.StmtNumRows();
 			DatabaseLog("found %d profiles", count);
 		}
 	}
@@ -841,7 +821,7 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 		else
 		{
 			query2Success = true;
-			count = (ulong)mysql_stmt_num_rows(query2.GetStatement());
+			count = (ulong)query2.StmtNumRows();
 		}
 	//}
 
@@ -905,22 +885,23 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 		}
 	}
 
-	// *Step 4: delete friends list for profile id* //
+	// *Step 4: delete friends list for profile id and delete profile id from all friends lists* //
 
 	// prepared statement wrapper object
-	MySQLQuery query4(this->m_Connection, "DELETE FROM mg_friends WHERE profileid = ?");
+	MySQLQuery query4(this->m_Connection, "DELETE FROM mg_friends WHERE profileid = ? OR friendprofileid = ?");
 
 	// prepared statement binding structures
-	MYSQL_BIND param4[1];
+	MYSQL_BIND params4[2];
 
 	// initialize (zero) bind structures
-	memset(param4, 0, sizeof(param4));
+	memset(params4, 0, sizeof(params4));
 
 	// bind parameters to prepared statement
-	query4.Bind(&param4[0], &profileId);		//profile id
+	query4.Bind(&params4[0], &profileId);		//profile id
+	query4.Bind(&params4[1], &profileId);
 
 	// execute prepared statement
-	if (!query4.StmtExecute(param4))
+	if (!query4.StmtExecute(params4))
 	{
 		DatabaseLog("DeleteUserProfile(query4) failed: profile id(%d)", email, profileId);
 		query4Success = false;
@@ -931,22 +912,23 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 		query4Success = true;
 	}
 
-	// *Step 5: delete ignore list for profile id* //
+	// *Step 5: delete ignore list for profile id and delete profile id from all ignore lists* //
 
 	// prepared statement wrapper object
-	MySQLQuery query5(this->m_Connection, "DELETE FROM mg_ignored WHERE profileid = ?");
+	MySQLQuery query5(this->m_Connection, "DELETE FROM mg_ignored WHERE profileid = ? OR ignoredprofileid = ?");
 
 	// prepared statement binding structures
-	MYSQL_BIND param5[1];
+	MYSQL_BIND params5[2];
 
 	// initialize (zero) bind structures
-	memset(param5, 0, sizeof(param5));
+	memset(params5, 0, sizeof(params5));
 
 	// bind parameters to prepared statement
-	query5.Bind(&param5[0], &profileId);		//profile id
+	query5.Bind(&params5[0], &profileId);		//profile id
+	query5.Bind(&params5[1], &profileId);
 
 	// execute prepared statement
-	if (!query5.StmtExecute(param5))
+	if (!query5.StmtExecute(params5))
 	{
 		DatabaseLog("DeleteUserProfile(query5) failed: profile id(%d)", email, profileId);
 		query5Success = false;
@@ -1014,6 +996,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 		profile->m_Rank = 0;
 		profile->m_ClanId = 0;
 		profile->m_RankInClan = 0;
+		profile->m_OnlineStatus = 0;
 
 		//communication options
 		options->FromUInt(0);
@@ -1031,6 +1014,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 			profile->m_Rank = 0;
 			profile->m_ClanId = 0;
 			profile->m_RankInClan = 0;
+			profile->m_OnlineStatus = 0;
 
 			//communication options
 			options->FromUInt(0);
@@ -1046,6 +1030,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 			profile->m_Rank = rank;
 			profile->m_ClanId = clanid;
 			profile->m_RankInClan = rankinclan;
+			profile->m_OnlineStatus = 0;
 
 			//communication options
 			options->FromUInt(commoptions);
@@ -1169,18 +1154,19 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 
 		MMG_Profile *tmp = new MMG_Profile[1];
 
-		tmp->m_ProfileId = 0;
-		wcscpy_s(tmp->m_Name, L"");
-		tmp->m_Rank = 0;
-		tmp->m_ClanId = 0;
-		tmp->m_RankInClan = 0;
+		tmp[0].m_ProfileId = 0;
+		wcscpy_s(tmp[0].m_Name, L"");
+		tmp[0].m_Rank = 0;
+		tmp[0].m_ClanId = 0;
+		tmp[0].m_RankInClan = 0;
+		tmp[0].m_OnlineStatus = 0;
 
 		*profiles = tmp;
 		*dstProfileCount = 0;
 	}
 	else
 	{
-		ulong count = (ulong)mysql_stmt_num_rows(query.GetStatement());
+		ulong count = (ulong)query.StmtNumRows();
 		DatabaseLog("%s: %d profiles found", email, count);
 		querySuccess = true;
 
@@ -1188,11 +1174,12 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 		{
 			MMG_Profile *tmp = new MMG_Profile[1];
 
-			tmp->m_ProfileId = 0;
-			wcscpy_s(tmp->m_Name, L"");
-			tmp->m_Rank = 0;
-			tmp->m_ClanId = 0;
-			tmp->m_RankInClan = 0;
+			tmp[0].m_ProfileId = 0;
+			wcscpy_s(tmp[0].m_Name, L"");
+			tmp[0].m_Rank = 0;
+			tmp[0].m_ClanId = 0;
+			tmp[0].m_RankInClan = 0;
+			tmp[0].m_OnlineStatus = 0;
 
 			*profiles = tmp;
 			*dstProfileCount = 0;
@@ -1209,6 +1196,7 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *passw
 				tmp[i].m_Rank = rank;
 				tmp[i].m_ClanId = clanid;
 				tmp[i].m_RankInClan = rankinclan;
+				tmp[i].m_OnlineStatus = 0;
 
 				i++;
 			}
@@ -1311,14 +1299,14 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 
 		uint *tmp = new uint[1];
 
-		*tmp = 0;
+		tmp[0] = 0;
 
 		*friendIds = tmp;
 		*dstProfileCount = 0;
 	}
 	else
 	{
-		ulong count = (ulong)mysql_stmt_num_rows(query.GetStatement());
+		ulong count = (ulong)query.StmtNumRows();
 		DatabaseLog("profile id(%d), %d friends found", profileId, count);
 		querySuccess = true;
 
@@ -1326,7 +1314,7 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 		{
 			uint *tmp = new uint[1];
 
-			*tmp = 0;
+			tmp[0] = 0;
 
 			*friendIds = tmp;
 			*dstProfileCount = 0;
@@ -1386,7 +1374,7 @@ bool MySQLDatabase::AddFriend(const uint profileId, uint friendProfileId)
 	else
 	{
 		DatabaseLog("profileid (%d) added friendprofileid(%d)", profileId, friendProfileId);
-		friend_insert_id = (uint)mysql_insert_id(this->m_Connection);
+		friend_insert_id = (uint)query.StmtInsertId();
 		querySuccess = true;
 	}
 	
@@ -1474,14 +1462,14 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 
 		uint *tmp = new uint[1];
 
-		*tmp = 0;
+		tmp[0] = 0;
 
 		*acquaintanceIds = tmp;
 		*dstProfileCount = 0;
 	}
 	else
 	{
-		ulong count = (ulong)mysql_stmt_num_rows(query.GetStatement());
+		ulong count = (ulong)query.StmtNumRows();
 		DatabaseLog("profile id(%d), %d acquaintances found", profileId, count);
 		querySuccess = true;
 
@@ -1489,7 +1477,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 		{
 			uint *tmp = new uint[1];
 
-			*tmp = 0;
+			tmp[0] = 0;
 
 			*acquaintanceIds = tmp;
 			*dstProfileCount = 0;
@@ -1550,14 +1538,14 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 
 		uint *tmp = new uint[1];
 
-		*tmp = 0;
+		tmp[0] = 0;
 
 		*ignoredIds = tmp;
 		*dstProfileCount = 0;
 	}
 	else
 	{
-		ulong count = (ulong)mysql_stmt_num_rows(query.GetStatement());
+		ulong count = (ulong)query.StmtNumRows();
 		DatabaseLog("profile id(%d), %d ignored profiles found", profileId, count);
 		querySuccess = true;
 
@@ -1565,7 +1553,7 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 		{
 			uint *tmp = new uint[1];
 
-			*tmp = 0;
+			tmp[0] = 0;
 
 			*ignoredIds = tmp;
 			*dstProfileCount = 0;
@@ -1625,7 +1613,7 @@ bool MySQLDatabase::AddIgnoredProfile(const uint profileId, uint ignoredProfileI
 	else
 	{
 		DatabaseLog("profileid (%d) added ingoredprofileid(%d)", profileId, ignoredProfileId);
-		ignored_insert_id = (uint)mysql_insert_id(this->m_Connection);
+		ignored_insert_id = (uint)query.StmtInsertId();
 		querySuccess = true;
 	}
 	
@@ -1722,6 +1710,7 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 		profile->m_Rank = 0;
 		profile->m_ClanId = 0;
 		profile->m_RankInClan = 0;
+		profile->m_OnlineStatus = 0;
 	}
 	else
 	{
@@ -1735,6 +1724,7 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 			profile->m_Rank = 0;
 			profile->m_ClanId = 0;
 			profile->m_RankInClan = 0;
+			profile->m_OnlineStatus = 0;
 		}
 		else
 		{
@@ -1747,6 +1737,7 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 			profile->m_Rank = rank;
 			profile->m_ClanId = clanid;
 			profile->m_RankInClan = rankinclan;
+			profile->m_OnlineStatus = 0;
 		}
 	}
 
