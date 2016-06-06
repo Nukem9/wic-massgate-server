@@ -71,23 +71,23 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			if (!aMessage->ReadUShort(activefilters))
 				return false;
 
-			// read server fiters from the client
+			// read server filters from the client
 			ServerListFilters filters(activefilters);
-
 			if (!filters.FromStream(aMessage))
 				return false;
 
-			if(filters.HasFlag(DEDICATED_FLAG))
-				printf("activefilters has DEDICATED_FLAG\n");
-
-			//filters.PrintFilters(); //debug purposes
+			//debug purposes
+			//if(filters.HasFlag(DEDICATED_FLAG))
+			//	printf("activefilters has DEDICATED_FLAG\n");
+			//
+			//filters.PrintFilters();
 
 			// list of matched servers retrieved from global list, currently disregarding filters
 			uint serverCount;
 			std::vector<MMG_TrackableServerFullInfo> serverFullInfo;
 			std::vector<MMG_TrackableServerBriefInfo> serverBriefInfo;
 
-			MMG_TrackableServer::ourInstance->GetServerListInfo(&serverFullInfo, &serverBriefInfo, &serverCount);
+			MMG_TrackableServer::ourInstance->GetServerListInfo(&filters, &serverFullInfo, &serverBriefInfo, &serverCount);
 
 			//send total number of servers in global list
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_NUM_TOTAL_SERVERS);

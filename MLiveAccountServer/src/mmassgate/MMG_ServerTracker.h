@@ -6,7 +6,10 @@ enum ServerListFilterFlags
 	RANKED_FLAG			= 0x0002,	// ranked flag
 	RANKBALANCE_FLAG	= 0x0004,	// rankbalanced flag
 	GAMEMODE_FLAG		= 0x0038,	// gamemode flags
+	MAXPLAYERS_FLAG		= 0x0040,	// consider maximum players on server flag
+	MINPLAYERS_FLAG		= 0x0080,	// consider minimum players on server flag
 	POPULATION_FLAG		= 0x0100,	// population four-state flag
+	PLAYNOW_FLAG		= 0x0200,	// play now button has been pressed
 	MAPNAME_FLAG		= 0x0400,	// mapname flag
 	SERVERNAME_FLAG		= 0x0800,	// servername flag
 	PASSWORD_FLAG		= 0x1000,	// passworded flag
@@ -18,9 +21,10 @@ class ServerListFilters
 public:
 	//read search filters from client
 	uchar dedicated, ranked, rankbalance;
-	uchar gamemode[3], population;
+	uchar gamemode[3], maxplayers, minplayers, population;
 	wchar_t mapname[16], servername[16];
 	uchar password, mod;
+	uchar playnow;
 
 private:
 	ushort activefilters;
@@ -34,7 +38,10 @@ public:
 		this->dedicated			= 0;
 		this->ranked			= 0;
 		this->rankbalance		= 0;
+		this->minplayers		= 0;
+		this->maxplayers		= 0;
 		this->population		= 0;
+		this->playnow		= 0;
 		this->password			= 0;
 		this->mod				= 0;
 
@@ -61,6 +68,12 @@ public:
 		if (this->HasFlag(GAMEMODE_FLAG) && this->gamemode[2])
 			DebugLog(L_INFO, "gamemode flag set\t\t: Tug of War Only");
 
+		if (this->HasFlag(MAXPLAYERS_FLAG))
+			DebugLog(L_INFO, "maxplayers flag set\t\t: %i", this->maxplayers);
+
+		if (this->HasFlag(MINPLAYERS_FLAG))
+			DebugLog(L_INFO, "minplayers flag set\t\t: %i", this->minplayers);
+		
 		if (this->HasFlag(POPULATION_FLAG) && this->population == 0)
 			DebugLog(L_INFO, "population flag set\t\t: No Filter");
 
@@ -72,6 +85,9 @@ public:
 
 		if (this->HasFlag(POPULATION_FLAG) && this->population == 3)
 			DebugLog(L_INFO, "population flag set\t\t: Not Empty or Full");
+
+		if (this->HasFlag(PLAYNOW_FLAG))
+			DebugLog(L_INFO, "unknown flag set\t\t: %i", this->playnow);
 
 		if (this->HasFlag(MAPNAME_FLAG))
 			DebugLog(L_INFO, "mapname flag set\t\t: %ws", this->mapname);
@@ -106,8 +122,17 @@ public:
 		if (this->HasFlag(GAMEMODE_FLAG) && !aMessage->ReadUChar(this->gamemode[2]))  // tugofwar
 			return false;
 
+		if (this->HasFlag(MAXPLAYERS_FLAG) && !aMessage->ReadUChar(this->maxplayers))
+			return false;
+
+		if (this->HasFlag(MINPLAYERS_FLAG) && !aMessage->ReadUChar(this->minplayers))
+			return false;
+
 		// always reads population, massgate crashes otherwise
 		if (this->HasFlag(POPULATION_FLAG) && !aMessage->ReadUChar(this->population))
+			return false;
+
+		if (this->HasFlag(PLAYNOW_FLAG) && !aMessage->ReadUChar(this->playnow))
 			return false;
 
 		if (this->HasFlag(MAPNAME_FLAG) && !aMessage->ReadString(this->mapname, ARRAYSIZE(this->mapname)))

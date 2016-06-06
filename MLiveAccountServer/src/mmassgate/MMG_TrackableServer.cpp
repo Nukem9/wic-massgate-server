@@ -50,6 +50,48 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		}
 		break;
 
+		case MMG_ProtocolDelimiters::MESSAGING_DS_INFORM_PLAYER_JOINED:
+		{
+			DebugLog(L_INFO, "MESSAGING_DS_INFORM_PLAYER_JOINED:");
+
+			uint profileId, antiSpoofToken;
+
+			if (!aMessage->ReadUInt(profileId) || !aMessage->ReadUInt(antiSpoofToken))
+				return false;
+
+#ifdef USING_MYSQL_DATABASE
+			SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(profileId);
+
+			// if profileId not logged in, kick profileId
+			if (!player)
+			{
+				DebugLog(L_INFO, "MESSAGING_DS_KICK_PLAYER:");
+				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_DS_KICK_PLAYER);
+				responseMessage.WriteUInt(profileId);
+
+				if (!aClient->SendData(&responseMessage))
+					return false;
+			}
+			else
+			{
+				//if antispooftoken does not match the generated token from ACCOUNT_AUTH_ACCOUNT_REQ, then kick profileId
+				MMG_AuthToken *authtoken = player->GetToken();
+
+				// TODO
+				if (authtoken->m_TokenId != antiSpoofToken)
+				{
+					DebugLog(L_INFO, "MESSAGING_DS_KICK_PLAYER:");
+					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_DS_KICK_PLAYER);
+					responseMessage.WriteUInt(profileId);
+
+					if (!aClient->SendData(&responseMessage))
+						return false;
+				}
+			}
+#endif
+		}
+		break;
+		
 		// List of banned words in chat
 		case MMG_ProtocolDelimiters::MESSAGING_DS_GET_BANNED_WORDS_REQ:
 		{
@@ -324,7 +366,7 @@ MMG_TrackableServer::Server *MMG_TrackableServer::FindServer(SvClient *aClient)
 	return nullptr;
 }
 
-bool MMG_TrackableServer::GetServerListInfo(std::vector<MMG_TrackableServerFullInfo> *aFullInfo, std::vector<MMG_TrackableServerBriefInfo> *aBriefInfo, uint *aCount)
+bool MMG_TrackableServer::GetServerListInfo(ServerListFilters *filters, std::vector<MMG_TrackableServerFullInfo> *aFullInfo, std::vector<MMG_TrackableServerBriefInfo> *aBriefInfo, uint *aCount)
 {
 	// Atleast one parameter must be supplied
 	if (!aFullInfo && !aBriefInfo && !aCount)

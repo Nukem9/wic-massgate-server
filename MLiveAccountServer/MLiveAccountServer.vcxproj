@@ -164,6 +164,7 @@
     <ClInclude Include="src\mmassgate\MMG_AccountProxy.h" />
     <ClInclude Include="src\mmassgate\MMG_Chat.h" />
     <ClInclude Include="src\mmassgate\MMG_ClanStats.h" />
+    <ClInclude Include="src\mmassgate\MMG_InstantMessageListener.h" />
     <ClInclude Include="src\mmassgate\MMG_PlayerStats.h" />
     <ClInclude Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.h" />
     <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookEntry.h" />
@@ -240,6 +241,7 @@
     <ClCompile Include="src\mmassgate\MMG_AccountProxy.cpp" />
     <ClCompile Include="src\mmassgate\MMG_Chat.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ClanStats.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_InstantMessageListener.cpp" />
     <ClCompile Include="src\mmassgate\MMG_PlayerStats.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookEntry.cpp" />

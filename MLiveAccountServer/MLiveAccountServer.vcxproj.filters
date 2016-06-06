@@ -293,6 +293,9 @@
     <ClInclude Include="src\mmassgate\MMG_AccountProxy.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\mmassgate\MMG_InstantMessageListener.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Server Modules\Database.cpp">
@@ -501,6 +504,9 @@
     </ClCompile>
     <ClCompile Include="src\mmassgate\MMG_AccountProxy.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mmassgate\MMG_InstantMessageListener.cpp">
+      <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

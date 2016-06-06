@@ -326,6 +326,9 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				// Query the database
 				bool AuthQueryOK = MySQLDatabase::ourInstance->AuthUserAccount(myQuery.m_Authenticate.m_Email, myPassword, &isBanned, myAuthToken);
 
+				// TODO: generate a better authtoken
+				myAuthToken->m_TokenId = GetTickCount();
+
 				//determine if credentials were valid
 				if(myAuthToken->m_AccountId == 0 && AuthQueryOK)		//account doesnt exist
 				{
@@ -435,7 +438,8 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				cryptMessage.WriteUInt(WIC_CREDAUTH_RESEND_S);	// periodicityOfCredentialsRequests (How long until the first is sent)
 				cryptMessage.WriteUInt(0);						// myLeaseTimeLeft (Limited access key)
-				cryptMessage.WriteUInt(45523626);				// myAntiSpoofToken (Random number)
+				//cryptMessage.WriteUInt(45523626);				// myAntiSpoofToken (Random number)
+				cryptMessage.WriteUInt(myAuthToken->m_TokenId);	// TODO
 #endif
 			}
 			break;

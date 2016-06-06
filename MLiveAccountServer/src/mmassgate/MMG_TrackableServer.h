@@ -52,7 +52,7 @@ private:
 public:
 	MMG_TrackableServer();
 
-	bool MMG_TrackableServer::GetServerListInfo(std::vector<MMG_TrackableServerFullInfo> *aFullInfo, std::vector<MMG_TrackableServerBriefInfo> *aBriefInfo, uint *aCount);
+	bool MMG_TrackableServer::GetServerListInfo(ServerListFilters *filters, std::vector<MMG_TrackableServerFullInfo> *aFullInfo, std::vector<MMG_TrackableServerBriefInfo> *aBriefInfo, uint *aCount);
 
 	bool HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter);
 };
