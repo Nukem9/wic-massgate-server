@@ -78,8 +78,16 @@ bool MMG_AccountProxy::SetProfileOnlineStatus(SvClient *aClient, uint aStatus)
 	responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 	myProfile->ToStream(&responseMessage);
 
-	if (!SvClientManager::ourInstance->SendDataAll(&responseMessage, myProfile->m_ProfileId))
-		return false;
+	// send update to all online players except for self
+	std::map<uint, SvClient*>::iterator iter;
+	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); iter++)
+	{
+		if (iter->second->GetProfile()->m_ProfileId == myProfile->m_ProfileId)
+			continue;
+
+		if (!iter->second->SendData(&responseMessage))
+			continue;
+	}
 
 	return true;
 }
@@ -121,4 +129,19 @@ bool MMG_AccountProxy::ProfileInUse(MMG_Profile *profile)
 	}
 
 	return false;
+}
+
+SvClient* MMG_AccountProxy::GetClientByProfileId(uint profileId)
+{
+	//TODO 
+
+	std::map<uint, SvClient*>::iterator iter;
+
+	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); iter++)
+	{
+		if (iter->second->GetProfile()->m_ProfileId == profileId)
+			return iter->second;
+	}
+	
+	return nullptr;
 }

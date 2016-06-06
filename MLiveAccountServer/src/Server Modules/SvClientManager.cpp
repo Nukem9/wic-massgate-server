@@ -280,8 +280,10 @@ void SvClientManager::EmergencyDisconnectAll()
 	}
 }
 
-bool SvClientManager::SendDataAll(MN_WriteMessage *aMessage, uint skipProfileId)
+bool SvClientManager::SendDataAll(MN_WriteMessage *aMessage)
 {
+	this->m_Mutex.Lock();
+
 	// i think this is wrong
 	for(uint i = 0; i < this->m_ClientMaxCount; i++)
 	{
@@ -289,14 +291,12 @@ bool SvClientManager::SendDataAll(MN_WriteMessage *aMessage, uint skipProfileId)
 
 		if (!aClient->m_Valid || !aClient->m_LoggedIn || !aClient->m_IsPlayer)
 			continue;
-
-		// ugly
-		if (skipProfileId == aClient->GetProfile()->m_ProfileId)
-			continue;
-
+		
 		if (!aClient->SendData(aMessage))
-			return false;
+			continue;
 	}
+
+	this->m_Mutex.Unlock();
 
 	return true;
 }

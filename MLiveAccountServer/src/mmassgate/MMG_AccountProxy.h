@@ -18,4 +18,7 @@ public:
 
 	bool AccountInUse		(MMG_AuthToken *authtoken);
 	bool ProfileInUse		(MMG_Profile *profile);
+
+	//SvClient* GetClientByProfile	(MMG_Profile *profile);
+	SvClient* GetClientByProfileId	(uint profileId);
 };
