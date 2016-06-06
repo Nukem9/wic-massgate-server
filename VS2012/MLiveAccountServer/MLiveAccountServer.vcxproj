@@ -55,12 +55,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>..\..\MLiveAccountServer\libraries\mysql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\MLiveAccountServer\libraries\mysql;..\..\MLiveAccountServer\libraries\openssl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>..\..\MLiveAccountServer\libraries\mysql;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\MLiveAccountServer\libraries\mysql;..\..\MLiveAccountServer\libraries\openssl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -72,14 +72,14 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>..\..\MLiveAccountServer\libraries\mysql;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\MLiveAccountServer\libraries\mysql;..\..\MLiveAccountServer\libraries\openssl;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>..\..\MLiveAccountServer\libraries\mysql;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\MLiveAccountServer\libraries\mysql;..\..\MLiveAccountServer\libraries\openssl;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -90,6 +90,9 @@
     <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\strbuffer.h" />
     <ClInclude Include="..\..\MLiveAccountServer\libraries\jansson\utf.h" />
     <ClInclude Include="..\..\MLiveAccountServer\libraries\mongoose\mongoose.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\openssl\e_os2.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\openssl\md5.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\openssl\opensslconf.h" />
     <ClInclude Include="..\..\MLiveAccountServer\libraries\sqlite\sqlite3.h" />
     <ClInclude Include="..\..\MLiveAccountServer\libraries\stdafx.h" />
     <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\crc32.h" />
@@ -156,6 +159,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabase.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabaseInfo.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLQuery.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\PasswordHash.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\SQLQuery.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\StatsService.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\stdafx.h" />
@@ -230,6 +234,7 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\HTTPService.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\LiveAccount.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabase.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\PasswordHash.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\StatsService.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\SvClientManager.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\stdafx.cpp" />

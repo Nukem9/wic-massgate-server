@@ -8,4 +8,7 @@
 
 //mysql connector-c
 #include "mysql\mysql.h"
+
+//md5 headers ripped from openssl, (more info in Server Modules\PasswordHash.h)
+#include "openssl\md5.h"
 /******************* External libraries *******************/

@@ -58,6 +58,9 @@
     <Filter Include="Source Files\Server Modules">
       <UniqueIdentifier>{9d67ddbf-ca5f-4951-b02f-6e94a777b15f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Libraries\openssl">
+      <UniqueIdentifier>{8902e26b-149e-4f41-ab15-aa6885a08523}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\MLiveAccountServer\libraries\stdafx.h">
@@ -294,6 +297,18 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_InstantMessageListener.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\PasswordHash.h">
+      <Filter>Header Files\Server Modules</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\openssl\e_os2.h">
+      <Filter>Libraries\openssl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\openssl\md5.h">
+      <Filter>Libraries\openssl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\libraries\openssl\opensslconf.h">
+      <Filter>Libraries\openssl</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\dump.c">
@@ -505,6 +520,9 @@
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_InstantMessageListener.cpp">
       <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\Server Modules\PasswordHash.cpp">
+      <Filter>Source Files\Server Modules</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
