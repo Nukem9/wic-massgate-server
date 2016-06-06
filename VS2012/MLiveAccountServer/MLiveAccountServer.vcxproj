@@ -122,6 +122,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_GroupMemberships.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ICipher.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_InstantMessageListener.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_IStreamable.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Messaging.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_NullCipher.h" />
@@ -204,6 +205,7 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ClanStats.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ICipher.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_InstantMessageListener.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Messaging.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_NullCipher.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_OptionalContentProtocol.cpp" />

@@ -143,7 +143,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			this->SendStartupSequenceComplete(aClient, &responseMessage);
 			*/
 
-			this->SendFriendsAcquaintances(aClient, &responseMessage);
+			if (!this->SendFriendsAcquaintances(aClient, &responseMessage))
+				return false;
+
 		}
 		break;
 
@@ -160,7 +162,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 #endif
 			// NOTE:
 			// there doesnt seem to be a response, there is a lot of client side validation, making it unnecessary
-			// if the client behaves weird, use MESSAGING_GET_FRIENDS_RESPONSE
+			// if the client behaves weird, use MESSAGING_GET_FRIENDS_RESPONSE or MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
 		}
 		break;
 
@@ -173,9 +175,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 
 #ifdef USING_MYSQL_DATABASE
-
 			MySQLDatabase::ourInstance->RemoveFriend(aClient->GetProfile()->m_ProfileId, profileId);
-
 #endif
 
 			DebugLog(L_INFO, "MESSAGING_REMOVE_FRIEND_RESPONSE:");
@@ -189,7 +189,90 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_IM_CHECK_PENDING_MESSAGES:");
 
-			//TODO
+			uint msgCount = 0;
+			MMG_InstantMessageListener::InstantMessage *myMsgs = NULL;
+
+#ifdef USING_MYSQL_DATABASE
+			MySQLDatabase::ourInstance->QueryPendingMessages(aClient->GetProfile()->m_ProfileId, &msgCount, &myMsgs);
+#endif
+
+			// if there are messages, send them
+			// pending messages will be removed once they have been acknowledged.
+			if (myMsgs)
+			{
+				for (uint i = 0; i < msgCount; i++)
+				{
+					//DebugLog(L_INFO, "MESSAGING_IM_RECEIVE");
+					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
+					myMsgs[i].ToStream(&responseMessage);
+				}
+			
+				delete [] myMsgs;
+				myMsgs = NULL;
+
+				if (!aClient->SendData(&responseMessage))
+					return false;
+			}
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_IM_SEND:
+		{
+			DebugLog(L_INFO, "MESSAGING_IM_SEND");
+			
+			MMG_InstantMessageListener::InstantMessage myInstantMessage;
+			if(!myInstantMessage.FromStream(aMessage))
+				return false;
+			
+			//handle padding
+			uint aZero;
+			if (!aMessage->ReadUInt(aZero))
+				return false;
+
+			MN_WriteMessage	recipientMessage(2048);
+
+			//DebugLog(L_INFO, "MESSAGING_IM_RECEIVE");
+			recipientMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
+			myInstantMessage.ToStream(&recipientMessage);
+			
+			//check to see if recipient is online
+			SvClient *recipient = MMG_AccountProxy::ourInstance->GetClientByProfileId(myInstantMessage.m_RecipientProfile);
+
+			if (!recipient)
+			{
+				// intended recipient is offline
+#ifdef USING_MYSQL_DATABASE
+				MySQLDatabase::ourInstance->AddInstantMessage(aClient->GetProfile()->m_ProfileId, &myInstantMessage);
+#endif
+			}
+			else
+			{
+				// TODO
+				// this should probably be done in memory
+				// if recipient does not ack, the message is lost, un-read messages are NOT saved client side
+#ifdef USING_MYSQL_DATABASE
+				MySQLDatabase::ourInstance->AddInstantMessage(aClient->GetProfile()->m_ProfileId, &myInstantMessage);
+#endif
+
+				if (!recipient->SendData(&recipientMessage))
+					return false;
+			}
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_IM_ACK:
+		{
+			DebugLog(L_INFO, "MESSAGING_IM_ACK:");
+
+			uint messageId;
+			if (!aMessage->ReadUInt(messageId))
+				return false;
+
+			// message has been acked, remove it from queue
+
+#ifdef USING_MYSQL_DATABASE
+			MySQLDatabase::ourInstance->RemoveInstantMessage(messageId);
+#endif
 		}
 		break;
 
@@ -198,7 +281,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			DebugLog(L_INFO, "MESSAGING_SET_COMMUNICATION_OPTIONS_REQ:");
 
 			uint commOptions;
-
 			if (!aMessage->ReadUInt(commOptions))
 				return false;
 
@@ -209,10 +291,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			aClient->GetOptions()->FromUInt(commOptions);
 
 #ifdef USING_MYSQL_DATABASE
-
-			bool QueryOK = MySQLDatabase::ourInstance->SaveUserOptions(aClient->GetProfile()->m_ProfileId, commOptions);
-			//if (QueryOK)
-				//response message?
+			MySQLDatabase::ourInstance->SaveUserOptions(aClient->GetProfile()->m_ProfileId, commOptions);
+			//response message? MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
 #endif
 		}
 		break;
@@ -336,9 +416,10 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUInt(randomZero))
 				return false;
 
-			
 			// not sure if this is right
 			MMG_AccountProxy::ourInstance->SetClientOnline(aClient);
+
+			// response maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
 		}
 		break;
 
@@ -364,6 +445,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			// the authentication will involve checking authtoken/credentials and the unused antispoof token in MMG_AccountProtocol
 			// also before this can be implemented, the onlinestatus dependency needs to be removed from the database
 			MMG_AccountProxy::ourInstance->SetProfileOnlineStatus(aClient, serverId);
+
+			// response maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
 		}
 		break;
 
@@ -445,6 +528,30 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			
 			if (!aClient->SendData(&responseMessage))
 				return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_ABUSE_REPORT:
+		{
+			DebugLog(L_INFO, "MESSAGING_ABUSE_REPORT:");
+			
+			uint profileIdReported;
+			if (!aMessage->ReadUInt(profileIdReported))
+				return false;
+			
+			wchar_t anAbuseReport[256];
+			memset(anAbuseReport, 0, sizeof(anAbuseReport));
+			if (!aMessage->ReadString(anAbuseReport, ARRAYSIZE(anAbuseReport)))
+				return false;
+			
+			//handle padding
+			uchar aZero;
+			if (!aMessage->ReadUChar(aZero))
+				return false;
+
+#ifdef USING_MYSQL_DATABASE
+			MySQLDatabase::ourInstance->AddAbuseReport(aClient->GetProfile()->m_ProfileId, profileIdReported, anAbuseReport);
+#endif
 		}
 		break;
 		
@@ -632,7 +739,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_CLAN_COLOSSEUM_UNREGISTER_REQ:");
 
-			//TODO : no response required
+			//TODO : no response required, maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
 		}
 		break;
 
@@ -664,8 +771,11 @@ bool MMG_Messaging::SendProfileName(SvClient *aClient, MN_WriteMessage	*aMessage
 bool MMG_Messaging::SendFriendsAcquaintances(SvClient *aClient, MN_WriteMessage *aMessage)
 {
 	//send acquaintances first, otherwise it screws up the contacts list
-	this->SendAcquaintance(aClient, aMessage);
-	this->SendFriend(aClient, aMessage);
+	if (!this->SendAcquaintance(aClient, aMessage))
+		return false;
+
+	if (!this->SendFriend(aClient, aMessage))
+		return false;
 
 	return true;
 }

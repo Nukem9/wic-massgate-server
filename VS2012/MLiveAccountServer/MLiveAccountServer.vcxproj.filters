@@ -291,6 +291,9 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProxy.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_InstantMessageListener.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\dump.c">
@@ -498,6 +501,9 @@
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProxy.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_InstantMessageListener.cpp">
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
   </ItemGroup>

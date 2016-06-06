@@ -2,7 +2,7 @@
 
 static const char *MySQLTableValues[] =
 {
-	"drop table if exists mg_utils",
+	"drop table if exists mg_utils;",
 
 	"CREATE TABLE mg_utils ("
 		"poll tinyint(3) unsigned not null"
@@ -19,6 +19,10 @@ static const char *MySQLTableValues[] =
 	"drop table if exists mg_friends;",
 
 	"drop table if exists mg_ignored;",
+
+	"drop table if exists mg_messages;",
+
+	"drop table if exists mg_abusereports;",
 
 	"drop table if exists mg_clans;",
 
@@ -69,6 +73,24 @@ static const char *MySQLTableValues[] =
 		"id int(10) unsigned not null auto_increment,"
 		"profileid int(10) unsigned not null,"
 		"ignoredprofileid int(10) unsigned not null,"
+		"PRIMARY KEY (id)"
+	") ENGINE=MyISAM;",
+
+	"CREATE TABLE mg_messages ("
+		"id int(10) unsigned not null auto_increment,"
+		"writtenat timestamp not null,"
+		"senderprofileid int(10) unsigned not null,"
+		"recipientprofileid int(10) unsigned not null,"
+		"message varchar(512) not null,"
+		"PRIMARY KEY (id)"
+	") ENGINE=MyISAM;",
+
+	"CREATE TABLE mg_abusereports ("
+		"id int(10) unsigned not null auto_increment,"
+		"senderprofileid int(10) unsigned not null,"
+		"reportedprofileid int(10) unsigned not null,"
+		"report varchar(256) not null,"
+		"datereported datetime not null,"
 		"PRIMARY KEY (id)"
 	") ENGINE=MyISAM;",
 

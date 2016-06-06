@@ -14,6 +14,7 @@ class SvClient;
 #include "MMG_CryptoHash.h"
 #include "MMG_AuthToken.h"
 #include "MMG_Profile.h"
+#include "MMG_InstantMessageListener.h"
 #include "MMG_Options.h"
 #include "MMG_AccountProtocol.h"
 #include "MMG_AccountProxy.h"

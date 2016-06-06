@@ -29,6 +29,7 @@ void CreateServices()
 
 	MMG_AccountProtocol::Create();
 	MMG_AccountProxy::Create();
+	MMG_InstantMessageListener::Create();
 	MMG_Messaging::Create();
 	MMG_OptionalContentProtocol::Create();
 	MMG_ProfileEditableVariablesProtocol::Create();

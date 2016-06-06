@@ -1875,3 +1875,195 @@ bool MySQLDatabase::SaveEditableVariables(const uint profileId, const wchar_t *m
 
 	return querySuccess;
 }
+
+bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages[])
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, "SELECT id, writtenat, senderprofileid, recipientprofileid, message from mg_messages WHERE recipientprofileid = ? ORDER BY writtenat ASC LIMIT 20");
+
+	// prepared statement binding structures
+	MYSQL_BIND param[1], results[5];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+	memset(results, 0, sizeof(results));
+	
+	// query specific variables
+	wchar_t message[256];
+	memset(message, 0, sizeof(message));
+	ulong msgLength = ARRAYSIZE(message);
+
+	uint id, senderid, recipientid;
+	MYSQL_TIME writtenat;
+
+	//
+	// TODO
+	// note: temporarily limiting returned pending messages to 20, real limit for the client is unknown
+	// m_WrittenAt = number of seconds since midnight UTC, the client adjusts timezone aswell
+	//
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], &profileId);		//profileid
+
+	// bind results
+	query.Bind(&results[0], &id);					//mg_messages.id
+	query.BindTimeStamp(&results[1], &writtenat);	//mg_messages.writtenat
+	query.Bind(&results[2], &senderid);				//mg_messages.senderprofileid
+	query.Bind(&results[3], &recipientid);			//mg_messages.recipientprofileid
+	query.Bind(&results[4], message, &msgLength);	//mg_messages.message
+
+	// execute prepared statement
+	if(!query.StmtExecute(param, results))
+	{
+		DatabaseLog("QueryPendingMessages() failed: profile id(%d)", profileId);
+
+		//messages = NULL;
+		*dstMessageCount = 0;
+	}
+	else
+	{
+		ulong count = (ulong)query.StmtNumRows();
+		DatabaseLog("found %d pending messages for profile id(%d)", count, profileId);
+
+		*dstMessageCount = 0;
+
+		if (count > 0)
+		{
+			MMG_InstantMessageListener::InstantMessage *tmp = new MMG_InstantMessageListener::InstantMessage[count];
+			int i = 0;
+
+			while(query.StmtFetch())
+			{
+				tmp[i].m_MessageId = id;
+				tmp[i].m_WrittenAt = 0; // TODO
+				this->QueryProfileName(senderid, &tmp[i].m_SenderProfile);
+				tmp[i].m_RecipientProfile = recipientid;
+				wcscpy_s(tmp[i].m_Message, message);
+
+				i++;
+			}
+
+			*messages = tmp;
+			*dstMessageCount = count;
+		}
+	}
+
+	return query.Success();
+}
+
+bool MySQLDatabase::AddInstantMessage(const uint profileId, MMG_InstantMessageListener::InstantMessage *message)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, "INSERT INTO mg_messages (writtenat, senderprofileid, recipientprofileid, message) VALUES (NOW(), ?, ?, ?)");
+
+	// prepared statement binding structures
+	MYSQL_BIND params[3];
+
+	// initialize (zero) bind structures
+	memset(params, 0, sizeof(params));
+
+	// query specific variables
+	ulong msgLength = wcslen(message->m_Message);
+	MYSQL_TIME datetime;
+
+	// TODO store time as utc format
+	// might have to store as int rather than timestamp
+
+	// bind parameters to prepared statement
+	query.Bind(&params[0], &message->m_SenderProfile.m_ProfileId);
+	query.Bind(&params[1], &message->m_RecipientProfile);
+	query.Bind(&params[2], message->m_Message, &msgLength);
+
+	// execute prepared statement
+	if (!query.StmtExecute(params))
+	{
+		DatabaseLog("AddInstantMessage() query failed: profile id(%d)", profileId);
+		message->m_MessageId = 0;
+	}
+	else
+	{
+		message->m_MessageId = (uint)query.StmtInsertId();
+		//DatabaseLog("message id(%d) queued:", message->m_MessageId);
+	}
+
+	return query.Success();
+}
+
+bool MySQLDatabase::RemoveInstantMessage(const uint messageId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, "DELETE FROM mg_messages WHERE id = ?");  // AND recipientprofileid = ?
+
+	// prepared statement binding structures
+	MYSQL_BIND param[1];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], &messageId);			//mg_messages.id
+
+	// execute prepared statement
+	if (!query.StmtExecute(param))
+		DatabaseLog("RemoveInstantMessage() query failed: message id(%d)", messageId);
+	//else
+	//	DatabaseLog("message id(%d) acked", messageId);
+
+	return query.Success();
+}
+
+bool MySQLDatabase::AddAbuseReport(const uint profileId, const uint flaggedProfile, const wchar_t *report)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, "INSERT INTO mg_abusereports (senderprofileid, reportedprofileid, report, datereported) VALUES (?, ?, ?, NOW())");
+
+	// prepared statement binding structures
+	MYSQL_BIND params[3];
+
+	// initialize (zero) bind structures
+	memset(params, 0, sizeof(params));
+
+	// query specific variables
+	ulong reportLength = wcslen(report);
+
+	// bind parameters to prepared statement
+	query.Bind(&params[0], &profileId);
+	query.Bind(&params[1], &flaggedProfile);
+	query.Bind(&params[2], report, &reportLength);
+
+	// execute prepared statement
+	if (!query.StmtExecute(params))
+		DatabaseLog("AddAbuseReport() query failed: profileid(%d)", profileId);
+	else
+		DatabaseLog("player id(%d) reported player id(%d):", profileId, flaggedProfile);
+
+	return query.Success();
+}

@@ -60,6 +60,9 @@
 	- create a global 'logged in' player list/map
 		move account database queries to Query::FromStream
 	- save password hash, compatible with phpbb or some other forum
+	- maybe start using InnoDB/transactions (START TRANSACTION/BEGIN, COMMIT, ROLLBACK)/autocommit=0, 
+		indexing (any WHERE column = ?), replication, utf-8
+	- fix the message display time for instant messaging
 
 */
 
@@ -165,4 +168,8 @@ public:
 	bool	QueryProfileList	(const size_t Count, const uint *profileId, MMG_Profile *profiles);
 	bool	QueryEditableVariables	(const uint profileId, wchar_t *dstMotto, wchar_t *dstHomepage);
 	bool	SaveEditableVariables	(const uint profileId, const wchar_t *motto, const wchar_t *homepage);
+	bool	QueryPendingMessages	(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages[]);
+	bool	AddInstantMessage		(const uint profileId, MMG_InstantMessageListener::InstantMessage *message);
+	bool	RemoveInstantMessage	(const uint messageId);
+	bool	AddAbuseReport		(const uint profileId, const uint flaggedProfile, const wchar_t *report);
 };
