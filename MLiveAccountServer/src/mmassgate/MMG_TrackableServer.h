@@ -8,6 +8,7 @@ public:
 	public:
 		bool	m_Valid;
 		int		m_Index;
+		uint	m_PublicId;	// temporary
 
 		// Authorization
 		bool	m_KeyAuthenticated;
@@ -23,6 +24,7 @@ public:
 		{
 			this->m_Valid				= false;
 			this->m_Index				= 0;
+			this->m_PublicId			= SourceIp ^ (SourcePort + 0x1010101);
 
 			this->m_KeyAuthenticated	= false;
 			this->m_KeySequence			= 0;
@@ -38,16 +40,17 @@ public:
 		}
 	};
 
-	std::map<uint64, Server> m_ServerList;
+	std::map<uint, Server> m_ServerList;
 private:
 	MT_Mutex m_Mutex;
 
-	bool AuthServer(SvClient *aClient, uint aKeySequence, ushort aProtocolVersion);
-	bool ConnectServer(Server *aServer, MMG_ServerStartupVariables *aStartupVars);
-	bool UpdateServer(Server *aServer, MMG_TrackableServerHeartbeat *aHeartbeat);
-	void DisconnectServer(Server *aServer);
+	bool AuthServer			(SvClient *aClient, uint aKeySequence, ushort aProtocolVersion);
+	bool ConnectServer		(Server *aServer, MMG_ServerStartupVariables *aStartupVars);
+	bool UpdateServer		(Server *aServer, MMG_TrackableServerHeartbeat *aHeartbeat);
+	void DisconnectServer	(Server *aServer);
 
-	Server *FindServer(SvClient *aClient);
+	Server *FindServer		(SvClient *aClient);
+	bool FilterCheck		(ServerListFilters *filters, Server *aServer);
 
 public:
 	MMG_TrackableServer();

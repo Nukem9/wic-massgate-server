@@ -13,9 +13,11 @@ struct cycletest
 cycletest cycles[] =
 {
 	{ 0x01574C4E7CBEF3D7, L"do_Apocalypse" },
+	{ 0x1CCD30B72CBB801B, L"do_Countryside" },
 	{ 0x366789C15AE10C5E, L"tw_Radar" },
 	{ 0x36F05A2AA0295C85, L"do_Canal" },
 	{ 0x429233342E470501, L"do_Studio" },
+	{ 0x48C9F7176567AE50, L"as_Ozzault" },
 	{ 0x4C00F431FBEAE817, L"do_Riverbed" },
 	{ 0x525B0650EDB3F907, L"do_SpaceNeedle" },
 	{ 0x644ADB0FDB2C4659, L"do_Quarry" },
@@ -23,12 +25,15 @@ cycletest cycles[] =
 	{ 0x769CA9D3DB3D4BC7, L"as_Bridge" },
 	{ 0x831F7B7F952D5B74, L"as_Hillside" },
 	{ 0x8F02D72ADA98376A, L"do_Xmas" },
+	{ 0x9B3224F6ECAC28E3, L"do_Airport" },
 	{ 0x9E09C0C0A8287490, L"do_Hometown" },
 	{ 0xA034BA00003A26EF, L"do_Liberty" },
 	{ 0xA26056C7BDAFA137, L"as_AirBase" },
 	{ 0xA6125C4498FAAFE5, L"tw_Wasteland" },
 	{ 0xA8F4AD3889B7DB44, L"tw_Highway" },
 	{ 0xB192ED3AC88EC95E, L"as_Dome" },
+	{ 0xB4587B3812BA036C, L"tw_Bocage" },
+	{ 0xB51B002E5A355FF1, L"tw_Arizona" },
 	{ 0xB66333A0F3934C34, L"do_Farmland" },
 	{ 0xB9A06118E38E7651, L"do_Powerplant" },
 	{ 0xBE135EFD6055077E, L"do_Riviera" },
@@ -39,6 +44,10 @@ cycletest cycles[] =
 	{ 0xEC622A23B302DC9D, L"do_Seaside" },
 	{ 0xEC7E463C053AE139, L"as_Typhoon" },
 	{ 0xECD1F5047AD078A5, L"do_Ruins" },
+	{ 0xF00E7E6DD9850EF3, L"do_Virginia" },
+	{ 0xF6889983A6B4D4E1, L"do_Valley" },
+	{ 0xFAA7FB8CAD40E3A2, L"do_Paradise" },
+	{ 0xFE456DAC7CED58F9, L"do_Vineyard" },
 };
 
 bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter)
@@ -83,18 +92,19 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			//filters.PrintFilters();
 
 			// list of matched servers retrieved from global list, currently disregarding filters
-			uint serverCount;
+			uint serverCount, matchedCount;
 			std::vector<MMG_TrackableServerFullInfo> serverFullInfo;
 			std::vector<MMG_TrackableServerBriefInfo> serverBriefInfo;
 
 			MMG_TrackableServer::ourInstance->GetServerListInfo(&filters, &serverFullInfo, &serverBriefInfo, &serverCount);
+			matchedCount = serverFullInfo.size();
 
 			//send total number of servers in global list
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_NUM_TOTAL_SERVERS);
 			responseMessage.WriteUInt(serverCount);
 
 			//send matched server list
-			for (uint i = 0; i < serverCount; i++)
+			for (uint i = 0; i < matchedCount; i++)
 			{
 				//write short server info to stream
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_SHORT_SERVER_INFO);

@@ -15,7 +15,6 @@ MMG_ServerStartupVariables::MMG_ServerStartupVariables()
 	m_ServerType			= NORMAL_SERVER;
 	m_HostProfileId			= 0;
 	m_Fingerprint			= 0;
-	m_ServerId				= 0;
 	m_ContainsPreorderMap	= true;
 	m_IsRankBalanced		= false;
 	m_HasDominationMaps		= false;
@@ -37,11 +36,11 @@ void MMG_ServerStartupVariables::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUShort(this->m_ServerReliablePort);
 	aMessage->WriteUShort(this->m_MassgateCommPort);
 	aMessage->WriteString(this->m_ServerName);
-	aMessage->WriteUChar(this->somebits.MaxPlayers);		// Maximum number of players
-	aMessage->WriteUChar(this->somebits.Passworded);		// Password required
-	aMessage->WriteUChar(this->somebits.bitfield5);		// ?
-	aMessage->WriteUChar(this->somebits.bitfield3);		// ?
-	aMessage->WriteUChar(this->somebits.Ranked);		// Ranked
+	aMessage->WriteUChar(this->somebits.MaxPlayers);
+	aMessage->WriteUChar(this->somebits.Passworded);		
+	aMessage->WriteUChar(this->somebits.Dedicated);			
+	aMessage->WriteUChar(this->somebits.bitfield3);
+	aMessage->WriteUChar(this->somebits.Ranked);
 	aMessage->WriteUChar(this->m_ServerType);
 	aMessage->WriteUInt64(this->m_CurrentMapHash);
 	aMessage->WriteString(this->m_PublicIp);
@@ -92,7 +91,7 @@ bool MMG_ServerStartupVariables::FromStream(MN_ReadMessage *aMessage)
 
 	this->somebits.MaxPlayers = temp[0];
 	this->somebits.Passworded = temp[1];
-	this->somebits.bitfield5 = temp[2];
+	this->somebits.Dedicated = temp[2];
 	this->somebits.bitfield3 = temp[3];
 	this->somebits.Ranked = temp[4];
 

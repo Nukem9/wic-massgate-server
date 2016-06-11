@@ -87,7 +87,7 @@ public:
 			DebugLog(L_INFO, "population flag set\t\t: Not Empty or Full");
 
 		if (this->HasFlag(PLAYNOW_FLAG))
-			DebugLog(L_INFO, "unknown flag set\t\t: %i", this->playnow);
+			DebugLog(L_INFO, "playnow flag set\t\t: %i", this->playnow);
 
 		if (this->HasFlag(MAPNAME_FLAG))
 			DebugLog(L_INFO, "mapname flag set\t\t: %ws", this->mapname);

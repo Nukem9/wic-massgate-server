@@ -60,10 +60,10 @@ bool MMG_AccountProxy::SetProfileOnlineStatus(SvClient *aClient, uint aStatus)
 
 		case WIC_PROFILE_STATUS_ONLINE:
 		{
-			//std::map<uint, SvClient*>::iterator iter;
+			std::map<uint, SvClient*>::iterator iter;
 
-			//iter = this->m_PlayerList.find(myAuthToken->m_AccountId);
-			//if (iter == this->m_PlayerList.end())
+			iter = this->m_PlayerList.find(myAuthToken->m_AccountId);
+			if (iter == this->m_PlayerList.end())
 				this->m_PlayerList.insert(std::pair<uint, SvClient*>(myAuthToken->m_AccountId, aClient));
 		}
 		break;
@@ -71,7 +71,11 @@ bool MMG_AccountProxy::SetProfileOnlineStatus(SvClient *aClient, uint aStatus)
 		default:
 
 			// set client profile status = playing, the server id is used so a friend can right click->join same server
-			this->m_PlayerList.insert(std::pair<uint, SvClient*>(myAuthToken->m_AccountId, aClient));
+			std::map<uint, SvClient*>::iterator iter;
+
+			iter = this->m_PlayerList.find(myAuthToken->m_AccountId);
+			if (iter != this->m_PlayerList.end())
+				iter->second->GetProfile()->m_OnlineStatus = aStatus;
 		break;
 	}
 
@@ -80,7 +84,7 @@ bool MMG_AccountProxy::SetProfileOnlineStatus(SvClient *aClient, uint aStatus)
 
 	// send update to all online players except for self
 	std::map<uint, SvClient*>::iterator iter;
-	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); iter++)
+	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); ++iter)
 	{
 		if (iter->second->GetProfile()->m_ProfileId == myProfile->m_ProfileId)
 			continue;
@@ -98,7 +102,7 @@ void MMG_AccountProxy::CheckProfileOnlineStatus(MMG_Profile *profile)
 
 	std::map<uint, SvClient*>::iterator iter;
 
-	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); iter++)
+	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); ++iter)
 	{
 		if (iter->second->GetProfile()->m_ProfileId == profile->m_ProfileId)
 			profile->m_OnlineStatus = iter->second->GetProfile()->m_OnlineStatus;
@@ -121,7 +125,7 @@ bool MMG_AccountProxy::ProfileInUse(MMG_Profile *profile)
 
 	std::map<uint, SvClient*>::iterator iter;
 
-	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); iter++)
+	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); ++iter)
 	{
 		MMG_Profile *p = iter->second->GetProfile();
 		if (p->m_ProfileId == profile->m_ProfileId)
@@ -137,7 +141,7 @@ SvClient* MMG_AccountProxy::GetClientByProfileId(uint profileId)
 
 	std::map<uint, SvClient*>::iterator iter;
 
-	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); iter++)
+	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); ++iter)
 	{
 		if (iter->second->GetProfile()->m_ProfileId == profileId)
 			return iter->second;

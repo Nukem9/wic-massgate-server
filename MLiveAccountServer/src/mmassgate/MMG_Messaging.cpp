@@ -29,6 +29,14 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 	switch(aDelimiter)
 	{
+		/*case MMG_ProtocolDelimiters::MESSAGING_PROTOCOL_ERROR:
+		{
+			DebugLog(L_INFO, "MESSAGING_PROTOCOL_ERROR:");
+			//DebugBreak();
+		}
+		break;
+		*/
+
 		case MMG_ProtocolDelimiters::MESSAGING_RETRIEVE_PROFILENAME:
 		{
 			DebugLog(L_INFO, "MESSAGING_RETRIEVE_PROFILENAME:");
@@ -72,6 +80,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aClient->SendData(&responseMessage))
 				return false;
 #else
+
+			// TODO: limit is 128, (MMG_Messaging::Update)
+
 			uint *profildIds = NULL;
 			MMG_Profile *profileList = NULL;
 
@@ -429,6 +440,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			//IDA wic.exe sub_7A1290 MMG_Messaging::SetStatusPlaying
 
+			// either MMG_AccountProxy::State_t or MMG_MasterConnection::State
 			uint serverId;
 			if (!aMessage->ReadUInt(serverId))
 				return false;
@@ -459,13 +471,20 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUChar(randomZero))
 				return false;
 
-			//TODO: i dont know what these are (resolution, ip/mac address, RAM)?
 			DebugLog(L_INFO, "MESSAGING_GET_CLIENT_METRICS:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS);
 
 			//char key[16] = "";
 			//char value[96] = "";
 			
+			// TODO
+			// this has something to do with EXMASS_Client::ReceiveNotification case 27) 
+			//
+			// enum MMG_ClientMetric::Context
+			// number of options
+			// key
+			// value
+
 			//responseMessage.WriteUChar(1);
 			//responseMessage.WriteUInt(0);
 			//responseMessage.WriteString(key, ARRAYSIZE(key));
@@ -476,7 +495,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 
-		case MMG_ProtocolDelimiters::MESSAGING_SET_CLIENT_SETTINGS:
+		/*case MMG_ProtocolDelimiters::MESSAGING_SET_CLIENT_SETTINGS:
 		{
 			DebugLog(L_INFO, "MESSAGING_SET_CLIENT_SETTINGS:");
 
@@ -484,6 +503,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			//DebugBreak();
 		}
 		break;
+		*/
 
 		case MMG_ProtocolDelimiters::MESSAGING_STARTUP_SEQUENCE_COMPLETE:
 		{
@@ -777,7 +797,7 @@ bool MMG_Messaging::SendFriendsAcquaintances(SvClient *aClient, MN_WriteMessage 
 	if (!this->SendFriend(aClient, aMessage))
 		return false;
 
-	return true;
+	return aClient->SendData(aMessage);
 }
 
 bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
@@ -817,7 +837,8 @@ bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 	myFriends = NULL;
 #endif
 
-	return aClient->SendData(aMessage);
+	// return aClient->SendData(aMessage);
+	return true;
 }
 
 bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessage)
@@ -866,7 +887,8 @@ bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessag
 	myAcquaintances = NULL;
 #endif
 
-	return aClient->SendData(aMessage);
+	// return aClient->SendData(aMessage);
+	return true;
 }
 
 bool MMG_Messaging::SendCommOptions(SvClient *aClient, MN_WriteMessage *aMessage)

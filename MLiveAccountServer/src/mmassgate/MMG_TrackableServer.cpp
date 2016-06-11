@@ -39,7 +39,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 			// TODO: Verify proto and pub id
 
-			//if (publicServerId != server->m_Info.m_ServerId)
+			//if (publicServerId != server->m_PublicId)
 				// ?????
 
 			// Pong!
@@ -189,7 +189,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				// Send back the assigned public ID
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_PUBLIC_ID);
-				responseMessage.WriteUInt(server->m_Info.m_ServerId);// ServerId
+				responseMessage.WriteUInt(server->m_PublicId);// ServerId
 
 				if (!aClient->SendData(&responseMessage))
 					return false;
@@ -279,8 +279,8 @@ bool MMG_TrackableServer::AuthServer(SvClient *aClient, uint aKeySequence, ushor
 	masterEntry.m_KeySequence	= aKeySequence;
 
 	//this->m_ServerList.push_back(masterEntry);
-	if (this->m_ServerList.find(masterEntry.m_Cookie.hash) == this->m_ServerList.end())
-		this->m_ServerList.insert(std::pair<uint64, Server>(masterEntry.m_Cookie.hash, masterEntry));
+	if (this->m_ServerList.find(masterEntry.m_PublicId) == this->m_ServerList.end())
+		this->m_ServerList.insert(std::pair<uint, Server>(masterEntry.m_PublicId, masterEntry));
 
 	// Sanity check
 	assert(FindServer(aClient) != nullptr);
@@ -320,7 +320,6 @@ bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, MM
 	aServer->m_Info				= *aStartupVars;
 	aServer->m_Valid			= true;
 	//aServer->m_Info.m_ServerId	= aServer->m_Index + 1;
-	aServer->m_Info.m_ServerId	= aServer->m_Cookie.hash;
 	return true;
 }
 
@@ -357,13 +356,113 @@ MMG_TrackableServer::Server *MMG_TrackableServer::FindServer(SvClient *aClient)
 	}
 	*/
 
-	std::map<uint64, Server>::iterator iter;
+	std::map<uint, Server>::iterator iter;
 
 	iter = this->m_ServerList.find(clientIp ^ (clientPort + 0x1010101));
 	if (iter != this->m_ServerList.end())
 		return &iter->second;
 
 	return nullptr;
+}
+
+bool MMG_TrackableServer::FilterCheck(ServerListFilters *filters, Server *aServer)
+{
+	// todo MAPNAME_FLAG, SERVERNAME_FLAG
+	// still needs work, cycle map list needs to be fixed
+
+	if (filters->HasFlag(DEDICATED_FLAG))
+	{
+		if (filters->dedicated && !aServer->m_Info.somebits.Dedicated)	// dedicated
+			return false;
+
+		if (!filters->dedicated && aServer->m_Info.somebits.Dedicated)	// not dedicated
+			return false;
+	}
+		
+	if (filters->HasFlag(RANKED_FLAG))
+	{
+		if (filters->ranked && !aServer->m_Info.somebits.Ranked)			// ranked
+			return false;
+			
+		if (!filters->ranked && aServer->m_Info.somebits.Ranked)			// not ranked
+			return false;
+	}
+
+	if (filters->HasFlag(RANKBALANCE_FLAG) 
+		&& (filters->rankbalance && !aServer->m_Info.m_IsRankBalanced)	// rank balanced
+		|| (!filters->rankbalance && aServer->m_Info.m_IsRankBalanced))	// not rank balanced
+		return false;
+
+	if (filters->HasFlag(GAMEMODE_FLAG)									// domination only
+		&& (filters->gamemode[0] && aServer->m_Info.m_HasAssaultMaps)
+		|| (filters->gamemode[0] && aServer->m_Info.m_HasTowMaps))
+		return false;
+
+	if (filters->HasFlag(GAMEMODE_FLAG)									// assault only
+		&& (filters->gamemode[1] && aServer->m_Info.m_HasDominationMaps)
+		|| (filters->gamemode[1] && aServer->m_Info.m_HasTowMaps))
+		return false;
+
+	if (filters->HasFlag(GAMEMODE_FLAG)									// tow only
+		&& (filters->gamemode[2] && aServer->m_Info.m_HasDominationMaps)
+		|| (filters->gamemode[2] && aServer->m_Info.m_HasAssaultMaps))
+		return false;
+
+	//if (filters->HasFlag(POPULATION_FLAG))
+	//{
+	//	if (filters->population == 0) { /* no filter, do nothing*/ }
+	//}
+
+	if (filters->HasFlag(POPULATION_FLAG)								// not full
+		&& (filters->population == 1)
+		&& (aServer->m_Heartbeat.m_NumPlayers >= aServer->m_Info.somebits.MaxPlayers))
+		return false;
+
+	if (filters->HasFlag(POPULATION_FLAG)								// not empty
+		&& (filters->population == 2)
+		&& (aServer->m_Heartbeat.m_NumPlayers < 1))
+		return false;
+
+	if (filters->HasFlag(POPULATION_FLAG)								// not empty or full
+		&& (filters->population == 3)
+		&& (aServer->m_Heartbeat.m_NumPlayers < 1 || aServer->m_Heartbeat.m_NumPlayers >= aServer->m_Info.somebits.MaxPlayers))
+		return false;
+
+	if (filters->HasFlag(PLAYNOW_FLAG))									// play now button
+	{
+		// TODO: sort list by player count descending
+
+		if (filters->HasFlag(MAXPLAYERS_FLAG)							// play now max players
+			&& (filters->maxplayers >= aServer->m_Heartbeat.m_NumPlayers))
+			return false;
+
+		if (filters->HasFlag(MINPLAYERS_FLAG)							// play now min players
+			&& (filters->minplayers < aServer->m_Heartbeat.m_NumPlayers))
+			return false;
+	}
+
+	//if (this->HasFlag(MAPNAME_FLAG))
+	//if (this->HasFlag(SERVERNAME_FLAG))
+
+	if (filters->HasFlag(PASSWORD_FLAG))
+	{
+		if (filters->password && !aServer->m_Info.somebits.Passworded)	// need password
+			return false;
+
+		if (!filters->password && aServer->m_Info.somebits.Passworded)	// no password
+			return false;
+	}
+		
+	if (filters->HasFlag(MOD_FLAG))
+	{
+		if (filters->mod && (aServer->m_Info.m_ModId == 0))				// no mods
+			return false;
+			
+		if (!filters->mod && (aServer->m_Info.m_ModId > 0))				// only mods
+			return false;
+	}
+
+	return true;
 }
 
 bool MMG_TrackableServer::GetServerListInfo(ServerListFilters *filters, std::vector<MMG_TrackableServerFullInfo> *aFullInfo, std::vector<MMG_TrackableServerBriefInfo> *aBriefInfo, uint *aCount)
@@ -382,13 +481,17 @@ bool MMG_TrackableServer::GetServerListInfo(ServerListFilters *filters, std::vec
 	if (aCount)
 		*aCount = this->m_ServerList.size();
 
-	std::map<uint64, Server>::iterator iter;
+	std::map<uint, Server>::iterator iter;
 
 	// Loop through each master list entry and convert the structures
 	//for (auto& server : this->m_ServerList)
-	for (iter = this->m_ServerList.begin(); iter != this->m_ServerList.end(); iter++)
+	for (iter = this->m_ServerList.begin(); iter != this->m_ServerList.end(); ++iter)
 	{
 		auto server = iter->second;
+
+		// implement server filters (mostly untested)
+		if (!this->FilterCheck(filters, &server))
+			continue;
 
 		MMG_TrackableServerFullInfo fullInfo;
 		MMG_TrackableServerBriefInfo briefInfo;
@@ -418,7 +521,7 @@ bool MMG_TrackableServer::GetServerListInfo(ServerListFilters *filters, std::vec
 			fullInfo.m_ModId				= server.m_Info.m_ModId;
 			fullInfo.m_MassgateCommPort		= server.m_Info.m_MassgateCommPort;
 			fullInfo.m_GameTime				= server.m_Heartbeat.m_GameTime;
-			fullInfo.m_ServerId				= server.m_Info.m_ServerId;
+			fullInfo.m_ServerId				= server.m_PublicId;
 			fullInfo.m_CurrentLeader		= server.m_Heartbeat.m_CurrentLeader;
 			fullInfo.m_HostProfileId		= server.m_Info.m_HostProfileId;
 			fullInfo.m_WinnerTeam			= 0;
@@ -426,7 +529,7 @@ bool MMG_TrackableServer::GetServerListInfo(ServerListFilters *filters, std::vec
 			// superfluous, it seems the client requests this info directly from the server
 			// fullInfo.m_Players[i].m_ProfileId, fullInfo.m_Players[i].m_Score
 
-			aFullInfo->push_back(fullInfo);
+			aFullInfo->insert(aFullInfo->end(), fullInfo);
 		}
 
 		// Brief tracker information
@@ -441,7 +544,7 @@ bool MMG_TrackableServer::GetServerListInfo(ServerListFilters *filters, std::vec
 			briefInfo.m_ServerType			= fullInfo.m_ServerType;
 			briefInfo.m_IsRankBalanced		= server.m_Info.m_IsRankBalanced;
 
-			aBriefInfo->push_back(briefInfo);
+			aBriefInfo->insert(aBriefInfo->end(), briefInfo);
 		}
 	}
 
