@@ -380,7 +380,7 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	return query.Success();
 }
 
-bool MySQLDatabase::CreateUserAccount(const char *email, const wchar_t *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const ulong cipherKeys[])
+bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const ulong cipherKeys[])
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -402,7 +402,7 @@ bool MySQLDatabase::CreateUserAccount(const char *email, const wchar_t *password
 
 	// query specific variables
 	ulong emailLength = strlen(email);
-	ulong passLength = wcslen(password);
+	ulong passLength = strlen(password);
 	ulong countryLength = strlen(country);
 	uint account_insert_id, cdkey_insert_id;
 
@@ -458,7 +458,7 @@ bool MySQLDatabase::CreateUserAccount(const char *email, const wchar_t *password
 	return query.Success() && query2.Success();
 }
 
-bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken)
+bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -486,7 +486,7 @@ bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uch
 	// query specific variables
 	ulong emailLength = strlen(email);
 	
-	wchar_t password[WIC_PASSWORD_MAX_LENGTH];
+	char password[WIC_PASSWORDHASH_MAX_LENGTH];
 	memset(password, 0, sizeof(password));
 	ulong passLength = ARRAYSIZE(password);
 
@@ -512,7 +512,7 @@ bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uch
 		authToken->m_ProfileId = 0;
 		//authToken->m_TokenId = 0;
 		authToken->m_CDkeyId = 0;
-		dstPassword = L"";
+		dstPassword = "";
 		*dstIsBanned = 0;
 	}
 	else
@@ -525,7 +525,7 @@ bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uch
 			authToken->m_ProfileId = 0;
 			//authToken->m_TokenId = 0;
 			authToken->m_CDkeyId = 0;
-			dstPassword = L"";
+			dstPassword = "";
 			*dstIsBanned = 0;
 		}
 		else
@@ -536,7 +536,7 @@ bool MySQLDatabase::AuthUserAccount(const char *email, wchar_t *dstPassword, uch
 			authToken->m_ProfileId = activeprofileid;
 			//authToken->m_TokenId = 0;
 			authToken->m_CDkeyId = cdkeyid;
-			wcscpy_s(dstPassword, ARRAYSIZE(password), password);
+			strncpy(dstPassword, password, strlen(password));
 			*dstIsBanned = isbanned;
 		}
 	}
@@ -1099,7 +1099,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 	return query1Success && query2Success && query3Success;
 }
 
-bool MySQLDatabase::RetrieveUserProfiles(const char *email, const wchar_t *password, ulong *dstProfileCount, MMG_Profile *profiles[])
+bool MySQLDatabase::RetrieveUserProfiles(const char *email, const char *password, ulong *dstProfileCount, MMG_Profile *profiles[])
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())

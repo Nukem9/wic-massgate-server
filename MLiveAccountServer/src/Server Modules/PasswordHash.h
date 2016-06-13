@@ -145,12 +145,12 @@ private:
 	uint32 random_state;
 
 public:
-	void get_random_bytes(char *dst, int count);
-	void encode64(char *dst, char *src, int count);
-	void gensalt_private(char* output, char *input);
-	void crypt_private(char *dst, char *password, char *setting);
-	void HashPassword(char *dst, char *input);
-	bool CheckPassword(char *password, char *stored_hash);
+	void get_random_bytes	(char *dst, int count);
+	void encode64			(char *dst, char *src, int count);
+	void gensalt_private	(char *output, char *input);
+	void crypt_private		(char *dst, wchar_t *password, char *setting);
+	void HashPassword		(char *dst, wchar_t *input);
+	bool CheckPassword		(wchar_t *password, char *stored_hash);
 
 	PasswordHash(int iteration_count_log2, bool portable_hashes)
 	{

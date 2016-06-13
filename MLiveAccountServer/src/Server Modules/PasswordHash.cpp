@@ -101,24 +101,24 @@ void PasswordHash::get_random_bytes(char *dst, int count)
 	MD5_CTX ctx, ctx2;
 	unsigned char digest[16], digest2[16];
 
-	char md5str1[33], md5str2[33];
+	char md5str1[64], md5str2[64];
 	memset(md5str1, 0, sizeof(md5str1));
 	memset(md5str2, 0, sizeof(md5str2));
 
 	for (int i = 0; i < count; i += 16) 
 	{
 		// first random number, convert to string
-		char randstr1[11];
+		char randstr1[16];
 		memset(randstr1, 0, sizeof(randstr1));
 		sprintf(randstr1, "%u", twister.randomMT());
 
 		// second random number, convert to string
-		char randstr2[11];
+		char randstr2[16];
 		memset(randstr2, 0, sizeof(randstr2));
 		sprintf(randstr2, "%u", this->random_state);
 	
 		// concatenate random number strings
-		char couple[21];
+		char couple[32];
 		memset(couple, 0, sizeof(couple));
 		sprintf(couple, "%s%s", randstr1, randstr2);
 
@@ -168,13 +168,13 @@ void PasswordHash::encode64(char *dst, char *src, int count)
 
 void PasswordHash::gensalt_private(char* output, char *input)
 {
-	uint phpversion = 5;	// 3 or 5 it makes no difference until blowfish is added
+	uint phpversion = 5;	// 3-5 it makes no difference until blowfish is added
 	strncpy(output, "$H$", 3);
 	strncpy(output+3, &itoa64[min(iteration_count_log2 + phpversion, 30)], 1);
 	encode64(output+4, input, 6);
 }
 
-void PasswordHash::crypt_private(char *dst, char *password, char *setting)
+void PasswordHash::crypt_private(char *dst, wchar_t *password, char *setting)
 {
 	MD5_CTX ctx;
 	char hash[MD5_DIGEST_LENGTH];
@@ -199,7 +199,7 @@ void PasswordHash::crypt_private(char *dst, char *password, char *setting)
 	if (strlen(salt) < 8)
 		return;
 
-	length = strlen(password);
+	length = wcslen(password);
 
 	MD5_Init(&ctx);
 	MD5_Update(&ctx, salt, 8);
@@ -218,16 +218,23 @@ void PasswordHash::crypt_private(char *dst, char *password, char *setting)
 	encode64(&dst[12], hash, MD5_DIGEST_LENGTH);
 }
 
-void PasswordHash::HashPassword(char *dst, char *input)
+void PasswordHash::HashPassword(char *dst, wchar_t *input)
 {
-	char random[17];
+	char random[32];
 	memset(random, 0, sizeof(random));
 
-	char salt[13];
+	char salt[16];
 	memset(salt, 0, sizeof(salt));
 
-	// TODO blowfish, DES
+	// todo: blowfish, DES.
+	// not really required as its 'portable' hashes. but its better than md5
 	//http://cvsweb.openwall.com/cgi/cvsweb.cgi/projects/phpass/PasswordHash.php?rev=1.8;content-type=text%2Fplain
+
+	if (!this->portable_hashes)
+	{
+		dst[0] = '*';
+		return;
+	}
 
 	if (strlen(random) < 6)
 	{
@@ -239,10 +246,11 @@ void PasswordHash::HashPassword(char *dst, char *input)
 			return;
 	}
 
-	strncpy(dst, "*", 1);
+	//memset(dst, 0, strlen(dst));
+	dst[0] = '*';
 }
 
-bool PasswordHash::CheckPassword(char *password, char *stored_hash)
+bool PasswordHash::CheckPassword(wchar_t *password, char *stored_hash)
 {
 	char hash[35];
 	memset(hash, 0, sizeof(hash));
@@ -253,24 +261,21 @@ bool PasswordHash::CheckPassword(char *password, char *stored_hash)
 	//if (hash[0] == '*')
 	//		hash = crypt(password, stored_hash);
 
-	return strncmp(hash, stored_hash, 35) == 0;
+	return strncmp(hash, stored_hash, 34) == 0;
 }
 
 /*
 	//test code, copy to somewhere like main() or MLiveAccountServer::Startup
 
-	//generate test hash here
-	//http://phpbbmodders.net/tools/hash/
-
 	char password[35];
 	memset(password, 0, sizeof(password));
 
 	PasswordHash hasher(8, true);
-	hasher.HashPassword(password, "rightpass");
+	hasher.HashPassword(password, L"rightpass");
 
-	if (hasher.CheckPassword("rightpass", password))
+	if (hasher.CheckPassword(L"rightpass", password))
 		printf("pass matched\n");
 
-	if (!hasher.CheckPassword("wrongpass", password))
+	if (!hasher.CheckPassword(L"wrongpass", password))
 		printf("pass not matched\n");
 */

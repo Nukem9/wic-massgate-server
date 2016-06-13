@@ -29,7 +29,7 @@ static const char *MySQLTableValues[] =
 	"CREATE TABLE mg_accounts ("
 		"id int(10) unsigned not null auto_increment,"
 		"email varchar(64) not null,"
-		"password varchar(32) not null,"
+		"password varchar(34) not null,"
 		"country varchar(5) not null,"
 		"emailgamerelated tinyint(3) unsigned not null,"
 		"acceptsemail tinyint(3) unsigned not null,"

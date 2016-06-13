@@ -58,8 +58,8 @@
 		- QueryUserProfile
 	- handle communication options properly
 	- create a global 'logged in' player list/map
-		move account database queries to Query::FromStream
-	- save password hash, compatible with phpbb or some other forum
+		MMG_AccountProtocol is messy, move account database queries to Query::FromStream
+	- change mg_cdkeys from cipherkeys to sequencenumber?
 	- maybe start using InnoDB/transactions (START TRANSACTION/BEGIN, COMMIT, ROLLBACK)/autocommit=0, 
 		indexing (any WHERE column = ?), replication, utf-8
 	- fix the message display time for instant messaging
@@ -144,15 +144,15 @@ public:
 	//accounts
 	bool	CheckIfEmailExists	(const char *email, uint *dstId);
 	bool	CheckIfCDKeyExists	(const ulong cipherKeys[], uint *dstId);
-	bool	CreateUserAccount	(const char *email, const wchar_t *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const ulong cipherKeys[]);
-	bool	AuthUserAccount		(const char *email, wchar_t *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
+	bool	CreateUserAccount	(const char *email, const char *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const ulong cipherKeys[]);
+	bool	AuthUserAccount		(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
 	
 	//profiles (logins)
 	bool	CheckIfProfileExists	(const wchar_t* name, uint *dstId);
 	bool	CreateUserProfile	(const uint accountId, const wchar_t* name, const char* email);
 	bool	DeleteUserProfile	(const uint accountId, const uint profileId, const char* email);
 	bool	QueryUserProfile	(const uint accountId, const uint profileId, MMG_Profile *profile, MMG_Options *options);
-	bool	RetrieveUserProfiles	(const char *email, const wchar_t *password, ulong *dstProfileCount, MMG_Profile *profiles[]);
+	bool	RetrieveUserProfiles	(const char *email, const char *password, ulong *dstProfileCount, MMG_Profile *profiles[]);
 
 	//messaging
 	bool	QueryUserOptions	(const uint profileId, int *options);	//TODO

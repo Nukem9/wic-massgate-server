@@ -89,7 +89,12 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 					return false;
 			}
 
+#ifndef USING_MYSQL_DATABASE
 			DebugLog(L_INFO, "ACCOUNT_AUTH_ACCOUNT_REQ: %s %ws", this->m_Authenticate.m_Email, this->m_Authenticate.m_Password);
+#else
+			DebugLog(L_INFO, "ACCOUNT_AUTH_ACCOUNT_REQ: %s", this->m_Authenticate.m_Email);
+#endif
+
 		}
 		break;
 
@@ -111,7 +116,12 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 			if (!decryptedMsg.ReadUChar(this->m_Create.m_EmailMeGameRelated) || !decryptedMsg.ReadUChar(this->m_Create.m_AcceptsEmail))
 				return false;
 
+#ifndef USING_MYSQL_DATABASE
 			DebugLog(L_INFO, "ACCOUNT_CREATE_ACCOUNT_REQ: %s %ws", this->m_Create.m_Email, this->m_Create.m_Password);
+#else
+			DebugLog(L_INFO, "ACCOUNT_CREATE_ACCOUNT_REQ: %s", this->m_Create.m_Email);
+#endif
+
 		}
 		break;
 
@@ -149,7 +159,12 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 			if (!decryptedMsg.ReadString(this->m_RetrieveProfiles.m_Password, ARRAYSIZE(this->m_RetrieveProfiles.m_Password)))
 				return false;
 
+#ifndef USING_MYSQL_DATABASE
 			DebugLog(L_INFO, "ACCOUNT_RETRIEVE_PROFILES_REQ: %s %ws", this->m_RetrieveProfiles.m_Email, this->m_RetrieveProfiles.m_Password);
+#else
+			DebugLog(L_INFO, "ACCOUNT_RETRIEVE_PROFILES_REQ: %s", this->m_RetrieveProfiles.m_Email);
+#endif
+
 		}
 		break;
 
@@ -315,8 +330,10 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				MMG_Options *myOptions = aClient->GetOptions();
 
 				//password check should be done by massgate server, not by database
-				wchar_t myPassword[WIC_PASSWORD_MAX_LENGTH];
-				memset(myPassword, 0, sizeof(myPassword));
+				PasswordHash hasher(8, true);
+
+				char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
+				memset(myPasswordHash, 0, sizeof(myPasswordHash));
 
 				uchar isBanned = 0;
 
@@ -324,10 +341,11 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				uint mySuccessFlag = 0;
 
 				// Query the database
-				bool AuthQueryOK = MySQLDatabase::ourInstance->AuthUserAccount(myQuery.m_Authenticate.m_Email, myPassword, &isBanned, myAuthToken);
+				bool AuthQueryOK = MySQLDatabase::ourInstance->AuthUserAccount(myQuery.m_Authenticate.m_Email, myPasswordHash, &isBanned, myAuthToken);
 
 				// TODO: generate a better authtoken
-				myAuthToken->m_TokenId = GetTickCount();
+				MTwist twist;
+				myAuthToken->m_TokenId = twist.randomMT();
 
 				//determine if credentials were valid
 				if(myAuthToken->m_AccountId == 0 && AuthQueryOK)		//account doesnt exist
@@ -335,7 +353,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myStatusCode = AuthFailed_NoSuchAccount;
 					mySuccessFlag = 0;
 				}
-				else if(wcscmp(myQuery.m_Authenticate.m_Password, myPassword) != 0 && AuthQueryOK)	//wrong password
+				else if(!hasher.CheckPassword(myQuery.m_Authenticate.m_Password, myPasswordHash) && AuthQueryOK)	//wrong password
 				{
 					myStatusCode = AuthFailed_BadCredentials;
 					mySuccessFlag = 0;
@@ -475,7 +493,15 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				else							//should be ok to create account
 				{
-					bool CreateQueryOK = MySQLDatabase::ourInstance->CreateUserAccount(myQuery.m_Create.m_Email, myQuery.m_Create.m_Password, 
+
+					PasswordHash hasher(8, true);
+
+					char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
+					memset(myPasswordHash, 0, sizeof(myPasswordHash));
+
+					hasher.HashPassword(myPasswordHash, myQuery.m_Create.m_Password);
+
+					bool CreateQueryOK = MySQLDatabase::ourInstance->CreateUserAccount(myQuery.m_Create.m_Email, myPasswordHash, 
 						myQuery.m_Create.m_Country, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail, myQuery.m_CipherKeys);
 
 					if(CreateQueryOK)			//create user account succeeded
@@ -558,8 +584,10 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
 				MMG_Profile *myProfiles = NULL;
 
-				wchar_t myPassword[WIC_PASSWORD_MAX_LENGTH];
-				memset(myPassword, 0, sizeof(myPassword));
+				PasswordHash hasher(8, true);
+
+				char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
+				memset(myPasswordHash, 0, sizeof(myPasswordHash));
 
 				uchar isBanned = 0;
 				ulong myProfileCount = 0;
@@ -568,7 +596,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				uint myStatusCode = 0;
 				uint mySuccessFlag = 0;
 
-				bool AuthQueryOK = MySQLDatabase::ourInstance->AuthUserAccount(myQuery.m_RetrieveProfiles.m_Email, myPassword, &isBanned, myAuthToken);
+				bool AuthQueryOK = MySQLDatabase::ourInstance->AuthUserAccount(myQuery.m_RetrieveProfiles.m_Email, myPasswordHash, &isBanned, myAuthToken);
 
 				//determine if credentials were valid
 				if(myAuthToken->m_AccountId == 0 && AuthQueryOK)		//account doesnt exist
@@ -576,7 +604,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myStatusCode = AuthFailed_BadCredentials;	//AuthFailed_NoSuchAccount
 					mySuccessFlag = 0;
 				}
-				else if(wcscmp(myQuery.m_RetrieveProfiles.m_Password, myPassword) != 0 && AuthQueryOK)	//wrong password
+				else if(!hasher.CheckPassword(myQuery.m_RetrieveProfiles.m_Password, myPasswordHash) && AuthQueryOK)	//wrong password
 				{
 					myStatusCode = AuthFailed_BadCredentials;
 					mySuccessFlag = 0;
@@ -593,7 +621,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				else													//should be ok to retrieve profile list
 				{
-					bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myQuery.m_RetrieveProfiles.m_Email, myQuery.m_RetrieveProfiles.m_Password, &myProfileCount, &myProfiles);
+					bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myQuery.m_RetrieveProfiles.m_Email, "", &myProfileCount, &myProfiles);
 
 					if(RetrieveProfilesQueryOK)
 					{
@@ -638,9 +666,6 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
 				MMG_Profile *myProfiles = NULL;
-
-				wchar_t myPassword[WIC_PASSWORD_MAX_LENGTH];
-				memset(myPassword, 0, sizeof(myPassword));
 
 				uchar isBanned = 0;
 				ulong myProfileCount = 0;
@@ -706,7 +731,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				
 				// retrieve and send profile list
-				bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myQuery.m_ModifyProfile.m_Email, myQuery.m_ModifyProfile.m_Password, &myProfileCount, &myProfiles);
+				bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myQuery.m_ModifyProfile.m_Email, "", &myProfileCount, &myProfiles);
 
 				if (RetrieveProfilesQueryOK && mySuccessFlag)
 				{
