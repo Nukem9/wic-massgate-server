@@ -6,7 +6,7 @@
  * c++ implementation of phpass to generate password hashes that can be used with a phpBB3 forum
  * http://cvsweb.openwall.com/cgi/cvsweb.cgi/projects/phpass/
  *
- * TODO: requires openssl library for MD5
+ * TODO: find a better md5 implementation
  * - i had trouble implementing md5.c and md5.h from http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
  * 
  * -quoted from http://www.openwall.com/phpass/
@@ -18,14 +18,13 @@
  * - phpass c requires MD5 functions from openssl
  * - mersenne twister prng is used instead of microtime()/getmypid()/rand() function
  *
- * - TODO: only CheckPassword works, still need to save the hashed passwords to the database
- * more info here https://www.hackthissite.org/forums/viewtopic.php?f=28&t=11875
- *
  *******************************************************************************
  *			-''Mersenne Twister'' random number generator MT19937-
  *
  * taken from http://www.mcs.anl.gov/~kazutomo/hugepage-old/twister.c
  * -changed seedMT(4357U) to seedMT((uint32)GetTickCount());
+ * -forcing tickcount to odd number
+ * -converted to class
  *
  *******************************************************************************
  *					-OpenSSL v1.0.2h-
@@ -112,29 +111,45 @@ typedef unsigned long uint32;
 #define loBits(u)      ((u) & 0x7FFFFFFFU)   // mask     the highest   bit of u
 #define mixBits(u, v)  (hiBit(u)|loBits(v))  // move hi bit of u to hi bit of v
 
-static uint32   state[N+1];     // state vector + 1 extra to not violate ANSI C
-static uint32   *next;          // next random value is computed from here
-static int      left = -1;      // can *next++ this many times before reloading
+class MTwist
+{
+private:
+	uint32	state[N+1];	// state vector + 1 extra to not violate ANSI C
+	uint32	*next;		// next random value is computed from here
+	int		left;		// can *next++ this many times before reloading
 
-void seedMT(uint32 seed);
-uint32 reloadMT(void);
-uint32 randomMT(void);
+public:
+	MTwist() : left(-1)
+	{
+		// you can seed with any uint32, but the best are odds in 0..(2^32 - 1)
+		uint32 tickcount = GetTickCount();
+		if ((tickcount % 2) == 0)
+			tickcount--;
+
+		seedMT(tickcount);
+	}
+
+	void seedMT(uint32 seed);
+	uint32 reloadMT();
+	uint32 randomMT();
+};
 
 class PasswordHash
 {
 private:
+	MTwist twister;
+
 	char *itoa64;
 	int iteration_count_log2;
 	bool portable_hashes;
 	uint32 random_state;
 
 public:
-
-	//void get_random_bytes(char *src, int count);
+	void get_random_bytes(char *dst, int count);
 	void encode64(char *dst, char *src, int count);
-	//char *gensalt_private(char *input);
-	char *crypt_private(char *password, char *setting);
-	//char *HashPassword(char *password);
+	void gensalt_private(char* output, char *input);
+	void crypt_private(char *dst, char *password, char *setting);
+	void HashPassword(char *dst, char *input);
 	bool CheckPassword(char *password, char *stored_hash);
 
 	PasswordHash(int iteration_count_log2, bool portable_hashes)
@@ -147,8 +162,6 @@ public:
 
 		this->portable_hashes = portable_hashes;
 
-		// you can seed with any uint32, but the best are odds in 0..(2^32 - 1)
-		seedMT((uint32)GetTickCount());
-		this->random_state = randomMT();
+		this->random_state = twister.randomMT();
 	}
 };
