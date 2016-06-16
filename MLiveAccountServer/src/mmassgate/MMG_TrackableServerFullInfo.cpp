@@ -27,11 +27,11 @@ void MMG_TrackableServerFullInfo::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUInt(this->m_WinnerTeam);
 	aMessage->WriteUInt(this->m_HostProfileId);
 	
-	//if (this->bf_PlayerCount > 0 && this->bf_PlayerCount < this->bf_MaxPlayers)
-	//{
-	//	for(int i = 0; i < this->bf_PlayerCount; i++) 
-	//		this->m_Players[i].ToStream(aMessage);
-	//}
+	if (this->bf_PlayerCount > 0 && this->bf_PlayerCount <= 64)
+	{
+		for(int i = 0; i < this->bf_PlayerCount; i++)
+			this->m_Players[i].ToStream(aMessage);
+	}
 }
 
 bool MMG_TrackableServerFullInfo::FromStream(MN_ReadMessage *aMessage)

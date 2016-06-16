@@ -60,7 +60,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			wcscpy_s(friends[0].m_Name, L"tenerefis");
 			wcscpy_s(friends[1].m_Name, L"HouseBee");
 
-			friends[0].m_OnlineStatus = WIC_PROFILE_STATUS_ONLINE;
+			friends[0].m_OnlineStatus = 1;
 
 			friends[0].m_Rank = 18;
 			friends[1].m_Rank = 18;
@@ -80,8 +80,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aClient->SendData(&responseMessage))
 				return false;
 #else
-
-			// TODO: limit is 128, (MMG_Messaging::Update)
+			// TODO: limit may be 128, (MMG_Messaging::Update)
+			if (count > 128)
+				count = 128;
 
 			uint *profildIds = NULL;
 			MMG_Profile *profileList = NULL;
@@ -173,7 +174,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 #endif
 			// NOTE:
 			// there doesnt seem to be a response, there is a lot of client side validation, making it unnecessary
-			// if the client behaves weird, use MESSAGING_GET_FRIENDS_RESPONSE or MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
+			// if the client behaves weird, use MESSAGING_GET_FRIENDS_RESPONSE
 		}
 		break;
 
@@ -213,6 +214,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			{
 				for (uint i = 0; i < msgCount; i++)
 				{
+					// check the online status of the sender
+					MMG_AccountProxy::ourInstance->CheckProfileOnlineStatus(&myMsgs->m_SenderProfile);
+
 					//DebugLog(L_INFO, "MESSAGING_IM_RECEIVE");
 					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
 					myMsgs[i].ToStream(&responseMessage);
@@ -240,12 +244,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUInt(aZero))
 				return false;
 
-			MN_WriteMessage	recipientMessage(2048);
-
-			//DebugLog(L_INFO, "MESSAGING_IM_RECEIVE");
-			recipientMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
-			myInstantMessage.ToStream(&recipientMessage);
-			
 			//check to see if recipient is online
 			SvClient *recipient = MMG_AccountProxy::ourInstance->GetClientByProfileId(myInstantMessage.m_RecipientProfile);
 
@@ -258,12 +256,17 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			}
 			else
 			{
+				MN_WriteMessage	recipientMessage(2048);
+
 				// TODO
 				// this should probably be done in memory
 				// if recipient does not ack, the message is lost, un-read messages are NOT saved client side
 #ifdef USING_MYSQL_DATABASE
 				MySQLDatabase::ourInstance->AddInstantMessage(aClient->GetProfile()->m_ProfileId, &myInstantMessage);
 #endif
+				//DebugLog(L_INFO, "MESSAGING_IM_RECEIVE");
+				recipientMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
+				myInstantMessage.ToStream(&recipientMessage);
 
 				if (!recipient->SendData(&recipientMessage))
 					return false;
@@ -303,7 +306,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 #ifdef USING_MYSQL_DATABASE
 			MySQLDatabase::ourInstance->SaveUserOptions(aClient->GetProfile()->m_ProfileId, commOptions);
-			//response message? MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
 #endif
 		}
 		break;
@@ -450,12 +452,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUInt(randomZero))
 				return false;
 
-			// TODO:
-			// serverId is used for when a player joins another players game
-			// for some reason there is an anomaly where the online status of the 'playing' profile is set to this serverId
-			// it is important to note, a few delimiters are sent between client<->massgate<->ds beforehand for authentication
-			// the authentication will involve checking authtoken/credentials and the unused antispoof token in MMG_AccountProtocol
-			// also before this can be implemented, the onlinestatus dependency needs to be removed from the database
 			MMG_AccountProxy::ourInstance->SetProfileOnlineStatus(aClient, serverId);
 
 			// response maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
@@ -759,7 +755,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_CLAN_COLOSSEUM_UNREGISTER_REQ:");
 
-			//TODO : no response required, maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
+			//TODO : no response required
 		}
 		break;
 

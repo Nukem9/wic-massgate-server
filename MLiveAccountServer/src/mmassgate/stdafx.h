@@ -30,5 +30,6 @@ class SvClient;
 #include "MMG_TrackableServerHeartbeat.h"
 #include "MMG_ServerStartupVariables.h"
 #include "MMG_Chat.h"
+#include "MMG_ServerFilter.h"
 #include "MMG_ServerTracker.h"
 #include "MMG_TrackableServer.h"

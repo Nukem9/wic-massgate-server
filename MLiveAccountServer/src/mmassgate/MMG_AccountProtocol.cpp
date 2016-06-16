@@ -285,7 +285,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					//if (!Database::QueryUserProfile(accProfileId, aClient->GetProfile()))
 					//	DebugLog(L_ERROR, "Failed to retrieve profile for valid account ");
 					wcscpy_s(aClient->GetProfile()->m_Name, L"Nukem");
-					aClient->GetProfile()->m_OnlineStatus = WIC_PROFILE_STATUS_ONLINE;
+					aClient->GetProfile()->m_OnlineStatus = 1;
 					aClient->GetProfile()->m_Rank = 18;
 					aClient->GetProfile()->m_ProfileId = 1234;
 					//aClient->GetProfile()->m_ClanId = 4321;
@@ -436,7 +436,6 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				cryptMessage.WriteUShort(0);			// auth.myLatestVersion
 
 				// Write the profile info stream
-				myProfile->m_OnlineStatus = WIC_PROFILE_STATUS_ONLINE;
 				myProfile->ToStream(&cryptMessage);
 
 				// TigerMD5 of ...? (possibly crypt keys)
@@ -574,7 +573,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				wcscpy_s(myProfile->m_Name, L"Nukem");
 				myProfile->m_ProfileId = 1234;
 				//myProfile->m_ClanId = 4321;
-				myProfile->m_OnlineStatus = WIC_PROFILE_STATUS_OFFLINE;
+				myProfile->m_OnlineStatus = 0;
 				myProfile->m_Rank = 18;
 				//myProfile->m_RankInClan = 1;
 

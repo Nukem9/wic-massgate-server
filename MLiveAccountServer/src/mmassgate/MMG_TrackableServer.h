@@ -50,12 +50,12 @@ private:
 	void DisconnectServer	(Server *aServer);
 
 	Server *FindServer		(SvClient *aClient);
-	bool FilterCheck		(ServerListFilters *filters, Server *aServer);
+	bool FilterCheck		(MMG_ServerFilter *filters, Server *aServer);
 
 public:
 	MMG_TrackableServer();
 
-	bool MMG_TrackableServer::GetServerListInfo(ServerListFilters *filters, std::vector<MMG_TrackableServerFullInfo> *aFullInfo, std::vector<MMG_TrackableServerBriefInfo> *aBriefInfo, uint *aCount);
+	bool MMG_TrackableServer::GetServerListInfo(MMG_ServerFilter *filters, std::vector<MMG_TrackableServerFullInfo> *aFullInfo, std::vector<MMG_TrackableServerBriefInfo> *aBriefInfo, uint *aCount);
 
 	bool HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter);
 };

@@ -157,6 +157,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="libraries\openssl\e_os2.h" />
+    <ClInclude Include="libraries\openssl\md5.h" />
+    <ClInclude Include="libraries\openssl\opensslconf.h" />
     <ClInclude Include="libraries\sqlite\sqlite3.h" />
     <ClInclude Include="libraries\stdafx.h" />
     <ClInclude Include="src\mcommon2\stdafx.h" />
@@ -170,6 +173,7 @@
     <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookEntry.h" />
     <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookProtocol.h" />
     <ClInclude Include="src\mmassgate\MMG_Protocols.h" />
+    <ClInclude Include="src\mmassgate\MMG_ServerFilter.h" />
     <ClInclude Include="src\mmassgate\MMG_ServerStartupVariables.h" />
     <ClInclude Include="src\mmassgate\MMG_TrackableServer.h" />
     <ClInclude Include="src\mmassgate\MMG_TrackableServerBriefInfo.h" />
@@ -217,6 +221,7 @@
     <ClInclude Include="src\Server Modules\MySQLDatabase.h" />
     <ClInclude Include="src\Server Modules\MySQLDatabaseInfo.h" />
     <ClInclude Include="src\Server Modules\MySQLQuery.h" />
+    <ClInclude Include="src\Server Modules\PasswordHash.h" />
     <ClInclude Include="src\Server Modules\SQLQuery.h" />
     <ClInclude Include="src\Server Modules\StatsService.h" />
     <ClInclude Include="src\Server Modules\stdafx.h" />
@@ -246,6 +251,7 @@
     <ClCompile Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookEntry.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookProtocol.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_ServerFilter.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ServerStartupVariables.cpp" />
     <ClCompile Include="src\mmassgate\MMG_TrackableServer.cpp" />
     <ClCompile Include="src\mmassgate\MMG_TrackableServerBriefInfo.cpp" />
@@ -369,6 +375,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="src\Server Modules\MySQLDatabase.cpp" />
+    <ClCompile Include="src\Server Modules\PasswordHash.cpp" />
     <ClCompile Include="src\Server Modules\StatsService.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
     </ClCompile>

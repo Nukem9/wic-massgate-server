@@ -38,8 +38,6 @@ bool MMG_AccountProxy::SetProfileOnlineStatus(SvClient *aClient, uint aStatus)
 {
 	DebugLog(L_INFO, "MMG_AccountProxy::SetProfileOnlineStatus(%ws, %d)", aClient->GetProfile()->m_Name, aStatus);
 
-	MN_WriteMessage	responseMessage(2048);
-
 	//TODO: use MMG_Profile instead of SvClient, maybe keep 2 lists, authtokens and profiles
 
 	MMG_AuthToken *myAuthToken = aClient->GetToken();
@@ -79,15 +77,13 @@ bool MMG_AccountProxy::SetProfileOnlineStatus(SvClient *aClient, uint aStatus)
 		break;
 	}
 
-	responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
-	myProfile->ToStream(&responseMessage);
-
 	// send update to all online players except for self
 	std::map<uint, SvClient*>::iterator iter;
 	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); ++iter)
 	{
-		if (iter->second->GetProfile()->m_ProfileId == myProfile->m_ProfileId)
-			continue;
+		MN_WriteMessage	responseMessage(2048);
+		responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+		myProfile->ToStream(&responseMessage);
 
 		if (!iter->second->SendData(&responseMessage))
 			continue;

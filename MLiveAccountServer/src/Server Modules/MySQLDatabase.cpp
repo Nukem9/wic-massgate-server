@@ -437,7 +437,7 @@ bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, c
 	memset(params2, 0, sizeof(params2));
 
 	// bind parameters to prepared statement
-	query2.Bind(&params2[0], &account_insert_id);	
+	query2.Bind(&params2[0], &account_insert_id);
 	query2.Bind(&params2[1], &cipherKeys[0]);
 	query2.Bind(&params2[2], &cipherKeys[1]);
 	query2.Bind(&params2[3], &cipherKeys[2]);
@@ -762,7 +762,7 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 
 	// query specific variables
 	bool query1Success, query2Success, query3Success;
-	bool query4Success, query5Success;
+	bool query4Success, query5Success, query6Success;
 	ulong count;
 	uint id;
 
@@ -939,7 +939,34 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 		query5Success = true;
 	}
 
-	return query1Success && query2Success && query3Success && query4Success && query5Success;
+	// *Step 6: delete pending and sent messages for profile
+
+	// prepared statement wrapper object
+	MySQLQuery query6(this->m_Connection, "DELETE FROM mg_messages WHERE senderprofileid = ? OR recipientprofileid = ?");
+
+	// prepared statement binding structures
+	MYSQL_BIND params6[2];
+
+	// initialize (zero) bind structures
+	memset(params6, 0, sizeof(params6));
+
+	// bind parameters to prepared statement
+	query6.Bind(&params6[0], &profileId);		//profile id
+	query6.Bind(&params6[1], &profileId);
+
+	// execute prepared statement
+	if (!query6.StmtExecute(params6))
+	{
+		DatabaseLog("DeleteUserProfile(query6) failed: profile id(%d)", email, profileId);
+		query6Success = false;
+	}
+	else
+	{
+		DatabaseLog("%s deleted all messages for/from profile id(%d)", email, profileId);
+		query6Success = true;
+	}
+
+	return query1Success && query2Success && query3Success && query4Success && query5Success && query6Success;
 }
 
 bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId, MMG_Profile *profile, MMG_Options *options)
@@ -1435,7 +1462,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 	// must fix when stats are implemented
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id from mg_profiles WHERE id <> ? LIMIT 100");
+	MySQLQuery query(this->m_Connection, "SELECT id from mg_profiles WHERE id <> ? LIMIT 64");
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], result[1];
@@ -1905,7 +1932,7 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 
 	//
 	// TODO
-	// note: temporarily limiting returned pending messages to 20, real limit for the client is unknown
+	// note: temporarily limiting returned pending messages to 20, real limit for the client may be 128
 	// m_WrittenAt = number of seconds since midnight UTC, the client adjusts timezone aswell
 	//
 

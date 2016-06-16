@@ -37,8 +37,8 @@ void MMG_ServerStartupVariables::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUShort(this->m_MassgateCommPort);
 	aMessage->WriteString(this->m_ServerName);
 	aMessage->WriteUChar(this->somebits.MaxPlayers);
-	aMessage->WriteUChar(this->somebits.Passworded);		
-	aMessage->WriteUChar(this->somebits.Dedicated);			
+	aMessage->WriteUChar(this->somebits.Passworded);
+	aMessage->WriteUChar(this->somebits.Dedicated);
 	aMessage->WriteUChar(this->somebits.bitfield3);
 	aMessage->WriteUChar(this->somebits.Ranked);
 	aMessage->WriteUChar(this->m_ServerType);
