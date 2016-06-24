@@ -930,7 +930,7 @@ bool MMG_Messaging::SendPingsPerSecond(SvClient *aClient, MN_WriteMessage *aMess
 {
 	DebugLog(L_INFO, "MESSAGING_GET_PPS_SETTINGS_RSP:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_PPS_SETTINGS_RSP);
-	aMessage->WriteUInt(WIC_CLIENT_PPS);
+	aMessage->WriteInt(WIC_CLIENT_PPS);
 
 	return aClient->SendData(aMessage);
 }
@@ -949,7 +949,7 @@ bool MMG_Messaging::SendOptionalContent(SvClient *aClient, MN_WriteMessage *aMes
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_OPTIONAL_CONTENT_GET_RSP);
 
 	// Write the map info data stream
-	//MMG_OptionalContentProtocol::ourInstance->ToStream(aMessage);
+	MMG_OptionalContentProtocol::ourInstance->ToStream(aMessage);
 
 	return aClient->SendData(aMessage);
 }

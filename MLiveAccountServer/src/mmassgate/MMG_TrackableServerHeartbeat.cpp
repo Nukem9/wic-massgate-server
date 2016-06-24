@@ -21,11 +21,8 @@ void MMG_TrackableServerHeartbeat::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteRawData(&this->m_Cookie, sizeof(this->m_Cookie));
 
 	// Write array of player profile IDs
-	if (this->m_NumPlayers > 0)
-	{
-		for (int i = 0; i < this->m_NumPlayers; i++)
-			aMessage->WriteUInt(this->m_PlayersInGame[i]);
-	}
+	for (int i = 0; i < this->m_NumPlayers; i++)
+		aMessage->WriteUInt(this->m_PlayersInGame[i]);
 }
 
 bool MMG_TrackableServerHeartbeat::FromStream(MN_ReadMessage *aMessage)

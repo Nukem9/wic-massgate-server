@@ -68,20 +68,8 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_LIST_SERVERS:");
 
-			uint gameVersion;
-			if (!aMessage->ReadUInt(gameVersion))
-				return false;
-
-			uint protocolVersion;
-			if (!aMessage->ReadUInt(protocolVersion))
-				return false;
-
-			ushort activefilters;
-			if (!aMessage->ReadUShort(activefilters))
-				return false;
-
 			// read server filters from the client
-			MMG_ServerFilter filters(activefilters);
+			MMG_ServerFilter filters;
 			if (!filters.FromStream(aMessage))
 				return false;
 

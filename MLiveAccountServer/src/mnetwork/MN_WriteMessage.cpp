@@ -32,6 +32,14 @@ void MN_WriteMessage::WriteUShort(ushort aUShort)
 	this->Write<ushort>(aUShort);
 }
 
+void MN_WriteMessage::WriteInt(int aInt)
+{
+	if (this->m_TypeChecks)
+		this->Write<ushort>('IN');
+
+	this->Write<int>(aInt);
+}
+
 void MN_WriteMessage::WriteUInt(uint aUInt)
 {
 	if (this->m_TypeChecks)
@@ -64,12 +72,13 @@ void MN_WriteMessage::WriteFloat(float aFloat)
 void MN_WriteMessage::WriteRawData(voidptr_t aBuffer, sizeptr_t aBufferSize)
 {
 	assert(aBuffer && aBufferSize > 0);
+	assert(aBufferSize < MESSAGE_MAX_LENGTH);
 
 	if (this->m_TypeChecks)
 		this->Write<ushort>('RD');
 
 	// Packet will exceed bounds before it exceeds ushort
-	this->WriteUShort((ushort)aBufferSize);
+	this->Write<ushort>(aBufferSize);	// No typecheck
 	this->CheckWriteSize(aBufferSize);
 
 	memcpy((voidptr_t)this->m_WritePtr, aBuffer, aBufferSize);
@@ -85,11 +94,13 @@ void MN_WriteMessage::WriteString(char *aBuffer)
 void MN_WriteMessage::WriteString(char *aBuffer, sizeptr_t aStringSize)
 {
 	assert(aBuffer && aStringSize > 0);
+	assert((aStringSize * sizeof(char)) < MESSAGE_MAX_LENGTH);
 
-	// Packet will exceed bounds before it exceeds ushort
-	ushort bufferSize = (ushort)(aStringSize * sizeof(char));
+	// Calculate actual size from number of characters * sizeof(single char)
+	ushort stringSize = (ushort)aStringSize;
+	ushort bufferSize = (ushort)(stringSize * sizeof(char));
 
-	this->WriteUShort((ushort)aStringSize);
+	this->Write<ushort>(stringSize);	// No typecheck
 	this->CheckWriteSize(bufferSize);
 
 	memcpy((voidptr_t)this->m_WritePtr, aBuffer, bufferSize);
@@ -105,11 +116,13 @@ void MN_WriteMessage::WriteString(wchar_t *aBuffer)
 void MN_WriteMessage::WriteString(wchar_t *aBuffer, sizeptr_t aStringSize)
 {
 	assert(aBuffer && aStringSize > 0);
+	assert((aStringSize * sizeof(wchar_t)) < MESSAGE_MAX_LENGTH);
 
-	// Packet will exceed bounds before it exceeds ushort
-	ushort bufferSize = (ushort)(aStringSize * sizeof(wchar_t));
+	// Calculate actual size from number of characters * sizeof(single wchar)
+	ushort stringSize = (ushort)aStringSize;
+	ushort bufferSize = (ushort)(stringSize * sizeof(wchar_t));
 
-	this->WriteUShort((ushort)aStringSize);
+	this->Write<ushort>(stringSize);	// No typecheck
 	this->CheckWriteSize(bufferSize);
 
 	memcpy((voidptr_t)this->m_WritePtr, aBuffer, bufferSize);
@@ -161,6 +174,16 @@ void MN_WriteMessage::IncWritePos(sizeptr_t aSize)
 	this->m_WritePos	+= aSize;
 	this->m_DataLen		+= aSize;
 
-	// Update the length of the packet (entry in packet data)
-	*(ushort *)this->m_PacketData = (ushort)(this->m_DataLen - sizeof(ushort));
+	// Write the message-specific information that is stored in the first 2 bytes
+	ushort packetInfo = 0;
+
+	// Packet length
+	packetInfo = (ushort)(this->m_DataLen - sizeof(ushort));
+	packetInfo &= MESSAGE_MAX_LENGTH;
+
+	// Packet flags
+	if (this->m_TypeChecks)
+		packetInfo |= MESSAGE_FLAG_TYPECHECKS;
+
+	*(ushort *)this->m_PacketData = packetInfo;
 }

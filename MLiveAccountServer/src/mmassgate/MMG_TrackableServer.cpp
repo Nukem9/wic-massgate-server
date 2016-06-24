@@ -393,22 +393,22 @@ bool MMG_TrackableServer::FilterCheck(MMG_ServerFilter *filters, Server *aServer
 			return false;
 	}
 
-	if (filters->HasFlag(RANKBALANCE_FLAG) 
+	if (filters->HasFlag(RANKBALANCE_FLAG)
 		&& (filters->isRankBalanced && !aServer->m_Info.m_IsRankBalanced)	// rank balanced
 		|| (!filters->isRankBalanced && aServer->m_Info.m_IsRankBalanced))	// not rank balanced
 		return false;
 
-	if (filters->HasFlag(GAMEMODE_FLAG)										// domination only
+	if (filters->HasFlag(GAMEMODE_DOM_FLAG)										// domination only
 		&& (filters->hasDominationMaps && aServer->m_Info.m_HasAssaultMaps)
 		|| (filters->hasDominationMaps && aServer->m_Info.m_HasTowMaps))
 		return false;
 
-	if (filters->HasFlag(GAMEMODE_FLAG)										// assault only
+	if (filters->HasFlag(GAMEMODE_AST_FLAG)										// assault only
 		&& (filters->hasAssaultMaps && aServer->m_Info.m_HasDominationMaps)
 		|| (filters->hasAssaultMaps && aServer->m_Info.m_HasTowMaps))
 		return false;
 
-	if (filters->HasFlag(GAMEMODE_FLAG)										// tow only
+	if (filters->HasFlag(GAMEMODE_TOW_FLAG)										// tow only
 		&& (filters->hasTowMaps && aServer->m_Info.m_HasDominationMaps)
 		|| (filters->hasTowMaps && aServer->m_Info.m_HasAssaultMaps))
 		return false;

@@ -30,6 +30,7 @@ public:
 	void WriteBool      (bool aBool);
 	void WriteUChar		(uchar aUChar);
 	void WriteUShort	(ushort aUShort);
+	void WriteInt		(int aInt);
 	void WriteUInt		(uint aUInt);
 	void WriteULong		(ulong aULong);
 	void WriteUInt64	(uint64 aUInt64);

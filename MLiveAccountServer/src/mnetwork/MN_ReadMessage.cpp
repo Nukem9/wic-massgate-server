@@ -25,6 +25,16 @@ bool MN_ReadMessage::ReadBool(bool &aBool)
 	return true;
 }
 
+bool MN_ReadMessage::ReadChar(char &aChar)
+{
+	if (!this->TypeCheck('CH'))
+		return false;
+
+	aChar = this->Read<char>();
+
+	return true;
+}
+
 bool MN_ReadMessage::ReadUChar(uchar &aUChar)
 {
 	if (!this->TypeCheck('UC'))

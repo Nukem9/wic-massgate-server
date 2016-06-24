@@ -7,8 +7,10 @@ MMG_OptionalContentProtocol::MMG_OptionalContentProtocol()
 void MMG_OptionalContentProtocol::ToStream(MN_WriteMessage *aMessage)
 {
 	// Map count
-	aMessage->WriteUInt(1);
+	aMessage->WriteUInt(0);
 
+	// TODO
+	/*
 	// File size
 	aMessage->WriteUInt64(0x1000000);
 
@@ -17,4 +19,5 @@ void MMG_OptionalContentProtocol::ToStream(MN_WriteMessage *aMessage)
 
 	// File hash
 	aMessage->WriteUInt(0x00023523);
+	*/
 }

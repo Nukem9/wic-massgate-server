@@ -24,14 +24,13 @@ void MMG_TrackableServerFullInfo::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteFloat(this->m_GameTime);
 	aMessage->WriteUInt(this->m_ServerId);
 	aMessage->WriteUInt(this->m_CurrentLeader);
-	aMessage->WriteUInt(this->m_WinnerTeam);
 	aMessage->WriteUInt(this->m_HostProfileId);
-	
-	if (this->bf_PlayerCount > 0 && this->bf_PlayerCount <= 64)
-	{
-		for(int i = 0; i < this->bf_PlayerCount; i++)
-			this->m_Players[i].ToStream(aMessage);
-	}
+	aMessage->WriteUInt(this->m_WinnerTeam);
+
+	// The game always expects the total number of "players", similar to bf_PlayerCount + bf_SpectatorCount,
+	// but can't be confirmed right now. Send all 64 slots for the time being.
+	for(int i = 0; i < this->bf_MaxPlayers; i++)
+		this->m_Players[i].ToStream(aMessage);
 }
 
 bool MMG_TrackableServerFullInfo::FromStream(MN_ReadMessage *aMessage)
@@ -84,8 +83,8 @@ bool MMG_TrackableServerFullInfo::FromStream(MN_ReadMessage *aMessage)
 		|| !aMessage->ReadFloat(this->m_GameTime)
 		|| !aMessage->ReadUInt(this->m_ServerId)
 		|| !aMessage->ReadUInt(this->m_CurrentLeader)
-		|| !aMessage->ReadUInt(this->m_WinnerTeam)
-		|| !aMessage->ReadUInt(this->m_HostProfileId))
+		|| !aMessage->ReadUInt(this->m_HostProfileId)
+		|| !aMessage->ReadUInt(this->m_WinnerTeam))
 		return false;
 
 	// read players
