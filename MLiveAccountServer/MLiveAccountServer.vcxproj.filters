@@ -317,6 +317,9 @@
     <ClInclude Include="src\mcommon2\MC_MTwister.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\misc\tiger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Server Modules\Database.cpp">
@@ -536,6 +539,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\mcommon2\MC_MTwister.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\misc\tiger.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\misc\tiger_sboxes.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

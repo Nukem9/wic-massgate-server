@@ -4,7 +4,7 @@ class MMG_BlockTEA : public MMG_ICipher
 {
 public:
 
-//private:
+private:
 	ulong m_Keys[4];
 
 public:

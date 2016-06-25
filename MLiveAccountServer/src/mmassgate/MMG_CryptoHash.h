@@ -10,12 +10,10 @@ public:
 private:
 
 public:
-	MMG_CryptoHash()
-	{
-		memset(this->m_Hash, 0, sizeof(this->m_Hash));
-		this->m_HashLength					= 0;
-		this->m_GeneratedFromHashAlgorithm	= HASH_ALGORITHM_UNKNOWN;
-	}
+	MMG_CryptoHash	();
+	MMG_CryptoHash	(voidptr_t theHash, uint theByteLength, HashAlgorithmIdentifier theSourceAlgorithm);
+
+	void SetHash	(voidptr_t theHash, uint theByteLength, HashAlgorithmIdentifier theSourceAlgorithm);
 
 	void ToStream	(MN_WriteMessage *aMessage);
 	bool FromStream	(MN_ReadMessage *aMessage);
