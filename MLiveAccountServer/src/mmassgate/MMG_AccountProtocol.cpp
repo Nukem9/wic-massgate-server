@@ -170,8 +170,8 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 
 		case MMG_ProtocolDelimiters::ACCOUNT_MODIFY_PROFILE_REQ:
 		{
-			//operations: add		6382692
-			//			  delete	6579564
+			// operations: add		6382692 ASCII 'add'
+			//			   delete	6579564 ASCII 'del'
 			if (!decryptedMsg.ReadUInt(this->m_ModifyProfile.m_Operation))
 				return false;
 
@@ -199,10 +199,20 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 			if (!decryptedMsg.ReadString(this->m_ModifyProfile.m_Password, ARRAYSIZE(this->m_ModifyProfile.m_Password)))
 				return false;
 
-			if(this->m_ModifyProfile.m_Operation == MODIFY_PROFILE_ADD)
+			switch (this->m_ModifyProfile.m_Operation)
+			{
+			case 'add':
 				DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_REQ: (ADD) %ws %s", this->m_ModifyProfile.m_Name, this->m_ModifyProfile.m_Email);
-			else
+				break;
+
+			case 'del':
 				DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_REQ: (DELETE) %d %s", this->m_ModifyProfile.m_ProfileId, this->m_ModifyProfile.m_Email);
+				break;
+
+			default:
+				assert(false);
+				break;
+			}
 		}
 		break;
 	}

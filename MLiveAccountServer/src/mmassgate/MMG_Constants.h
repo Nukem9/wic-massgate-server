@@ -17,6 +17,11 @@ enum WIC_REVISION_VER
 	VER_1011 = 134,
 };
 
+enum WIC_DS_REVISION_VER
+{
+	DS_VER_1011 = 35,
+};
+
 // Limits
 #define WIC_NAME_MAX_LENGTH			25
 #define WIC_EMAIL_MAX_LENGTH		64
@@ -47,13 +52,10 @@ enum WIC_REVISION_VER
 
 // Version
 #define WIC_CURRENT_VERSION			VER_1011
+#define WIC_DS_CURRENT_VERSION		DS_VER_1011
 
 // Account values
 #define WIC_INVALID_ACCOUNT			((uint)-1)
-
-// modify profile operation values
-#define MODIFY_PROFILE_ADD			6382692
-#define MODIFY_PROFILE_DELETE		6579564
 
 // profile online status
 #define WIC_PROFILE_STATUS_OFFLINE	0
