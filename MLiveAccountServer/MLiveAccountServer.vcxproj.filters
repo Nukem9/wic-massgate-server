@@ -314,6 +314,9 @@
     <ClInclude Include="src\Server Modules\PasswordHash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\mcommon2\MC_MTwister.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Server Modules\Database.cpp">
@@ -530,6 +533,9 @@
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
     <ClCompile Include="src\Server Modules\PasswordHash.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mcommon2\MC_MTwister.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

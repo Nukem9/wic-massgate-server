@@ -9,6 +9,7 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <algorithm>
 
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "winmm.lib")
@@ -21,8 +22,9 @@
 typedef unsigned char		uchar;
 typedef unsigned short		ushort;
 typedef unsigned int		uint;
-typedef unsigned long		ulong;
+typedef unsigned __int32	uint32;
 typedef unsigned __int64	uint64;
+typedef unsigned long		ulong;
 typedef void				*voidptr_t;
 #ifdef _M_IX86
 typedef __w64 unsigned long sizeptr_t;

@@ -96,6 +96,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnablePREfast>false</EnablePREfast>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -113,6 +114,7 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <EnablePREfast>false</EnablePREfast>
+      <MultiProcessorCompilation>false</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -148,6 +150,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -162,6 +165,7 @@
     <ClInclude Include="libraries\openssl\opensslconf.h" />
     <ClInclude Include="libraries\sqlite\sqlite3.h" />
     <ClInclude Include="libraries\stdafx.h" />
+    <ClInclude Include="src\mcommon2\MC_MTwister.h" />
     <ClInclude Include="src\mcommon2\stdafx.h" />
     <ClInclude Include="src\misc\stdafx.h" />
     <ClInclude Include="src\mmassgate\MMG_AccountProxy.h" />
@@ -243,6 +247,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="libraries\sqlite\sqlite3.c" />
+    <ClCompile Include="src\mcommon2\MC_MTwister.cpp" />
     <ClCompile Include="src\mmassgate\MMG_AccountProxy.cpp" />
     <ClCompile Include="src\mmassgate\MMG_Chat.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ClanStats.cpp" />
