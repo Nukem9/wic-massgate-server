@@ -49,25 +49,19 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 	// Check if the client should be disconnected
 	if (aError)
 	{
+		// Tell MMG_AccountProxy
+		if (aClient->IsLoggedIn() && aClient->IsPlayer())
+			MMG_AccountProxy::ourInstance->SetClientOffline(aClient);
+
+		// Tell MMG_TrackableServer
+		if (aClient->IsServer())
+			MMG_TrackableServer::ourInstance->DisconnectServer(aClient);
+
 		in_addr addr;
 		addr.s_addr = ntohl(aClient->GetIPAddress());
-
-		if (aClient->IsLoggedIn() && aClient->IsPlayer())
-		{
-			// TODO: Notify MMG_AccountProxy
-			MMG_AccountProxy::ourInstance->SetClientOffline(aClient);
-		}
-
-		if (aClient->IsServer())
-		{
-			// TODO: Notify MMG_ServerTracker
-			// temporary
-			MMG_TrackableServer::ourInstance->m_ServerList.erase(aClient->GetIPAddress() ^ (aClient->GetPort() + 0x1010101));
-		}
-
 		LiveAccLog("Disconnecting client on %s...", inet_ntoa(addr));
-		SvClientManager::ourInstance->DisconnectClient(aClient);
 
+		SvClientManager::ourInstance->DisconnectClient(aClient);
 		return;
 	}
 	

@@ -1,6 +1,6 @@
 #include "../stdafx.h"
 
-MMG_TrackableServer::MMG_TrackableServer() : m_ServerList()
+MMG_TrackableServer::MMG_TrackableServer() : m_Mutex(), m_ServerList()
 {
 }
 
@@ -37,10 +37,14 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			if (!aMessage->ReadUInt(publicServerId))
 				return false;
 
-			// TODO: Verify proto and pub id
+			//if (aProtocolVersion != MassgateProtocolVersion)
+			//	return false;
 
-			//if (publicServerId != server->m_PublicId)
-				// ?????
+			if (publicServerId != server->m_PublicId)
+			{
+				DisconnectServer(aClient);
+				return false;
+			}
 
 			// Pong!
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_DS_PONG);
@@ -162,30 +166,13 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			if (!startupVars.FromStream(aMessage))
 				return false;
 
-			// wic_ds sends populated m_PublicIp if firewall flag is set
-			// use the PrivateIP/PublicIp as the servers' ip address
-			if (strlen(startupVars.m_PublicIp) > 0)
-				startupVars.m_Ip = inet_addr(startupVars.m_PublicIp);
-			else
-				startupVars.m_Ip = ntohl(aClient->GetIPAddress());
-
 			// Request to "connect" the active game server
-			if (ConnectServer(server, &startupVars))
+			if (ConnectServer(server, aClient->GetIPAddress(), &startupVars))
 			{
 				// Tell SvClientManager
 				aClient->SetIsServer(true);
 				aClient->SetLoginStatus(true);
 				aClient->SetTimeout(WIC_HEARTBEAT_NET_TIMEOUT);
-				
-				struct sockaddr_in temp;
-				temp.sin_addr.S_un.S_addr = startupVars.m_Ip;
-
-				DebugLog(L_INFO, "Info: %ws %s %s %d %d",
-					startupVars.m_ServerName,
-					startupVars.m_PublicIp,
-					inet_ntoa(temp.sin_addr),
-					startupVars.m_MassgateCommPort,
-					startupVars.m_ServerReliablePort);
 
 				// Send back the assigned public ID
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_PUBLIC_ID);
@@ -205,6 +192,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			else
 			{
 				DebugLog(L_INFO, "Failed to connect server");
+				DisconnectServer(aClient);
 			}
 		}
 		break;
@@ -252,42 +240,133 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 	return true;
 }
 
+bool MMG_TrackableServer::GetServerListInfo(MMG_ServerFilter *aFilters, std::vector<MMG_TrackableServerFullInfo> *aFullInfo, std::vector<MMG_TrackableServerBriefInfo> *aBriefInfo, uint *aTotalCount)
+{
+	// Atleast one parameter must be supplied
+	if (!aFullInfo && !aBriefInfo && !aTotalCount)
+		return false;
+
+	// Reset any initial data
+	if (aFullInfo)
+		aFullInfo->clear();
+
+	if (aBriefInfo)
+		aBriefInfo->clear();
+
+	if (aTotalCount)
+		*aTotalCount = this->m_ServerList.size();
+
+	// Loop through each master list entry and convert the structures
+	for (auto iter = this->m_ServerList.begin(); iter != this->m_ServerList.end(); ++iter)
+	{
+		auto& server = *iter;
+
+		// Server filter check (skip index if not matching, mostly untested)
+		if (aFilters && !this->FilterCheck(aFilters, &server))
+			continue;
+
+		// Full tracker information
+		if (aFullInfo)
+		{
+			MMG_TrackableServerFullInfo fullInfo;
+
+			fullInfo.m_GameVersion			= server.m_Info.m_GameVersion;
+			fullInfo.m_ProtocolVersion		= server.m_Info.m_ProtocolVersion;
+			fullInfo.m_CurrentMapHash		= server.m_Heartbeat.m_CurrentMapHash;
+			fullInfo.m_CycleHash			= 0;// TODO
+			wcscpy_s(fullInfo.m_ServerName, (const wchar_t *)server.m_Info.m_ServerName);
+			fullInfo.m_ServerReliablePort	= server.m_Info.m_ServerReliablePort;
+
+			fullInfo.bf_MaxPlayers			= server.m_Heartbeat.m_MaxNumPlayers;
+			fullInfo.bf_PlayerCount			= server.m_Heartbeat.m_NumPlayers;
+			fullInfo.bf_SpectatorCount		= 0;// TODO
+			fullInfo.bf_ServerType			= server.m_Info.m_ServerType;
+			fullInfo.bf_RankedFlag			= server.m_Info.somebits.Ranked;
+			fullInfo.bf_RankBalanceTeams	= server.m_Info.m_IsRankBalanced;
+			fullInfo.bf_HasDomMaps			= server.m_Info.m_HasDominationMaps;
+			fullInfo.bf_HasAssaultMaps		= server.m_Info.m_HasAssaultMaps;
+			fullInfo.bf_HasTugOfWarMaps		= server.m_Info.m_HasTowMaps;
+
+			fullInfo.m_ServerType			= server.m_Info.m_ServerType;
+			fullInfo.m_IP					= server.m_Info.m_Ip;
+			fullInfo.m_ModId				= server.m_Info.m_ModId;
+			fullInfo.m_MassgateCommPort		= server.m_Info.m_MassgateCommPort;
+			fullInfo.m_GameTime				= server.m_Heartbeat.m_GameTime;
+			fullInfo.m_ServerId				= server.m_PublicId;
+			fullInfo.m_CurrentLeader		= server.m_Heartbeat.m_CurrentLeader;
+			fullInfo.m_HostProfileId		= server.m_Info.m_HostProfileId;
+			fullInfo.m_WinnerTeam			= 0;// TODO
+
+			aFullInfo->push_back(fullInfo);
+		}
+
+		// Brief tracker information
+		if (aBriefInfo)
+		{
+			MMG_TrackableServerBriefInfo briefInfo;
+
+			wcscpy_s(briefInfo.m_GameName, (const wchar_t *)server.m_Info.m_ServerName);
+			briefInfo.m_IP					= server.m_Info.m_Ip;
+			briefInfo.m_ModId				= server.m_Info.m_ModId;
+			briefInfo.m_ServerId			= server.m_PublicId;
+			briefInfo.m_MassgateCommPort	= server.m_Info.m_MassgateCommPort;
+			briefInfo.m_CycleHash			= 0;// TODO
+			briefInfo.m_ServerType			= server.m_Info.m_ServerType;
+			briefInfo.m_IsRankBalanced		= server.m_Info.m_IsRankBalanced;
+
+			aBriefInfo->push_back(briefInfo);
+		}
+	}
+
+	return true;
+}
+
+MMG_TrackableServer::Server *MMG_TrackableServer::FindServer(SvClient *aClient)
+{
+	auto itr = std::find_if(this->m_ServerList.begin(), this->m_ServerList.end(), [aClient](Server& s)
+	{
+		return s.TestIPHash(aClient->GetIPAddress(), aClient->GetPort());
+	});
+
+	if (itr != this->m_ServerList.end())
+		return &(*itr);
+
+	return nullptr;
+}
+
 bool MMG_TrackableServer::AuthServer(SvClient *aClient, uint aKeySequence, ushort aProtocolVersion)
 {
+	// Sanity check: Server should not be registered
+	assert(FindServer(aClient) == nullptr);
+
 	//
 	// Protocol and key validation (similar to the client)
 	//
 	//if (aProtocolVersion != MassgateProtocolVersion)
 	//	return false;
 
-	if (aKeySequence != 0)
-	{
-		// TODO: Query database
-		// TODO: Generate quiz answer
-		// return false;
-	}
-
 	//
-	// Add entry to master list
+	// Insert into master server list
 	//
 	Server masterEntry(aClient->GetIPAddress(), aClient->GetPort());
+	{
+		if (aKeySequence != 0)
+		{
+			// TODO: Query database
+			// TODO: Generate quiz answer
+			masterEntry.m_KeySequence	= aKeySequence;
+			masterEntry.m_QuizAnswer	= 0;
+		}
 
-	// TODO
-	// small issue with m_Index being set to the size() of the map
-	// ie 2 indexes can have the value 4 if the size() of the map is 4
-	masterEntry.m_Index			= this->m_ServerList.size();
-	masterEntry.m_KeySequence	= aKeySequence;
+		this->m_ServerList.push_back(masterEntry);
+	}
 
-	//this->m_ServerList.push_back(masterEntry);
-	if (this->m_ServerList.find(masterEntry.m_PublicId) == this->m_ServerList.end())
-		this->m_ServerList.insert(std::pair<uint, Server>(masterEntry.m_PublicId, masterEntry));
-
-	// Sanity check
+	// Sanity check: Server should be registered
 	assert(FindServer(aClient) != nullptr);
 	return true;
 }
 
-bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, MMG_ServerStartupVariables *aStartupVars)
+bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, uint aSourceIp, MMG_ServerStartupVariables *aStartupVars)
 {
 	//
 	// Protocol validation
@@ -295,12 +374,10 @@ bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, MM
 	//if (aStartupVars->m_ProtocolVersion != MassgateProtocolVersion)
 	//	return false;
 
-	//if (aStartupVars->m_GameVersion != VER_1011)
-	//	return false;
+	if (aStartupVars->m_GameVersion != WIC_DS_CURRENT_VERSION)
+		return false;
 
-	//
 	// License validation
-	//
 	if (aStartupVars->somebits.Ranked)
 	{
 		// If ranked and mod, drop
@@ -316,10 +393,38 @@ bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, MM
 			return false;
 	}
 
+	// Resolve IP address if UseFireWallSettingsFlag is set
+	in_addr serverAddr;
+
+	if (strlen(aStartupVars->m_PublicIp) > 0)
+		serverAddr.s_addr = inet_addr(aStartupVars->m_PublicIp);
+	else
+		serverAddr.s_addr = htonl(aSourceIp);
+
+	// Generate a psuedo-random public ID by hashing a string containing
+	// various server fields
+	char data[1024];
+
+	sprintf_s(data, "%ws%s%d%d%X%X",
+		aStartupVars->m_ServerName,
+		inet_ntoa(serverAddr),
+		aStartupVars->m_MassgateCommPort,
+		aStartupVars->m_ServerReliablePort,
+		aServer->m_KeySequence,
+		MC_MTwister().Random());
+
 	// Mark server list entry as valid and copy information over
+	aServer->m_PublicId			= MC_Misc::HashSDBM(data);
 	aServer->m_Info				= *aStartupVars;
-	aServer->m_Valid			= true;
-	//aServer->m_Info.m_ServerId	= aServer->m_Index + 1;
+	aServer->m_Info.m_Ip		= serverAddr.s_addr;
+
+	DebugLog(L_INFO, "ConnectServer: %ws %s %s %d %d %d",
+		aStartupVars->m_ServerName,
+		aStartupVars->m_PublicIp,
+		inet_ntoa(serverAddr),
+		aStartupVars->m_MassgateCommPort,
+		aStartupVars->m_ServerReliablePort,
+		aServer->m_PublicId);
 	return true;
 }
 
@@ -329,40 +434,27 @@ bool MMG_TrackableServer::UpdateServer(MMG_TrackableServer::Server *aServer, MMG
 	if (aServer->m_Cookie.hash != aHeartbeat->m_Cookie.hash ||
 		aServer->m_Cookie.trackid != aHeartbeat->m_Cookie.trackid)
 	{
-		__debugbreak();
+		assert(false);
 		return false;
 	}
 
 	// Copy heartbeat variables over to the startup info structure
-	//aServer->m_Info.m_CurrentMapHash	= aHeartbeat->m_CurrentMapHash;
-	//aServer->m_Info.somebits.bitfield1	= aHeartbeat->m_MaxNumPlayers;
+	aServer->m_Info.m_CurrentMapHash	= aHeartbeat->m_CurrentMapHash;
+	aServer->m_Info.somebits.MaxPlayers = aHeartbeat->m_MaxNumPlayers;
 	aServer->m_Heartbeat				= *aHeartbeat;
 	return true;
 }
 
-void MMG_TrackableServer::DisconnectServer(MMG_TrackableServer::Server *aServer)
+void MMG_TrackableServer::DisconnectServer(SvClient *aClient)
 {
-}
+	auto& list = this->m_ServerList;
 
-MMG_TrackableServer::Server *MMG_TrackableServer::FindServer(SvClient *aClient)
-{
-	uint clientIp	= aClient->GetIPAddress();
-	uint clientPort = aClient->GetPort();
-
-	/*for (auto& server : this->m_ServerList)
-	{
-		if (server.TestIPHash(clientIp, clientPort))
-			return &server;
-	}
-	*/
-
-	std::map<uint, Server>::iterator iter;
-
-	iter = this->m_ServerList.find(clientIp ^ (clientPort + 0x1010101));
-	if (iter != this->m_ServerList.end())
-		return &iter->second;
-
-	return nullptr;
+	list.erase(
+		std::remove_if(list.begin(), list.end(), [aClient](Server& s)
+		{
+			return s.TestIPHash(aClient->GetIPAddress(), aClient->GetPort());
+		}),
+	list.end());
 }
 
 bool MMG_TrackableServer::FilterCheck(MMG_ServerFilter *filters, Server *aServer)
@@ -465,97 +557,6 @@ bool MMG_TrackableServer::FilterCheck(MMG_ServerFilter *filters, Server *aServer
 
 		if (!filters->noMod && (aServer->m_Info.m_ModId > 0))				// only mods
 			return false;
-	}
-
-	return true;
-}
-
-bool MMG_TrackableServer::GetServerListInfo(MMG_ServerFilter *filters, std::vector<MMG_TrackableServerFullInfo> *aFullInfo, std::vector<MMG_TrackableServerBriefInfo> *aBriefInfo, uint *aCount)
-{
-	// Atleast one parameter must be supplied
-	if (!aFullInfo && !aBriefInfo && !aCount)
-		return false;
-
-	// Reset any initial data
-	if (aFullInfo)
-		aFullInfo->clear();
-
-	if (aBriefInfo)
-		aBriefInfo->clear();
-
-	if (aCount)
-		*aCount = this->m_ServerList.size();
-
-	std::map<uint, Server>::iterator iter;
-
-	// Loop through each master list entry and convert the structures
-	//for (auto& server : this->m_ServerList)
-	for (iter = this->m_ServerList.begin(); iter != this->m_ServerList.end(); ++iter)
-	{
-		auto server = iter->second;
-
-		MMG_TrackableServerFullInfo fullInfo;
-		MMG_TrackableServerBriefInfo briefInfo;
-
-		// Full tracker information
-		if (aFullInfo)
-		{
-			fullInfo.m_GameVersion			= server.m_Info.m_GameVersion;
-			fullInfo.m_ProtocolVersion		= PROTO_1012;
-			fullInfo.m_CurrentMapHash		= server.m_Heartbeat.m_CurrentMapHash;
-			fullInfo.m_CycleHash			= 0;// TODO
-			wcscpy_s(fullInfo.m_ServerName, (const wchar_t *)server.m_Info.m_ServerName);
-			fullInfo.m_ServerReliablePort	= server.m_Info.m_ServerReliablePort;
-
-			uint playingCount = 0;
-			for (int i = 0; i < 64; i++)
-			{
-				fullInfo.m_Players[i].m_ProfileId = server.m_Heartbeat.m_PlayersInGame[i];	// fullInfo.m_Players[i].m_Score = 0;
-				if (fullInfo.m_Players[i].m_ProfileId > 0 && fullInfo.m_Players[i].m_Score > 0)
-					playingCount++;
-			}
-
-			fullInfo.bf_MaxPlayers			= 0;	//
-			fullInfo.bf_PlayerCount			= 0;	// TODO
-			fullInfo.bf_SpectatorCount		= 0;	//
-			fullInfo.bf_ServerType			= server.m_Info.m_ServerType;
-			fullInfo.bf_RankedFlag			= server.m_Info.somebits.Ranked;
-			fullInfo.bf_RankBalanceTeams	= server.m_Info.m_IsRankBalanced;
-			fullInfo.bf_HasDomMaps			= server.m_Info.m_HasDominationMaps;
-			fullInfo.bf_HasAssaultMaps		= server.m_Info.m_HasAssaultMaps;
-			fullInfo.bf_HasTugOfWarMaps		= server.m_Info.m_HasTowMaps;
-
-			fullInfo.m_ServerType			= server.m_Info.m_ServerType;
-			fullInfo.m_IP					= server.m_Info.m_Ip;
-			fullInfo.m_ModId				= server.m_Info.m_ModId;
-			fullInfo.m_MassgateCommPort		= server.m_Info.m_MassgateCommPort;
-			fullInfo.m_GameTime				= server.m_Heartbeat.m_GameTime;
-			fullInfo.m_ServerId				= server.m_PublicId;
-			fullInfo.m_CurrentLeader		= server.m_Heartbeat.m_CurrentLeader;
-			fullInfo.m_HostProfileId		= server.m_Info.m_HostProfileId;
-			fullInfo.m_WinnerTeam			= 0;
-
-			// server filter check (mostly untested)
-			if (this->FilterCheck(filters, &server))
-				aFullInfo->insert(aFullInfo->end(), fullInfo);
-		}
-
-		// Brief tracker information
-		if (aBriefInfo)
-		{
-			wcscpy_s(briefInfo.m_GameName, (const wchar_t *)fullInfo.m_ServerName);
-			briefInfo.m_IP					= fullInfo.m_IP;
-			briefInfo.m_ModId				= fullInfo.m_ModId;
-			briefInfo.m_ServerId			= fullInfo.m_ServerId;
-			briefInfo.m_MassgateCommPort	= fullInfo.m_MassgateCommPort;
-			briefInfo.m_CycleHash			= fullInfo.m_CycleHash;
-			briefInfo.m_ServerType			= fullInfo.m_ServerType;
-			briefInfo.m_IsRankBalanced		= server.m_Info.m_IsRankBalanced;
-
-			// server filter check (mostly untested)
-			if (this->FilterCheck(filters, &server))
-				aBriefInfo->insert(aBriefInfo->end(), briefInfo);
-		}
 	}
 
 	return true;

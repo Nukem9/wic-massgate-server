@@ -12,9 +12,9 @@ typedef unsigned long word32;
 typedef unsigned char byte;
 
 /* Big endian:                                         */
-#if !(defined(__alpha)||defined(__i386__)||defined(__vax__))
-#define BIG_ENDIAN
-#endif
+//#if !(defined(__alpha)||defined(__i386__)||defined(__vax__))
+//#define BIG_ENDIAN
+//#endif
 
 /* The following macro denotes that an optimization    */
 /* for Alpha is required. It is used only for          */

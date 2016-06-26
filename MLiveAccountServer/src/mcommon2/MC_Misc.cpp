@@ -19,4 +19,18 @@ namespace MC_Misc
 
 		return convertedChars;
 	}
+
+	uint HashSDBM(const char *str)
+	{
+		//
+		// http://www.cse.yorku.ca/~oz/hash.html
+		//
+		uint hash	= 0;
+		int c		= 0;
+
+		while (c = *str++)
+			hash = c + (hash << 6) + (hash << 16) - hash;
+
+		return hash;
+	}
 }
