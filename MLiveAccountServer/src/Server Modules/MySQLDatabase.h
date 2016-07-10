@@ -50,19 +50,16 @@
 			http://dev.mysql.com/doc/refman/5.7/en/auto-reconnect.html
 
 	TODO:
-		experience "experience int(10) unsigned not null,"
-	- better error handling of queries (ie querySuccess)
+	- reduce to one query per function:
 		- CreateUserAccount
+		- AuthUserAccount
 		- CreateUserProfile
 		- DeleteUserProfile
 		- QueryUserProfile
-	- handle communication options properly
 	- create a global 'logged in' player list/map
 		MMG_AccountProtocol is messy, move account database queries to Query::FromStream
-	- change mg_cdkeys from cipherkeys to sequencenumber?
-	- maybe start using InnoDB/transactions (START TRANSACTION/BEGIN, COMMIT, ROLLBACK)/autocommit=0, 
-		indexing (any WHERE column = ?), replication, utf-8
-	- fix the message display time for instant messaging
+	- change cdkeys from cipherkeys to sequencenumber?
+	- better error message output
 
 */
 
@@ -73,11 +70,29 @@
 CLASS_SINGLE(MySQLDatabase)
 {
 private:
+
+	enum
+	{
+		UTILS_TABLE,
+		ACCOUNTS_TABLE,
+		CDKEYS_TABLE,
+		PROFILES_TABLE,
+		FRIENDS_TABLE,
+		IGNORED_TABLE,
+		MESSAGES_TABLE,
+		ABUSEREPORTS_TABLE,
+		CLANS_TABLE,
+
+		TOTAL_TABLES
+	};
+
+	char TABLENAME[TOTAL_TABLES][64];
+
 	//mysql connection settings
-	char* host;
-	char* user;
-	char* pass;
-	char* db;
+	char host[512];
+	char user[512];
+	char pass[512];
+	char db[512];
 
 	// mysql connection object
 	MYSQL *m_Connection;
@@ -100,10 +115,11 @@ private:
 public:
 	MySQLDatabase()
 	{
-		this->host = NULL;
-		this->user = NULL;
-		this->pass = NULL;
-		this->db = NULL;
+		memset(this->TABLENAME, 0, sizeof(this->TABLENAME));
+		memset(this->host, 0, sizeof(this->host));
+		memset(this->user, 0, sizeof(this->user));
+		memset(this->pass, 0, sizeof(this->pass));
+		memset(this->db, 0, sizeof(this->db));
 
 		this->m_Connection = NULL;
 		this->isConnected = false;
@@ -111,7 +127,7 @@ public:
 		// mysql connection options
 		this->reconnect = 1;
 		this->bind_interface = "localhost";
-		this->charset_name = "latin1";		//TODO: change to utf8
+		this->charset_name = "utf8";
 
 		this->sleep_interval_h = 5;
 		this->sleep_interval_m = this->sleep_interval_h * 60;
@@ -135,11 +151,14 @@ private:
 	bool	TestDatabase		();
 	bool	PingDatabase		();
 
+	void	BeginTransaction	();
+	void	RollbackTransaction	();
+	void	CommitTransaction	();
+
 public:
 	bool	Initialize			();
 	void	Unload				();
 	bool	HasConnection		();
-	bool	InitializeSchema	();
 	
 	//accounts
 	bool	CheckIfEmailExists	(const char *email, uint *dstId);
@@ -151,12 +170,12 @@ public:
 	bool	CheckIfProfileExists	(const wchar_t* name, uint *dstId);
 	bool	CreateUserProfile	(const uint accountId, const wchar_t* name, const char* email);
 	bool	DeleteUserProfile	(const uint accountId, const uint profileId, const char* email);
-	bool	QueryUserProfile	(const uint accountId, const uint profileId, MMG_Profile *profile, MMG_Options *options);
-	bool	RetrieveUserProfiles	(const char *email, const char *password, ulong *dstProfileCount, MMG_Profile *profiles[]);
+	bool	QueryUserProfile	(const uint accountId, const uint profileId, MMG_Profile *profile);
+	bool	RetrieveUserProfiles	(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles[]);
 
 	//messaging
-	bool	QueryUserOptions	(const uint profileId, int *options);	//TODO
-	bool	SaveUserOptions		(const uint profileId, const int options);
+	bool	QueryUserOptions	(const uint profileId, uint *options);
+	bool	SaveUserOptions		(const uint profileId, const uint options);
 	bool	QueryFriends		(const uint profileId, uint *dstProfileCount, uint *friendIds[]);
 	bool	AddFriend			(const uint profileId, uint friendProfileId);
 	bool	RemoveFriend		(const uint profileId, uint friendProfileId);
@@ -170,6 +189,6 @@ public:
 	bool	SaveEditableVariables	(const uint profileId, const wchar_t *motto, const wchar_t *homepage);
 	bool	QueryPendingMessages	(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages[]);
 	bool	AddInstantMessage		(const uint profileId, MMG_InstantMessageListener::InstantMessage *message);
-	bool	RemoveInstantMessage	(const uint messageId);
+	bool	RemoveInstantMessage	(const uint profileId, const uint messageId);
 	bool	AddAbuseReport		(const uint profileId, const uint flaggedProfile, const wchar_t *report);
 };

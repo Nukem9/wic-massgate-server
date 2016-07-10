@@ -51,16 +51,6 @@ void MySQLDatabase::Unload()
 	mysql_close(this->m_Connection);
 	this->m_Connection = NULL;
 	this->isConnected = false;
-
-	if (this->host) free((char*)this->host);
-	if (this->user) free((char*)this->user);
-	if (this->pass) free((char*)this->pass);
-	if (this->db) free((char*)this->db);
-
-	this->host = NULL;
-	this->user = NULL;
-	this->pass = NULL;
-	this->db = NULL;
 }
 
 bool MySQLDatabase::ReadConfig(const char *filename)
@@ -75,8 +65,8 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 		return false;
 	}
 
-	const int bufferlen = 32;		// characters read per line
-	const int maxoptions = 4;		// number of options read from the file
+	const int bufferlen = 64;		// characters read per line
+	const int maxoptions = 64;		// max number of options read from the file
 	int i = 0;
 
 	char line[bufferlen];
@@ -85,7 +75,7 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 	char settings[maxoptions][bufferlen];
 	memset(settings, 0, sizeof(settings));
 
-	while (fgets(line, bufferlen, file) && i < maxoptions)
+	while (fgets(line, bufferlen, file))
 	{
 		// remove newline
 		if (strchr(line, 10))
@@ -94,7 +84,7 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 		// ignoring standard comment characters and header. 91 = '[', 47 = '/'
 		if (!strchr(line, 91) && !strchr(line, 47) && strlen(line))
 		{
-			strcpy(settings[i], line);
+			strncpy(settings[i], line, sizeof(settings[i]));
 			i++;
 		}
 
@@ -104,17 +94,20 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 
 	fclose(file);
 
-	this->host = (char*)malloc(strlen(settings[0]) + 1);
-	memcpy((char*)this->host, settings[0], strlen(settings[0]) + 1);
+	strncpy(this->host,	settings[0], sizeof(this->host));
+	strncpy(this->user,	settings[1], sizeof(this->user));
+	strncpy(this->pass,	settings[2], sizeof(this->pass));
+	strncpy(this->db,	settings[3], sizeof(this->db));
 
-	this->user = (char*)malloc(strlen(settings[1]) + 1);
-	memcpy((char*)this->user, settings[1], strlen(settings[1]) + 1);
-
-	this->pass = (char*)malloc(strlen(settings[2]) + 1);
-	memcpy((char*)this->pass, settings[2], strlen(settings[2]) + 1);
-
-	this->db = (char*)malloc(strlen(settings[3]) + 1);
-	memcpy((char*)this->db, settings[3], strlen(settings[3]) + 1);
+	strncpy(this->TABLENAME[UTILS_TABLE],			strstr(settings[4], "=") + 1, sizeof(this->TABLENAME[UTILS_TABLE]));
+	strncpy(this->TABLENAME[ACCOUNTS_TABLE],		strstr(settings[5], "=") + 1, sizeof(this->TABLENAME[ACCOUNTS_TABLE]));
+	strncpy(this->TABLENAME[CDKEYS_TABLE],			strstr(settings[6], "=") + 1, sizeof(this->TABLENAME[CDKEYS_TABLE]));
+	strncpy(this->TABLENAME[PROFILES_TABLE],		strstr(settings[7], "=") + 1, sizeof(this->TABLENAME[PROFILES_TABLE]));
+	strncpy(this->TABLENAME[FRIENDS_TABLE],			strstr(settings[8], "=") + 1, sizeof(this->TABLENAME[FRIENDS_TABLE]));
+	strncpy(this->TABLENAME[IGNORED_TABLE],			strstr(settings[9], "=") + 1, sizeof(this->TABLENAME[IGNORED_TABLE]));
+	strncpy(this->TABLENAME[MESSAGES_TABLE],		strstr(settings[10], "=") + 1, sizeof(this->TABLENAME[MESSAGES_TABLE]));
+	strncpy(this->TABLENAME[ABUSEREPORTS_TABLE],	strstr(settings[11], "=") + 1, sizeof(this->TABLENAME[ABUSEREPORTS_TABLE]));
+	strncpy(this->TABLENAME[CLANS_TABLE],			strstr(settings[12], "=") + 1, sizeof(this->TABLENAME[CLANS_TABLE]));
 
 	return true;
 }
@@ -128,6 +121,7 @@ bool MySQLDatabase::ConnectDatabase()
 	mysql_options(this->m_Connection, MYSQL_OPT_RECONNECT, &this->reconnect);
 	mysql_options(this->m_Connection, MYSQL_OPT_BIND, this->bind_interface);
 	mysql_options(this->m_Connection, MYSQL_SET_CHARSET_NAME, this->charset_name);
+	mysql_options(this->m_Connection, MYSQL_INIT_COMMAND, "SET autocommit=1");
 
 	// attempt connection to the database
 	if (mysql_real_connect(this->m_Connection, this->host, this->user, this->pass, this->db, 0, NULL, CLIENT_REMEMBER_OPTIONS) == NULL)
@@ -199,11 +193,17 @@ bool MySQLDatabase::TestDatabase()
 
 	if (!error_flag)
 	{
+		char SQL[4096];
+		memset(SQL, 0, sizeof(SQL));
+
+		// build sql query using table names defined in settings file
+		sprintf(SQL, "SELECT poll FROM %s LIMIT 1", TABLENAME[UTILS_TABLE]);
+
 		// execute a standard query on the database
-		if (mysql_query(this->m_Connection, "SELECT poll FROM mg_utils LIMIT 1"))
+		if (mysql_real_query(this->m_Connection, SQL, strlen(SQL)))
 			error_flag = true;
 
-		// must call mysql_store_result after calling mysql_query
+		// must call mysql_store_result after calling mysql_real_query
 		if (!error_flag)
 			result = mysql_store_result(this->m_Connection);
 
@@ -255,23 +255,21 @@ bool MySQLDatabase::PingDatabase()
 	return true;
 }
 
-bool MySQLDatabase::InitializeSchema()
+void MySQLDatabase::BeginTransaction()
 {
-	if (!this->m_Connection)
-		return false;
+	mysql_real_query(this->m_Connection, "SET AUTOCOMMIT=0", 16);
+	mysql_real_query(this->m_Connection, "START TRANSACTION", 17);
+}
 
-	// Go through each table entry
-	for(int i = 0; i < ARRAYSIZE(MySQLTableValues); i++)
-	{
-		MySQLQuery query(this->m_Connection, MySQLTableValues[i]);
-		
-		if (!query.Step())
-			return false;
-	}
+void MySQLDatabase::RollbackTransaction()
+{
+	mysql_real_query(this->m_Connection, "ROLLBACK", 8);
+}
 
-	DatabaseLog("database tables created OK");
-
-	return true;
+void MySQLDatabase::CommitTransaction()
+{
+	mysql_real_query(this->m_Connection, "COMMIT", 6);
+	mysql_real_query(this->m_Connection, "SET AUTOCOMMIT=1", 16);
 }
 
 bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
@@ -283,8 +281,14 @@ bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 		return false;
 	}
 
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT id FROM %s WHERE email = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id FROM mg_accounts WHERE email = ? LIMIT 1");
+	MySQLQuery query(this->m_Connection, SQL);
 	
 	// prepared statement binding structures
 	MYSQL_BIND param[1], result[1];
@@ -301,7 +305,7 @@ bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 	query.Bind(&param[0], email, &emailLength);
 
 	// bind results
-	query.Bind(&result[0], &id);				//mg_accounts.id
+	query.Bind(&result[0], &id);
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, result))
@@ -323,7 +327,10 @@ bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 		}
 	}
 
-	return query.Success();
+	if (!query.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
@@ -335,8 +342,14 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 		return false;
 	}
 
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT id FROM %s WHERE cipherkeys0 = ? AND cipherkeys1 = ? AND cipherkeys2 = ? AND cipherkeys3 = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id FROM mg_cdkeys WHERE cipherkeys0 = ? AND cipherkeys1 = ? AND cipherkeys2 = ? AND cipherkeys3 = ? LIMIT 1");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND params[4], result[1];
@@ -355,7 +368,7 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	query.Bind(&params[3], &cipherKeys[3]);
 
 	// bind results
-	query.Bind(&result[0], &id);			//mg_cdkeys.id
+	query.Bind(&result[0], &id);
 
 	// execute prepared statement
 	if(!query.StmtExecute(params, result))
@@ -377,7 +390,10 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 		}
 	}
 
-	return query.Success();
+	if (!query.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const ulong cipherKeys[])
@@ -389,46 +405,67 @@ bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, c
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+
 	// *Step 1: insert account* //
 
+	char SQL1[4096];
+	memset(SQL1, 0, sizeof(SQL1));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL1, "INSERT INTO %s (email, password, country, emailgamerelated, acceptsemail, activeprofileid, isbanned) VALUES (?, ?, ?, ?, ?, 0, 0)", TABLENAME[ACCOUNTS_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "INSERT INTO mg_accounts (email, password, country, emailgamerelated, acceptsemail, activeprofileid, isbanned) VALUES (?, ?, ?, ?, ?, 0, 0)");
+	MySQLQuery query1(this->m_Connection, SQL1);
 
 	// prepared statement binding structures
-	MYSQL_BIND params[5];
+	MYSQL_BIND params1[5];
 
 	// initialize (zero) bind structures
-	memset(params, 0, sizeof(params));
+	memset(params1, 0, sizeof(params1));
 
 	// query specific variables
 	ulong emailLength = strlen(email);
 	ulong passLength = strlen(password);
 	ulong countryLength = strlen(country);
-	uint account_insert_id, cdkey_insert_id;
+	uint account_insert_id;
 
 	// bind parameters to prepared statement
-	query.Bind(&params[0], email, &emailLength);			//email
-	query.Bind(&params[1], password, &passLength);		//password
-	query.Bind(&params[2], country, &countryLength);		//country
-	query.Bind(&params[3], emailgamerelated);			//emailgamerelated (game related news and events)
-	query.Bind(&params[4], acceptsemail);				//acceptsemail (from ubisoft (pfft) rename this field)
+	query1.Bind(&params1[0], email, &emailLength);
+	query1.Bind(&params1[1], password, &passLength);
+	query1.Bind(&params1[2], country, &countryLength);
+	query1.Bind(&params1[3], emailgamerelated);
+	query1.Bind(&params1[4], acceptsemail);
 
 	// execute prepared statement
-	if (!query.StmtExecute(params))
+	if (!query1.StmtExecute(params1))
 	{
-		DatabaseLog("CreateUserAccount() query failed: %s", email);
+		DatabaseLog("CreateUserAccount() query1 failed: %s", email);
 		account_insert_id = 0;
 	}
 	else
 	{
-		DatabaseLog("created account: %s", email);
-		account_insert_id = (uint)query.StmtInsertId();
+		account_insert_id = (uint)query1.StmtInsertId();
+		DatabaseLog("%s created an account id(%u)", email, account_insert_id);
+	}
+
+	if (!query1.Success())
+	{
+		this->RollbackTransaction();
+		return false;
 	}
 
 	// *Step 2: insert cdkeys* //
 
+	char SQL2[4096];
+	memset(SQL2, 0, sizeof(SQL2));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL2, "INSERT INTO %s (accountid, cipherkeys0, cipherkeys1, cipherkeys2, cipherkeys3) VALUES (?, ?, ?, ?, ?)", TABLENAME[CDKEYS_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query2(this->m_Connection, "INSERT INTO mg_cdkeys (accountid, cipherkeys0, cipherkeys1, cipherkeys2, cipherkeys3) VALUES (?, ?, ?, ?, ?)");
+	MySQLQuery query2(this->m_Connection, SQL2);
 
 	// prepared statement binding structures
 	MYSQL_BIND params2[5];
@@ -445,17 +482,20 @@ bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, c
 
 	// execute prepared statement
 	if (!query2.StmtExecute(params2))
-	{
 		DatabaseLog("CreateUserAccount() query2 failed: %s", email);
-		cdkey_insert_id = 0;
-	}
 	else
+		DatabaseLog("inserted cipherkeys for %s", email);
+
+	if (!query2.Success())
 	{
-		DatabaseLog("inserted cipherkeys: %s", email);
-		cdkey_insert_id = (uint)query2.StmtInsertId();
+		this->RollbackTransaction();
+		return false;
 	}
 
-	return query.Success() && query2.Success();
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
 bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken)
@@ -467,21 +507,23 @@ bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar 
 		return false;
 	}
 
-	char *sql = "SELECT mg_accounts.id, mg_accounts.password, mg_accounts.activeprofileid, mg_accounts.isbanned, mg_cdkeys.id AS cdkeyid "
-				"FROM mg_accounts "
-				"JOIN mg_cdkeys "
-				"ON mg_accounts.id = mg_cdkeys.accountid "
-				"WHERE mg_accounts.email = ? LIMIT 1";
+	// *Step 1: retrieve account details* //
+
+	char SQL1[4096];
+	memset(SQL1, 0, sizeof(SQL1));
+
+	// build sql query using table names defined in settings file // AND password = ?
+	sprintf(SQL1, "SELECT id, password, activeprofileid, isbanned FROM %s WHERE email = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, sql);
+	MySQLQuery query1(this->m_Connection, SQL1);
 
 	// prepared statement binding structures
-	MYSQL_BIND param[1], results[5];
+	MYSQL_BIND param1[1], results1[4];
 
 	// initialize (zero) bind structures
-	memset(param, 0, sizeof(param));
-	memset(results, 0, sizeof(results));
+	memset(param1, 0, sizeof(param1));
+	memset(results1, 0, sizeof(results1));
 
 	// query specific variables
 	ulong emailLength = strlen(email);
@@ -490,21 +532,20 @@ bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar 
 	memset(password, 0, sizeof(password));
 	ulong passLength = ARRAYSIZE(password);
 
-	uint id, activeprofileid, cdkeyid;
+	uint id, activeprofileid;
 	uchar isbanned;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], email, &emailLength);		//email
+	query1.Bind(&param1[0], email, &emailLength);
 
 	// bind results
-	query.Bind(&results[0], &id);					//mg_accounts.id
-	query.Bind(&results[1], password, &passLength);	//mg_accounts.password
-	query.Bind(&results[2], &activeprofileid);		//mg_accounts.activeprofileid
-	query.Bind(&results[3], &isbanned);				//mg_accounts.isbanned
-	query.Bind(&results[4], &cdkeyid);				//mg_cdkeys.id AS cdkeyid
+	query1.Bind(&results1[0], &id);
+	query1.Bind(&results1[1], password, &passLength);
+	query1.Bind(&results1[2], &activeprofileid);
+	query1.Bind(&results1[3], &isbanned);
 
 	// execute prepared statement
-	if(!query.StmtExecute(param, results))
+	if(!query1.StmtExecute(param1, results1))
 	{
 		DatabaseLog("AuthUserAccount() query failed: %s", email);
 
@@ -517,7 +558,7 @@ bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar 
 	}
 	else
 	{
-		if (!query.StmtFetch())
+		if (!query1.StmtFetch())
 		{
 			DatabaseLog("account %s not found", email);
 
@@ -530,18 +571,71 @@ bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar 
 		}
 		else
 		{
-			DatabaseLog("account %s found", email);
+			DatabaseLog("accountid(%u) %s found", id, email);
 
 			authToken->m_AccountId = id;
 			authToken->m_ProfileId = activeprofileid;
-			//authToken->m_TokenId = 0;
-			authToken->m_CDkeyId = cdkeyid;
-			strncpy(dstPassword, password, strlen(password));
+			//authToken->m_TokenId = 0;	// TODO
+			authToken->m_CDkeyId = 0;	// fetched below in step 2
+			strncpy(dstPassword, password, WIC_PASSWORDHASH_MAX_LENGTH);
 			*dstIsBanned = isbanned;
 		}
 	}
 
-	return query.Success();
+	if (!query1.Success())
+		return false;
+
+	// *Step 2: retrieve account cdkeyid* //
+
+	char SQL2[4096];
+	memset(SQL2, 0, sizeof(SQL2));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL2, "SELECT id FROM %s WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query2(this->m_Connection, SQL2);
+
+	// prepared statement binding structures
+	MYSQL_BIND param2[1], result2[1];
+
+	// initialize (zero) bind structures
+	memset(param2, 0, sizeof(param2));
+	memset(result2, 0, sizeof(result2));
+
+	// query specific variables
+	uint cdkeyid;
+
+	// bind parameters to prepared statement
+	query2.Bind(&param2[0], &id);
+
+	// bind results
+	query2.Bind(&result2[0], &cdkeyid);
+
+	// execute prepared statement
+	if(!query2.StmtExecute(param2, result2))
+	{
+		DatabaseLog("AuthUserAccount() query2 failed: %s", email);
+		authToken->m_CDkeyId = 0;
+	}
+	else
+	{
+		if (!query2.StmtFetch())
+		{
+			DatabaseLog("cdkeyid %s not found", email);
+			authToken->m_CDkeyId = 0;
+		}
+		else
+		{
+			DatabaseLog("cdkeyid(%u) %s found", id, email);
+			authToken->m_CDkeyId = cdkeyid;
+		}
+	}
+
+	if (!query2.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
@@ -553,8 +647,14 @@ bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
 		return false;
 	}
 
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT id FROM %s WHERE name = ? AND isdeleted = 0 LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id FROM mg_profiles WHERE name = ? LIMIT 1");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], result[1];
@@ -564,7 +664,6 @@ bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
 	memset(result, 0, sizeof(result));
 
 	// query specific variables
-	bool querySuccess;
 	ulong nameLength = wcslen(name);
 	uint id;
 
@@ -572,13 +671,12 @@ bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
 	query.Bind(&param[0], name, &nameLength);
 
 	// bind results
-	query.Bind(&result[0], &id);		//mg_profiles.id
+	query.Bind(&result[0], &id);
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, result))
 	{
 		DatabaseLog("CheckIfProfileExists() query failed: %ws", name);
-		querySuccess = false;
 		*dstId = 0;
 	}
 	else
@@ -586,18 +684,19 @@ bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
 		if (!query.StmtFetch())
 		{
 			DatabaseLog("profile %ws not found", name);
-			querySuccess = true;
 			*dstId = 0;
 		}
 		else
 		{
-			DatabaseLog("profile %ws found", name);
-			querySuccess = true;
+			DatabaseLog("profile %ws already exists", name);
 			*dstId = id;
 		}
 	}
 
-	return querySuccess;
+	if (!query.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name, const char* email)
@@ -609,104 +708,110 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+	
 	// *Step 1: create the profile as usual* //
 
+	char SQL1[4096];
+	memset(SQL1, 0, sizeof(SQL1));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL1, "INSERT INTO %s (accountid, name, rank, clanid, rankinclan, isdeleted, commoptions, lastlogindate, motto, homepage) VALUES (?, ?, 0, 0, 0, 0, 992, 0, NULL, NULL)", TABLENAME[PROFILES_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "INSERT INTO mg_profiles (accountid, name, rank, clanid, rankinclan, commoptions, lastlogindate, motto, homepage) VALUES (?, ?, 0, 0, 0, 992, ?, NULL, NULL)");
+	MySQLQuery query1(this->m_Connection, SQL1);
 	
 	// prepared statement binding structures
-	MYSQL_BIND params[3];
+	MYSQL_BIND params1[2];
 
 	// initialize (zero) bind structures
-	memset(params, 0, sizeof(params));
+	memset(params1, 0, sizeof(params1));
 
 	// query specific variables
-	bool query1Success, query2Success, query3Success;
-	ulong count;
-	uint last_id;
-
 	ulong nameLength = wcslen(name);
-	uint id;
-
-	MYSQL_TIME datetime;
-
-	datetime.year = 1970;
-	datetime.month = 1;
-	datetime.day = 1;
-	datetime.hour = 0;
-	datetime.minute = 0;
-	datetime.second = 0;
+	uint profile_insert_id;
 
 	// bind parameters to prepared statement
-	query.Bind(&params[0], &accountId);			//account id
-	query.Bind(&params[1], name, &nameLength);	//profile name
-	query.BindDateTime(&params[2], &datetime);	//last login date, set to 1/1/1970 for new accounts
+	query1.Bind(&params1[0], &accountId);
+	query1.Bind(&params1[1], name, &nameLength);
 
 	// execute prepared statement
-	if (!query.StmtExecute(params))
+	if (!query1.StmtExecute(params1))
 	{
-		DatabaseLog("%s create profile '%ws' failed for account id %d", email, name, accountId);
-		query1Success = false;
-		last_id = 0;
+		DatabaseLog("%s create profile '%ws' failed for account id %u", email, name, accountId);
+		profile_insert_id = 0;
 	}
 	else
 	{
 		DatabaseLog("%s created profile %ws", email, name);
-		query1Success = true;
-		last_id = (uint)query.StmtInsertId();
+		profile_insert_id = (uint)query1.StmtInsertId();
+	}
+
+	if (!query1.Success())
+	{
+		this->RollbackTransaction();
+		return false;
 	}
 
 	// *Step 2: get profile count for current account* //
 
-	if(query1Success)
+	char SQL2[4096];
+	memset(SQL2, 0, sizeof(SQL2));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL2, "SELECT id FROM %s WHERE accountid = ? AND isdeleted = 0 ORDER BY lastlogindate DESC, id ASC LIMIT 5", TABLENAME[PROFILES_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query2(this->m_Connection, SQL2);
+
+	// prepared statement binding structures
+	MYSQL_BIND param2[1], result2[1];
+
+	// initialize (zero) bind structures
+	memset(param2, 0, sizeof(param2));
+	memset(result2, 0, sizeof(result2));
+
+	// query specific variables
+	uint id;
+	ulong profileCount;
+
+	// bind parameters to prepared statement
+	query2.Bind(&param2[0], &accountId);
+
+	// bind results
+	query2.Bind(&result2[0], &id);
+
+	// execute prepared statement
+	if(!query2.StmtExecute(param2, result2))
 	{
-		char *sql2 = "SELECT mg_profiles.id "
-					"FROM mg_profiles "
-					"JOIN mg_accounts "
-					"ON mg_profiles.accountid = mg_accounts.id "
-					"WHERE mg_accounts.email = ? "
-					"ORDER BY lastlogindate DESC, id ASC LIMIT 5";
-
-		// prepared statement wrapper object
-		MySQLQuery query2(this->m_Connection, sql2);
-
-		// prepared statement binding structures
-		MYSQL_BIND param2[1], result2[1];
-
-		// initialize (zero) bind structures
-		memset(param2, 0, sizeof(param2));
-		memset(result2, 0, sizeof(result2));
-
-		// query specific variables
-		ulong emailLength = strlen(email);
-
-		// bind parameters to prepared statement
-		query2.Bind(&param2[0], email, &emailLength);	//email
-
-		// bind results
-		query2.Bind(&result2[0], &id);					//mg_profiles.id
-
-		// execute prepared statement
-		if(!query2.StmtExecute(param2, result2))
-		{
-			DatabaseLog("CreateUserProfile() failed:");
-			query2Success = false;
-			count = 0;
-		}
-		else
-		{
-			query2Success = true;
-			count = (ulong)query2.StmtNumRows();
-			DatabaseLog("found %d profiles", count);
-		}
+		DatabaseLog("CreateUserProfile() query2 failed: %s", email);
+		profileCount = 0;
+	}
+	else
+	{
+		profileCount = (ulong)query2.StmtNumRows();
+		DatabaseLog("%s found %u profiles", email, profileCount);
 	}
 
-	// *Step 3: if there is only one profile for the account, set the only profile as the active profile* //
-
-	if(count == 1)
+	if (!query2.Success())
 	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// *Step 3: if this is the only profile for the account, set it as the active profile* //
+
+	if (profileCount == 1)
+	{
+		char SQL3[4096];
+		memset(SQL3, 0, sizeof(SQL3));
+
+		// build sql query using table names defined in settings file
+		sprintf(SQL3, "UPDATE %s SET activeprofileid = ? WHERE id = ?", TABLENAME[ACCOUNTS_TABLE]);
+
 		// prepared statement wrapper object
-		MySQLQuery query3(this->m_Connection, "UPDATE mg_accounts SET activeprofileid = ? WHERE id = ?");
+		MySQLQuery query3(this->m_Connection, SQL3);
 
 		// prepared statement binding structures
 		MYSQL_BIND params3[2];
@@ -715,24 +820,26 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 		memset(params3, 0, sizeof(params3));
 
 		// bind parameters to prepared statement
-		query3.Bind(&params3[0], &last_id);			//profileid
-		query3.Bind(&params3[1], &accountId);		//account id
+		query3.Bind(&params3[0], &profile_insert_id);
+		query3.Bind(&params3[1], &accountId);
 		
 		// execute prepared statement
 		if(!query3.StmtExecute(params3))
-		{
-			DatabaseLog("set active profile failed");
-			query3Success = false;
-			last_id = 0;
-		}
+			DatabaseLog("%s set active profile failed", email);
 		else
+			DatabaseLog("%s set active profile to profileid(%u)", email, profile_insert_id);
+
+		if (!query3.Success())
 		{
-			DatabaseLog("set active profile to %d OK", last_id);
-			query3Success = true;
+			this->RollbackTransaction();
+			return false;
 		}
 	}
 
-	return query1Success && query2Success && query3Success;
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
 bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId, const char* email)
@@ -744,151 +851,140 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 		return false;
 	}
 
-	//TODO: (when forum is implemented) 
-	//dont delete the profile, just rename the profile name
-	//set an 'isdeleted' flag to 1
-	//disassociate the profile with the account
+	// begin an sql transaction
+	this->BeginTransaction();
 
-	// *Step 1: just delete the profile* //
+	// *Step 1: set the isdeleted field to 1, dis-associating the profile from the account* //
+
+	char SQL1[4096];
+	memset(SQL1, 0, sizeof(SQL1));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL1, "UPDATE %s SET isdeleted = 1 WHERE id = ?", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "DELETE FROM mg_profiles WHERE id = ?");
+	MySQLQuery query1(this->m_Connection, SQL1);
 
 	// prepared statement binding structures
-	MYSQL_BIND param[1];
+	MYSQL_BIND param1[1];
 
 	// initialize (zero) bind structures
-	memset(param, 0, sizeof(param));
-
-	// query specific variables
-	bool query1Success, query2Success, query3Success;
-	bool query4Success, query5Success, query6Success;
-	ulong count;
-	uint id;
+	memset(param1, 0, sizeof(param1));
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);		//profile id
+	query1.Bind(&param1[0], &profileId);
 
 	// execute prepared statement
-	if (!query.StmtExecute(param))
-	{
-		DatabaseLog("DeleteUserProfile(query1) failed: profile id(%d)", email, profileId);
-		query1Success = false;
-	}
+	if (!query1.StmtExecute(param1))
+		DatabaseLog("DeleteUserProfile(query1) failed: %s, profile id(%u)", email, profileId);
 	else
+		DatabaseLog("%s deleted profile id(%u)", email, profileId);
+
+	if (!query1.Success())
 	{
-		DatabaseLog("%s deleted profile id(%d)", email, profileId);
-		query1Success = true;
+		this->RollbackTransaction();
+		return false;
 	}
 
 	// *Step 2: get profile count for current account* //
 
-	//if(query1Success)
-	//{
-		char *sql2 = "SELECT mg_profiles.id "
-					"FROM mg_profiles "
-					"JOIN mg_accounts "
-					"ON mg_profiles.accountid = mg_accounts.id "
-					"WHERE mg_accounts.email = ? "
-					"ORDER BY lastlogindate DESC, id ASC LIMIT 5";
+	char SQL2[4096];
+	memset(SQL2, 0, sizeof(SQL2));
 
-		// prepared statement wrapper object
-		MySQLQuery query2(this->m_Connection, sql2);
+	// build sql query using table names defined in settings file
+	sprintf(SQL2, "SELECT id FROM %s WHERE accountid = ? AND isdeleted = 0 ORDER BY lastlogindate DESC, id ASC LIMIT 5", TABLENAME[PROFILES_TABLE]);
 
-		// prepared statement binding structures
-		MYSQL_BIND params[1], results[1];
+	// prepared statement wrapper object
+	MySQLQuery query2(this->m_Connection, SQL2);
 
-		// initialize (zero) bind structures
-		memset(params, 0, sizeof(params));
-		memset(results, 0, sizeof(results));
+	// prepared statement binding structures
+	MYSQL_BIND param2[1], result2[1];
 
-		// query specific variables
-		ulong emailLength = strlen(email);
+	// initialize (zero) bind structures
+	memset(param2, 0, sizeof(param2));
+	memset(result2, 0, sizeof(result2));
 
-		// bind parameters to prepared statement
-		query2.Bind(&params[0], email, &emailLength);	//email
+	// query specific variables
+	uint id;
+	ulong profileCount;
 
-		// bind results
-		query2.Bind(&results[0], &id);					//mg_profiles.id
+	// bind parameters to prepared statement
+	query2.Bind(&param2[0], &accountId);
 
-		// execute prepared statement
-		if(!query2.StmtExecute(params, results))
-		{
-			DatabaseLog("DeleteUserProfile(query2) failed: account id(%d), profile id(%d)", accountId, profileId);
-			query2Success = false;
-			count = 0;
-		}
-		else
-		{
-			query2Success = true;
-			count = (ulong)query2.StmtNumRows();
-		}
-	//}
+	// bind results
+	query2.Bind(&result2[0], &id);
 
-	// *Step 3: set active profile to last used profile id, if there are no profiles set active profile id to 0* //
-		
-	if(count > 0)
+	// execute prepared statement
+	if(!query2.StmtExecute(param2, result2))
 	{
-
-		//fetch first row from query2, this is the last used id, as it is sorted by date
-		query2.StmtFetch();
-
-		// prepared statement wrapper object
-		MySQLQuery query3(this->m_Connection, "UPDATE mg_accounts SET activeprofileid = ? WHERE id = ?");
-
-		// prepared statement binding structures
-		MYSQL_BIND params3[2];
-
-		// initialize (zero) bind structures
-		memset(params3, 0, sizeof(params3));
-
-		// bind parameters to prepared statement
-		query3.Bind(&params3[0], &id);				//last used id
-		query3.Bind(&params3[1], &accountId);		//account id
-		
-		// execute prepared statement
-		if(!query3.StmtExecute(params3))
-		{
-			DatabaseLog("DeleteUserProfile(query3) failed: account id(%d), profile id(%d)", accountId, profileId);
-			query3Success = false;
-		}
-		else
-		{
-			DatabaseLog("account id(%d) set active profile id(0)", accountId);
-			query3Success = true;
-		}
+		DatabaseLog("DeleteUserProfile(query2) failed: %s", email);
+		profileCount = 0;
 	}
 	else
 	{
-		// prepared statement wrapper object
-		MySQLQuery query3(this->m_Connection, "UPDATE mg_accounts SET activeprofileid = 0 WHERE id = ?");
+		profileCount = (ulong)query2.StmtNumRows();
+		DatabaseLog("%s found %u profiles", email, profileCount);
+	}
 
-		// prepared statement binding structures
-		MYSQL_BIND param3[1];
+	if (!query2.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
 
-		// initialize (zero) bind structures
-		memset(param3, 0, sizeof(param3));
+	// *Step 3: set active profile to last used profile id, if there are no profiles set active profile id to 0* //
+	uint activeprofile;
 
-		// bind parameters to prepared statement
-		query3.Bind(&param3[0], &accountId);		//account id
+	if(profileCount > 0)
+	{
+		//fetch first row from query2, this is the last used id, as it is sorted by date
+		query2.StmtFetch();
+		activeprofile = id;
+	}
+	else
+		activeprofile = 0;
+
+	char SQL3[4096];
+	memset(SQL3, 0, sizeof(SQL3));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL3, "UPDATE %s SET activeprofileid = ? WHERE id = ?", TABLENAME[ACCOUNTS_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query3(this->m_Connection, SQL3);
+
+	// prepared statement binding structures
+	MYSQL_BIND params3[2];
+
+	// initialize (zero) bind structures
+	memset(params3, 0, sizeof(params3));
+
+	// bind parameters to prepared statement
+	query3.Bind(&params3[0], &activeprofile);
+	query3.Bind(&params3[1], &accountId);
 		
-		// execute prepared statement
-		if(!query3.StmtExecute(param3))
-		{
-			DatabaseLog("DeleteUserProfile(query3) failed: account id(%d), profile id(%d)", accountId, profileId);
-			query3Success = false;
-		}
-		else
-		{
-			DatabaseLog("account id(%d) set active profile id(0)", accountId);
-			query3Success = true;
-		}
+	// execute prepared statement
+	if(!query3.StmtExecute(params3))
+		DatabaseLog("DeleteUserProfile(query3) failed: account id(%u), profile id(%u)", email, accountId, activeprofile);
+	else
+		DatabaseLog("%s set active profile id(%u)", email, activeprofile);
+
+	if (!query3.Success())
+	{
+		this->RollbackTransaction();
+		return false;
 	}
 
 	// *Step 4: delete friends list for profile id and delete profile id from all friends lists* //
 
+	char SQL4[4096];
+	memset(SQL4, 0, sizeof(SQL4));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL4, "DELETE FROM %s WHERE profileid = ? OR friendprofileid = ?", TABLENAME[FRIENDS_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query4(this->m_Connection, "DELETE FROM mg_friends WHERE profileid = ? OR friendprofileid = ?");
+	MySQLQuery query4(this->m_Connection, SQL4);
 
 	// prepared statement binding structures
 	MYSQL_BIND params4[2];
@@ -897,25 +993,31 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 	memset(params4, 0, sizeof(params4));
 
 	// bind parameters to prepared statement
-	query4.Bind(&params4[0], &profileId);		//profile id
+	query4.Bind(&params4[0], &profileId);
 	query4.Bind(&params4[1], &profileId);
 
 	// execute prepared statement
 	if (!query4.StmtExecute(params4))
-	{
-		DatabaseLog("DeleteUserProfile(query4) failed: profile id(%d)", email, profileId);
-		query4Success = false;
-	}
+		DatabaseLog("DeleteUserProfile(query4) failed: profile id(%u)", email, profileId);
 	else
+		DatabaseLog("%s deleted friends list for profile id(%u)", email, profileId);
+
+	if (!query4.Success())
 	{
-		DatabaseLog("%s deleted friends list for profile id(%d)", email, profileId);
-		query4Success = true;
+		this->RollbackTransaction();
+		return false;
 	}
 
 	// *Step 5: delete ignore list for profile id and delete profile id from all ignore lists* //
 
+	char SQL5[4096];
+	memset(SQL5, 0, sizeof(SQL5));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL5, "DELETE FROM %s WHERE profileid = ? OR ignoredprofileid = ?", TABLENAME[IGNORED_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query5(this->m_Connection, "DELETE FROM mg_ignored WHERE profileid = ? OR ignoredprofileid = ?");
+	MySQLQuery query5(this->m_Connection, SQL5);
 
 	// prepared statement binding structures
 	MYSQL_BIND params5[2];
@@ -924,25 +1026,31 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 	memset(params5, 0, sizeof(params5));
 
 	// bind parameters to prepared statement
-	query5.Bind(&params5[0], &profileId);		//profile id
+	query5.Bind(&params5[0], &profileId);
 	query5.Bind(&params5[1], &profileId);
 
 	// execute prepared statement
 	if (!query5.StmtExecute(params5))
-	{
-		DatabaseLog("DeleteUserProfile(query5) failed: profile id(%d)", email, profileId);
-		query5Success = false;
-	}
+		DatabaseLog("DeleteUserProfile(query5) failed: profile id(%u)", email, profileId);
 	else
+		DatabaseLog("%s deleted ignore list for profile id(%u)", email, profileId);
+
+	if (!query5.Success())
 	{
-		DatabaseLog("%s deleted ignore list for profile id(%d)", email, profileId);
-		query5Success = true;
+		this->RollbackTransaction();
+		return false;
 	}
 
 	// *Step 6: delete pending and sent messages for profile
 
+	char SQL6[4096];
+	memset(SQL6, 0, sizeof(SQL6));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL6, "DELETE FROM %s WHERE senderprofileid = ? OR recipientprofileid = ?", TABLENAME[MESSAGES_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query6(this->m_Connection, "DELETE FROM mg_messages WHERE senderprofileid = ? OR recipientprofileid = ?");
+	MySQLQuery query6(this->m_Connection, SQL6);
 
 	// prepared statement binding structures
 	MYSQL_BIND params6[2];
@@ -951,25 +1059,28 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 	memset(params6, 0, sizeof(params6));
 
 	// bind parameters to prepared statement
-	query6.Bind(&params6[0], &profileId);		//profile id
+	query6.Bind(&params6[0], &profileId);
 	query6.Bind(&params6[1], &profileId);
 
 	// execute prepared statement
 	if (!query6.StmtExecute(params6))
-	{
-		DatabaseLog("DeleteUserProfile(query6) failed: profile id(%d)", email, profileId);
-		query6Success = false;
-	}
+		DatabaseLog("DeleteUserProfile(query6) failed: profile id(%u)", email, profileId);
 	else
+		DatabaseLog("%s deleted all messages for/from profile id(%u)", email, profileId);
+
+	if (!query6.Success())
 	{
-		DatabaseLog("%s deleted all messages for/from profile id(%d)", email, profileId);
-		query6Success = true;
+		this->RollbackTransaction();
+		return false;
 	}
 
-	return query1Success && query2Success && query3Success && query4Success && query5Success && query6Success;
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
-bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId, MMG_Profile *profile, MMG_Options *options)
+bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId, MMG_Profile *profile)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -978,155 +1089,169 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+
 	// *Step 1: get the requested profile* //
+
+	char SQL1[4096];
+	memset(SQL1, 0, sizeof(SQL1));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL1, "SELECT id, name, rank, clanid, rankinclan FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 	
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id, name, rank, clanid, rankinclan, commoptions FROM mg_profiles WHERE id = ? LIMIT 1");
+	MySQLQuery query1(this->m_Connection, SQL1);
 
 	// prepared statement binding structures
-	MYSQL_BIND param[1], results[6];
+	MYSQL_BIND param1[1], results1[5];
 
 	// initialize (zero) bind structures
-	memset(param, 0, sizeof(param));
-	memset(results, 0, sizeof(results));
+	memset(param1, 0, sizeof(param1));
+	memset(results1, 0, sizeof(results1));
 
 	// query specific variables
-	bool query1Success, query2Success, query3Success;
-
 	wchar_t name[WIC_NAME_MAX_LENGTH];
 	memset(name, 0, sizeof(name));
 	ulong nameLength = ARRAYSIZE(name);
 
-	uint id, clanid, commoptions;
+	uint id, clanid;
 	uchar rank, rankinclan;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);			//profile id
+	query1.Bind(&param1[0], &profileId);
 
 	// bind results
-	query.Bind(&results[0], &id);				//mg_profiles.id
-	query.Bind(&results[1], name, &nameLength);	//mg_profiles.name
-	query.Bind(&results[2], &rank);				//mg_profiles.rank
-	query.Bind(&results[3], &clanid);			//mg_profiles.clanid
-	query.Bind(&results[4], &rankinclan);		//mg_profiles.rankinclan
-	query.Bind(&results[5], &commoptions);		//mg_profiles.commoptions
+	query1.Bind(&results1[0], &id);
+	query1.Bind(&results1[1], name, &nameLength);
+	query1.Bind(&results1[2], &rank);
+	query1.Bind(&results1[3], &clanid);
+	query1.Bind(&results1[4], &rankinclan);
 
 	// execute prepared statement
-	if(!query.StmtExecute(param, results))
+	if(!query1.StmtExecute(param1, results1))
 	{
-		DatabaseLog("QueryUserProfile(query) failed: profile id(%d)", profileId);
-		query1Success = false;
+		DatabaseLog("QueryUserProfile(query1) failed: accountid(%u), profileid(%u)", accountId, profileId);
 
-		//profile
 		profile->m_ProfileId = 0;
-		wcscpy_s(profile->m_Name, L"");
+		wcsncpy(profile->m_Name, L"", WIC_NAME_MAX_LENGTH);
 		profile->m_Rank = 0;
 		profile->m_ClanId = 0;
 		profile->m_RankInClan = 0;
 		profile->m_OnlineStatus = 0;
-
-		//communication options
-		options->FromUInt(0);
 	}
 	else
 	{
-		if (!query.StmtFetch())
+		if (!query1.StmtFetch())
 		{
-			DatabaseLog("profile id(%d) not found", profileId);
-			query1Success = true;
+			DatabaseLog("profile id(%u) not found", profileId);
 
-			//profile
 			profile->m_ProfileId = 0;
-			wcscpy_s(profile->m_Name, L"");
+			wcsncpy(profile->m_Name, L"", WIC_NAME_MAX_LENGTH);
 			profile->m_Rank = 0;
 			profile->m_ClanId = 0;
 			profile->m_RankInClan = 0;
 			profile->m_OnlineStatus = 0;
-
-			//communication options
-			options->FromUInt(0);
 		}
 		else
 		{
-			DatabaseLog("profile id(%d) %ws found", profileId, name);
-			query1Success = true;
+			DatabaseLog("profile id(%u) %ws found", profileId, name);
 
-			//profile
 			profile->m_ProfileId = id;
-			wcscpy_s(profile->m_Name, name);
+			wcsncpy(profile->m_Name, name, WIC_NAME_MAX_LENGTH);
 			profile->m_Rank = rank;
 			profile->m_ClanId = clanid;
 			profile->m_RankInClan = rankinclan;
 			profile->m_OnlineStatus = 0;
-
-			//communication options
-			options->FromUInt(commoptions);
 		}
+	}
+
+	if (!query1.Success())
+	{
+		this->RollbackTransaction();
+		return false;
 	}
 
 	// *Step 2: update last login date for the requested profile* //
 
-	if(query1Success)
-	{
-		// prepared statement wrapper object
-		MySQLQuery query2(this->m_Connection, "UPDATE mg_profiles SET lastlogindate = NOW() WHERE id = ?");
+	char SQL2[4096];
+	memset(SQL2, 0, sizeof(SQL2));
 
-		// prepared statement binding structures
-		MYSQL_BIND param2[1];
+	// build sql query using table names defined in settings file
+	sprintf(SQL2, "UPDATE %s SET lastlogindate = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
 
-		// initialize (zero) bind structures
-		memset(param2, 0, sizeof(param2));
+	// prepared statement wrapper object
+	MySQLQuery query2(this->m_Connection, SQL2);
 
-		// bind parameters to prepared statement
-		query2.Bind(&param2[0], &profile->m_ProfileId);		//profile id
+	// prepared statement binding structures
+	MYSQL_BIND param2[2];
+
+	// initialize (zero) bind structures
+	memset(param2, 0, sizeof(param2));
+
+	// query specific variables
+	time_t local_timestamp = time(NULL);
+	//struct tm* gtime = gmtime(&local_timestamp);
+	//time_t utc_timestamp = mktime(gtime);
+
+	uint logintime = local_timestamp;
+
+	// bind parameters to prepared statement
+	query2.Bind(&param2[0], &logintime);
+	query2.Bind(&param2[1], &profile->m_ProfileId);
 		
-		// execute prepared statement
-		if(!query2.StmtExecute(param2))
-		{
-			DatabaseLog("QueryUserProfile(query2) failed: profile id(%d)", profile->m_ProfileId);
-			query2Success = false;
-		}
-		else
-		{
-			DatabaseLog("profile id(%d) %ws lastlogindate updated", profile->m_ProfileId, profile->m_Name);
-			query2Success = true;
-		}
+	// execute prepared statement
+	if(!query2.StmtExecute(param2))
+		DatabaseLog("QueryUserProfile(query2) failed: accountid(%u), profileid(%u)", accountId, profile->m_ProfileId);
+	else
+		DatabaseLog("profile id(%u) %ws lastlogindate updated", profile->m_ProfileId, profile->m_Name);
+
+	if (!query2.Success())
+	{
+		this->RollbackTransaction();
+		return false;
 	}
 
 	// *Step 3: set new requested profile as active for the account* //
 
-	if(query2Success)
-	{
-		// prepared statement wrapper object
-		MySQLQuery query3(this->m_Connection, "UPDATE mg_accounts SET activeprofileid = ? WHERE id = ?");
+	char SQL3[4096];
+	memset(SQL3, 0, sizeof(SQL3));
 
-		// prepared statement binding structures
-		MYSQL_BIND params3[2];
+	// build sql query using table names defined in settings file
+	sprintf(SQL3, "UPDATE %s SET activeprofileid = ? WHERE id = ?", TABLENAME[ACCOUNTS_TABLE]);
 
-		// initialize (zero) bind structures
-		memset(params3, 0, sizeof(params3));
+	// prepared statement wrapper object
+	MySQLQuery query3(this->m_Connection, SQL3);
 
-		// bind parameters to prepared statement
-		query3.Bind(&params3[0], &profile->m_ProfileId);		//profileid
-		query3.Bind(&params3[1], &accountId);					//account id
+	// prepared statement binding structures
+	MYSQL_BIND params3[2];
+
+	// initialize (zero) bind structures
+	memset(params3, 0, sizeof(params3));
+
+	// bind parameters to prepared statement
+	query3.Bind(&params3[0], &profile->m_ProfileId);
+	query3.Bind(&params3[1], &accountId);
 		
-		// execute prepared statement
-		if(!query3.StmtExecute(params3))
-		{
-			DatabaseLog("QueryUserProfile(query3) failed: account id(%d), profile id(%d)", accountId, profile->m_ProfileId);
-			query3Success = false;
-		}
-		else
-		{
-			DatabaseLog("account id(%d) set active profile id(%d) %ws", accountId, profile->m_ProfileId, profile->m_Name);
-			query3Success = true;
-		}
+	// execute prepared statement
+	if(!query3.StmtExecute(params3))
+		DatabaseLog("QueryUserProfile(query3) failed: accountid(%u), profileid(%u)", accountId, profile->m_ProfileId);
+	else
+		DatabaseLog("account id(%u) set active profile id(%u) %ws", accountId, profile->m_ProfileId, profile->m_Name);
+
+	if (!query3.Success())
+	{
+		this->RollbackTransaction();
+		return false;
 	}
 
-	return query1Success && query2Success && query3Success;
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
-bool MySQLDatabase::RetrieveUserProfiles(const char *email, const char *password, ulong *dstProfileCount, MMG_Profile *profiles[])
+bool MySQLDatabase::RetrieveUserProfiles(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles[])
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -1135,15 +1260,14 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const char *password
 		return false;
 	}
 
-	char *sql = "SELECT mg_profiles.id, mg_profiles.name, mg_profiles.rank, mg_profiles.clanid, mg_profiles.rankinclan "
-				"FROM mg_profiles "
-				"JOIN mg_accounts "
-				"ON mg_profiles.accountid = mg_accounts.id "
-				"WHERE mg_accounts.email = ? "
-				"ORDER BY lastlogindate DESC, id ASC LIMIT 5";
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT id, name, rank, clanid, rankinclan FROM %s WHERE accountid = ? AND isdeleted = 0 ORDER BY lastlogindate DESC, id ASC LIMIT 5", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, sql);
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], results[5];
@@ -1153,9 +1277,6 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const char *password
 	memset(results, 0, sizeof(results));
 
 	// query specific variables
-	bool querySuccess;
-	ulong emailLength = strlen(email);
-
 	wchar_t name[WIC_NAME_MAX_LENGTH];
 	memset(name, 0, sizeof(name));
 	ulong nameLength = ARRAYSIZE(name);
@@ -1164,25 +1285,24 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const char *password
 	uchar rank, rankinclan;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], email, &emailLength);		//email
+	query.Bind(&param[0], &accountId);
 
 	// bind results
-	query.Bind(&results[0], &id);					//mg_profiles.id
-	query.Bind(&results[1], name, &nameLength);		//mg_profiles.name
-	query.Bind(&results[2], &rank);					//mg_profiles.rank
-	query.Bind(&results[3], &clanid);				//mg_profiles.clanid
-	query.Bind(&results[4], &rankinclan);			//mg_profiles.rankinclan
+	query.Bind(&results[0], &id);
+	query.Bind(&results[1], name, &nameLength);
+	query.Bind(&results[2], &rank);
+	query.Bind(&results[3], &clanid);
+	query.Bind(&results[4], &rankinclan);
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
 	{
-		DatabaseLog("RetrieveUserProfiles() query failed: %s", email);
-		querySuccess = false;
+		DatabaseLog("RetrieveUserProfiles() failed: accountId(%u)", accountId);
 
 		MMG_Profile *tmp = new MMG_Profile[1];
 
 		tmp[0].m_ProfileId = 0;
-		wcscpy_s(tmp[0].m_Name, L"");
+		wcsncpy(tmp[0].m_Name, L"", WIC_NAME_MAX_LENGTH);
 		tmp[0].m_Rank = 0;
 		tmp[0].m_ClanId = 0;
 		tmp[0].m_RankInClan = 0;
@@ -1193,16 +1313,15 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const char *password
 	}
 	else
 	{
-		ulong count = (ulong)query.StmtNumRows();
-		DatabaseLog("%s: %d profiles found", email, count);
-		querySuccess = true;
+		ulong profileCount = (ulong)query.StmtNumRows();
+		DatabaseLog("accountid(%u): %u profiles found", accountId, profileCount);
 
-		if (count < 1)
+		if (profileCount < 1)
 		{
 			MMG_Profile *tmp = new MMG_Profile[1];
 
 			tmp[0].m_ProfileId = 0;
-			wcscpy_s(tmp[0].m_Name, L"");
+			wcsncpy(tmp[0].m_Name, L"", WIC_NAME_MAX_LENGTH);
 			tmp[0].m_Rank = 0;
 			tmp[0].m_ClanId = 0;
 			tmp[0].m_RankInClan = 0;
@@ -1213,13 +1332,13 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const char *password
 		}
 		else
 		{
-			MMG_Profile *tmp = new MMG_Profile[count];
+			MMG_Profile *tmp = new MMG_Profile[profileCount];
 			int i = 0;
 
 			while(query.StmtFetch())
 			{
 				tmp[i].m_ProfileId = id;
-				wcscpy_s(tmp[i].m_Name, name);
+				wcsncpy(tmp[i].m_Name, name, WIC_NAME_MAX_LENGTH);
 				tmp[i].m_Rank = rank;
 				tmp[i].m_ClanId = clanid;
 				tmp[i].m_RankInClan = rankinclan;
@@ -1229,27 +1348,17 @@ bool MySQLDatabase::RetrieveUserProfiles(const char *email, const char *password
 			}
 
 			*profiles = tmp;
-			*dstProfileCount = count;
+			*dstProfileCount = profileCount;
 		}
 	}
 	
-	return querySuccess;
-}
-
-bool MySQLDatabase::QueryUserOptions(const uint profileId, int *options)
-{
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
+	if (!query.Success())
 		return false;
-	}
 
-	//TODO
 	return true;
 }
 
-bool MySQLDatabase::SaveUserOptions(const uint profileId, const int options)
+bool MySQLDatabase::QueryUserOptions(const uint profileId, uint *options)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -1258,8 +1367,77 @@ bool MySQLDatabase::SaveUserOptions(const uint profileId, const int options)
 		return false;
 	}
 
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT commoptions FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET commoptions = ? WHERE id = ?");
+	MySQLQuery query(this->m_Connection, SQL);
+
+	// prepared statement binding structures
+	MYSQL_BIND param[1], results[1];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+	memset(results, 0, sizeof(results));
+
+	// query specific variables
+	uint commoptions;
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], &profileId);
+
+	// bind results
+	query.Bind(&results[0], &commoptions);
+
+	// execute prepared statement
+	if(!query.StmtExecute(param, results))
+	{
+		DatabaseLog("QueryUserOptions() failed: profileid(%u)", profileId);
+		*options = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			DatabaseLog("options not found for profile id(%u)", profileId);
+			*options = 0;
+		}
+		else
+		{
+			DatabaseLog("options found for profile id(%u)", profileId);
+			*options = commoptions;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::SaveUserOptions(const uint profileId, const uint options)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "UPDATE %s SET commoptions = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND params[2];
@@ -1267,26 +1445,26 @@ bool MySQLDatabase::SaveUserOptions(const uint profileId, const int options)
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
 
-	// query specific variables
-	bool querySuccess;
-
 	// bind parameters to prepared statement
 	query.Bind(&params[0], &options);
 	query.Bind(&params[1], &profileId);
 
 	// execute prepared statement
 	if(!query.StmtExecute(params))
-	{
-		DatabaseLog("SaveUserOptions() failed: profile id(%d), options(%d)", profileId, options);
-		querySuccess = false;
-	}
+		DatabaseLog("SaveUserOptions() failed: profileid(%u), options(%u)", profileId, options);
 	else
+		DatabaseLog("profile id(%u) set commoptions(%u)", profileId, options);
+
+	if (!query.Success())
 	{
-		DatabaseLog("profile id(%d) set commoptions(%d)", profileId, options);
-		querySuccess = true;
+		this->RollbackTransaction();
+		return false;
 	}
 
-	return querySuccess;
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
 bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, uint *friendIds[])
@@ -1298,8 +1476,14 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 		return false;
 	}
 
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT friendprofileid FROM %s WHERE profileid = ? LIMIT 64", TABLENAME[FRIENDS_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT friendprofileid from mg_friends WHERE profileid = ? LIMIT 64");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], result[1];
@@ -1309,20 +1493,18 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 	memset(result, 0, sizeof(result));
 
 	// query specific variables
-	bool querySuccess;
 	uint id;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);		//profileid
+	query.Bind(&param[0], &profileId);
 
 	// bind results
-	query.Bind(&result[0], &id);		//mg_friends.friendprofileid
+	query.Bind(&result[0], &id);
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, result))
 	{
-		DatabaseLog("QueryFriends() query failed: %s", profileId);
-		querySuccess = false;
+		DatabaseLog("QueryFriends() failed: profileid(%u)", profileId);
 
 		uint *tmp = new uint[1];
 
@@ -1334,8 +1516,7 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
-		DatabaseLog("profile id(%d), %d friends found", profileId, count);
-		querySuccess = true;
+		DatabaseLog("profile id(%u), %u friends found", profileId, count);
 
 		if (count < 1)
 		{
@@ -1362,7 +1543,10 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 		}
 	}
 
-	return querySuccess;
+	if (!query.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::AddFriend(const uint profileId, uint friendProfileId)
@@ -1374,8 +1558,17 @@ bool MySQLDatabase::AddFriend(const uint profileId, uint friendProfileId)
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "INSERT INTO %s (profileid, friendprofileid) VALUES (?, ?)", TABLENAME[FRIENDS_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "INSERT INTO mg_friends (profileid, friendprofileid) VALUES (?, ?)");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND params[2];
@@ -1383,29 +1576,26 @@ bool MySQLDatabase::AddFriend(const uint profileId, uint friendProfileId)
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
 
-	// query specific variables
-	bool querySuccess;
-	uint friend_insert_id;
-
 	// bind parameters to prepared statement
-	query.Bind(&params[0], &profileId);			//mg_friends.profileid
-	query.Bind(&params[1], &friendProfileId);	//mg_friends.friendprofileid
+	query.Bind(&params[0], &profileId);
+	query.Bind(&params[1], &friendProfileId);
 
 	// execute prepared statement
 	if (!query.StmtExecute(params))
-	{
-		DatabaseLog("AddFriend() query failed: %d", profileId);
-		friend_insert_id = 0;
-		querySuccess = false;
-	}
+		DatabaseLog("AddFriend() failed: profileid(%u)", profileId);
 	else
-	{
-		DatabaseLog("profileid (%d) added friendprofileid(%d)", profileId, friendProfileId);
-		friend_insert_id = (uint)query.StmtInsertId();
-		querySuccess = true;
-	}
+		DatabaseLog("profileid (%u) added friendprofileid(%u)", profileId, friendProfileId);
 	
-	return querySuccess;
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
 bool MySQLDatabase::RemoveFriend(const uint profileId, uint friendProfileId)
@@ -1417,35 +1607,44 @@ bool MySQLDatabase::RemoveFriend(const uint profileId, uint friendProfileId)
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "DELETE FROM %s WHERE profileid = ? AND friendprofileid = ?", TABLENAME[FRIENDS_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "DELETE FROM mg_friends WHERE profileid = ? AND friendprofileid = ?");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND params[2];
 
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
-	
-	// query specific variables
-	bool querySuccess;
 
 	// bind parameters to prepared statement
-	query.Bind(&params[0], &profileId);			//mg_friends.profileid
-	query.Bind(&params[1], &friendProfileId);	//mg_friends.friendprofileid
+	query.Bind(&params[0], &profileId);
+	query.Bind(&params[1], &friendProfileId);
 
 	// execute prepared statement
 	if (!query.StmtExecute(params))
-	{
-		DatabaseLog("RemoveFriend() query failed: %d", profileId);
-		querySuccess = false;
-	}
+		DatabaseLog("RemoveFriend() failed: profileid(%u)", profileId);
 	else
-	{
-		DatabaseLog("profileid (%d) remove friendprofileid(%d)", profileId, friendProfileId);
-		querySuccess = true;
-	}
+		DatabaseLog("profileid (%u) remove friendprofileid(%u)", profileId, friendProfileId);
 	
-	return querySuccess;
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
 bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCount, uint *acquaintanceIds[])
@@ -1458,11 +1657,17 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 	}
 
 	// TODO:
-	// this function is temporary
-	// must fix when stats are implemented
+	// this function is temporary, must fix when stats are implemented
+	// currently only retrieving profiles that have logged in within the last 7 days
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file, AND lastlogindate > (UNIX_TIMESTAMP(UTC_TIMESTAMP())
+	sprintf(SQL, "SELECT id FROM %s WHERE id <> ? AND isdeleted = 0 AND lastlogindate > (UNIX_TIMESTAMP(NOW()) - 604800) LIMIT 64", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id from mg_profiles WHERE id <> ? LIMIT 64");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], result[1];
@@ -1472,20 +1677,18 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 	memset(result, 0, sizeof(result));
 
 	// query specific variables
-	bool querySuccess;
 	uint id;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);		//profileid
+	query.Bind(&param[0], &profileId);
 
 	// bind results
-	query.Bind(&result[0], &id);			//mg_profiles.id
+	query.Bind(&result[0], &id);
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, result))
 	{
-		DatabaseLog("QueryAcquaintances() query failed: %s", profileId);
-		querySuccess = false;
+		DatabaseLog("QueryAcquaintances() failed: profileid(%u)", profileId);
 
 		uint *tmp = new uint[1];
 
@@ -1497,8 +1700,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
-		DatabaseLog("profile id(%d), %d acquaintances found", profileId, count);
-		querySuccess = true;
+		DatabaseLog("profile id(%u), %u acquaintances found", profileId, count);
 
 		if (count < 1)
 		{
@@ -1525,7 +1727,10 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 		}
 	}
 
-	return querySuccess;
+	if (!query.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileCount, uint *ignoredIds[])
@@ -1537,8 +1742,14 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 		return false;
 	}
 
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT ignoredprofileid FROM %s WHERE profileid = ? LIMIT 64", TABLENAME[IGNORED_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT ignoredprofileid from mg_ignored WHERE profileid = ? LIMIT 64");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], result[1];
@@ -1548,20 +1759,18 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 	memset(result, 0, sizeof(result));
 	
 	// query specific variables
-	bool querySuccess;
 	uint id;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);		//profileid
+	query.Bind(&param[0], &profileId);
 
 	// bind results
-	query.Bind(&result[0], &id);		//mg_ignored.ignoredprofileid
+	query.Bind(&result[0], &id);
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, result))
 	{
-		DatabaseLog("QueryIgnoredProfiles() query failed: %s", profileId);
-		querySuccess = false;
+		DatabaseLog("QueryIgnoredProfiles() failed: profileid(%u)", profileId);
 
 		uint *tmp = new uint[1];
 
@@ -1573,8 +1782,7 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
-		DatabaseLog("profile id(%d), %d ignored profiles found", profileId, count);
-		querySuccess = true;
+		DatabaseLog("profile id(%u), %u ignored profiles found", profileId, count);
 
 		if (count < 1)
 		{
@@ -1601,7 +1809,10 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 		}
 	}
 
-	return querySuccess;
+	if (!query.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::AddIgnoredProfile(const uint profileId, uint ignoredProfileId)
@@ -1613,8 +1824,17 @@ bool MySQLDatabase::AddIgnoredProfile(const uint profileId, uint ignoredProfileI
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "INSERT INTO %s (profileid, ignoredprofileid) VALUES (?, ?)", TABLENAME[IGNORED_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "INSERT INTO mg_ignored (profileid, ignoredprofileid) VALUES (?, ?)");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND params[2];
@@ -1622,29 +1842,26 @@ bool MySQLDatabase::AddIgnoredProfile(const uint profileId, uint ignoredProfileI
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
 
-	// query specific variables
-	bool querySuccess;
-	uint ignored_insert_id;
-
 	// bind parameters to prepared statement
-	query.Bind(&params[0], &profileId);			//mg_ignored.profileid
-	query.Bind(&params[1], &ignoredProfileId);	//mg_ignored.ignoredprofileid
+	query.Bind(&params[0], &profileId);
+	query.Bind(&params[1], &ignoredProfileId);
 
 	// execute prepared statement
 	if (!query.StmtExecute(params))
-	{
-		DatabaseLog("AddIgnoredProfile() query failed: %d", profileId);
-		ignored_insert_id = 0;
-		querySuccess = false;
-	}
+		DatabaseLog("AddIgnoredProfile() failed: profileid(%u)", profileId);
 	else
-	{
-		DatabaseLog("profileid (%d) added ingoredprofileid(%d)", profileId, ignoredProfileId);
-		ignored_insert_id = (uint)query.StmtInsertId();
-		querySuccess = true;
-	}
+		DatabaseLog("profileid (%u) added ingoredprofileid(%u)", profileId, ignoredProfileId);
 	
-	return querySuccess;
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
 bool MySQLDatabase::RemoveIgnoredProfile(const uint profileId, uint ignoredProfileId)
@@ -1656,8 +1873,17 @@ bool MySQLDatabase::RemoveIgnoredProfile(const uint profileId, uint ignoredProfi
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "DELETE FROM %s WHERE profileid = ? AND ignoredprofileid = ?", TABLENAME[IGNORED_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "DELETE FROM mg_ignored WHERE profileid = ? AND ignoredprofileid = ?");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND params[2];
@@ -1665,26 +1891,26 @@ bool MySQLDatabase::RemoveIgnoredProfile(const uint profileId, uint ignoredProfi
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
 
-	// query specific variables
-	bool querySuccess;
-
 	// bind parameters to prepared statement
-	query.Bind(&params[0], &profileId);			//mg_ignored.profileid
-	query.Bind(&params[1], &ignoredProfileId);	//mg_ignored.ignoredprofileid
+	query.Bind(&params[0], &profileId);
+	query.Bind(&params[1], &ignoredProfileId);
 
 	// execute prepared statement
 	if (!query.StmtExecute(params))
-	{
-		DatabaseLog("RemoveIgnoredProfile() query failed: %d", profileId);
-		querySuccess = false;
-	}
+		DatabaseLog("RemoveIgnoredProfile() failed: profileid(%u)", profileId);
 	else
-	{
-		DatabaseLog("profileid (%d) remove ignoredprofileid(%d)", profileId, ignoredProfileId);
-		querySuccess = true;
-	}
+		DatabaseLog("profileid (%u) remove ignoredprofileid(%u)", profileId, ignoredProfileId);
 	
-	return querySuccess;
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
 bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
@@ -1696,8 +1922,14 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 		return false;
 	}
 
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT id, name, rank, clanid, rankinclan FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id, name, rank, clanid, rankinclan FROM mg_profiles WHERE id = ? LIMIT 1");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], results[5];
@@ -1707,8 +1939,6 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 	memset(results, 0, sizeof(results));
 
 	// query specific variables
-	bool querySuccess;
-
 	wchar_t name[WIC_NAME_MAX_LENGTH];
 	memset(name, 0, sizeof(name));
 	ulong nameLength = ARRAYSIZE(name);
@@ -1717,23 +1947,22 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 	uchar rank, rankinclan;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);			//profile id
+	query.Bind(&param[0], &profileId);
 
 	// bind results
-	query.Bind(&results[0], &id);				//mg_profiles.id
-	query.Bind(&results[1], name, &nameLength);	//mg_profiles.name
-	query.Bind(&results[2], &rank);				//mg_profiles.rank
-	query.Bind(&results[3], &clanid);			//mg_profiles.clanid
-	query.Bind(&results[4], &rankinclan);		//mg_profiles.rankinclan
+	query.Bind(&results[0], &id);
+	query.Bind(&results[1], name, &nameLength);
+	query.Bind(&results[2], &rank);
+	query.Bind(&results[3], &clanid);
+	query.Bind(&results[4], &rankinclan);
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
 	{
-		DatabaseLog("QueryProfileName() failed: profile id(%d)", profileId);
-		querySuccess = false;
+		DatabaseLog("QueryProfileName() failed: profileid(%u)", profileId);
 
 		profile->m_ProfileId = 0;
-		wcscpy_s(profile->m_Name, L"");
+		wcsncpy(profile->m_Name, L"", WIC_NAME_MAX_LENGTH);
 		profile->m_Rank = 0;
 		profile->m_ClanId = 0;
 		profile->m_RankInClan = 0;
@@ -1743,11 +1972,10 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 	{
 		if (!query.StmtFetch())
 		{
-			DatabaseLog("profile id(%d) not found", profileId);
-			querySuccess = true;
+			DatabaseLog("profile id(%u) not found", profileId);
 
 			profile->m_ProfileId = 0;
-			wcscpy_s(profile->m_Name, L"");
+			wcsncpy(profile->m_Name, L"", WIC_NAME_MAX_LENGTH);
 			profile->m_Rank = 0;
 			profile->m_ClanId = 0;
 			profile->m_RankInClan = 0;
@@ -1755,12 +1983,10 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 		}
 		else
 		{
-			DatabaseLog("profile id(%d) %ws found", profileId, name);
-			querySuccess = true;
+			DatabaseLog("profile id(%u) %ws found", profileId, name);
 
-			//profile
 			profile->m_ProfileId = id;
-			wcscpy_s(profile->m_Name, name);
+			wcsncpy(profile->m_Name, name, WIC_NAME_MAX_LENGTH);
 			profile->m_Rank = rank;
 			profile->m_ClanId = clanid;
 			profile->m_RankInClan = rankinclan;
@@ -1768,7 +1994,10 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 		}
 	}
 
-	return querySuccess;
+	if (!query.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::QueryProfileList(const size_t Count, const uint *profileIds, MMG_Profile *profiles)
@@ -1791,8 +2020,14 @@ bool MySQLDatabase::QueryEditableVariables(const uint profileId, wchar_t *dstMot
 		return false;
 	}
 
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT motto, homepage FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT motto, homepage FROM mg_profiles WHERE id = ? LIMIT 1");
+	MySQLQuery query(this->m_Connection, SQL);
 	
 	// prepared statement binding structures
 	MYSQL_BIND param[1], results[2];
@@ -1802,8 +2037,6 @@ bool MySQLDatabase::QueryEditableVariables(const uint profileId, wchar_t *dstMot
 	memset(results, 0, sizeof(results));
 
 	// query specific variables
-	bool querySuccess;
-
 	wchar_t motto[WIC_MOTTO_MAX_LENGTH], homepage[WIC_HOMEPAGE_MAX_LENGTH];
 	memset(motto, 0, sizeof(motto));
 	memset(homepage, 0, sizeof(homepage));
@@ -1812,17 +2045,16 @@ bool MySQLDatabase::QueryEditableVariables(const uint profileId, wchar_t *dstMot
 	ulong homepageLength = ARRAYSIZE(homepage);
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);					//profile id
+	query.Bind(&param[0], &profileId);
 
 	// bind results
-	query.Bind(&results[0], motto, &mottoLength);			//mg_profiles.motto
-	query.Bind(&results[1], homepage, &homepageLength);	//mg_profiles.homepage
+	query.Bind(&results[0], motto, &mottoLength);
+	query.Bind(&results[1], homepage, &homepageLength);
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
 	{
-		DatabaseLog("QueryEditableVariables() failed: profile id(%d)", profileId);
-		querySuccess = false;
+		DatabaseLog("QueryEditableVariables() failed: profileid(%u)", profileId);
 
 		dstMotto = L"";
 		dstHomepage = L"";
@@ -1831,23 +2063,24 @@ bool MySQLDatabase::QueryEditableVariables(const uint profileId, wchar_t *dstMot
 	{
 		if (!query.StmtFetch())
 		{
-			DatabaseLog("profile id(%d) not found", profileId);
-			querySuccess = true;
+			DatabaseLog("profile id(%u) not found", profileId);
 
 			dstMotto = L"";
 			dstHomepage = L"";
 		}
 		else
 		{
-			DatabaseLog("profile id(%d) found", profileId);
-			querySuccess = true;
+			DatabaseLog("profile id(%u) found", profileId);
 
-			wcscpy_s(dstMotto, ARRAYSIZE(motto), motto);
-			wcscpy_s(dstHomepage, ARRAYSIZE(homepage), homepage);
+			wcsncpy(dstMotto, motto, WIC_MOTTO_MAX_LENGTH);
+			wcsncpy(dstHomepage, homepage, WIC_HOMEPAGE_MAX_LENGTH);
 		}
 	}
 
-	return querySuccess;
+	if (!query.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::SaveEditableVariables(const uint profileId, const wchar_t *motto, const wchar_t *homepage)
@@ -1859,8 +2092,17 @@ bool MySQLDatabase::SaveEditableVariables(const uint profileId, const wchar_t *m
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "UPDATE %s SET motto = ?, homepage = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "UPDATE mg_profiles SET motto = ?, homepage = ? WHERE id = ?");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND params[3];
@@ -1869,8 +2111,6 @@ bool MySQLDatabase::SaveEditableVariables(const uint profileId, const wchar_t *m
 	memset(params, 0, sizeof(params));
 
 	// query specific variables
-	bool querySuccess;
-
 	ulong mottoLength = wcslen(motto);
 	ulong homepageLength = wcslen(homepage);
 
@@ -1890,17 +2130,20 @@ bool MySQLDatabase::SaveEditableVariables(const uint profileId, const wchar_t *m
 
 	// execute prepared statement
 	if(!query.StmtExecute(params))
-	{
-		DatabaseLog("SaveEditableVariables() failed: profile id(%d)", profileId);
-		querySuccess = false;
-	}
+		DatabaseLog("SaveEditableVariables() failed: profileid(%u)", profileId);
 	else
+		DatabaseLog("SaveEditableVariables() success: profileid(%u)", profileId);
+
+	if (!query.Success())
 	{
-		DatabaseLog("SaveEditableVariables() success: profile id(%d)", profileId);
-		querySuccess = true;
+		this->RollbackTransaction();
+		return false;
 	}
 
-	return querySuccess;
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
 bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages[])
@@ -1912,8 +2155,16 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 		return false;
 	}
 
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+	
+	// TODO temporarily limiting returned pending messages to 20, real limit for the client may be 128
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT id, writtenat, senderprofileid, recipientprofileid, message FROM %s WHERE recipientprofileid = ? ORDER BY writtenat ASC LIMIT 20", TABLENAME[MESSAGES_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "SELECT id, writtenat, senderprofileid, recipientprofileid, message from mg_messages WHERE recipientprofileid = ? ORDER BY writtenat ASC LIMIT 20");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
 	MYSQL_BIND param[1], results[5];
@@ -1923,33 +2174,27 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 	memset(results, 0, sizeof(results));
 	
 	// query specific variables
-	wchar_t message[256];
+	wchar_t message[WIC_INSTANTMSG_MAX_LENGTH];
 	memset(message, 0, sizeof(message));
 	ulong msgLength = ARRAYSIZE(message);
 
 	uint id, senderid, recipientid;
-	MYSQL_TIME writtenat;
-
-	//
-	// TODO
-	// note: temporarily limiting returned pending messages to 20, real limit for the client may be 128
-	// m_WrittenAt = number of seconds since midnight UTC, the client adjusts timezone aswell
-	//
+	uint writtenat;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);		//profileid
+	query.Bind(&param[0], &profileId);
 
 	// bind results
-	query.Bind(&results[0], &id);					//mg_messages.id
-	query.BindTimeStamp(&results[1], &writtenat);	//mg_messages.writtenat
-	query.Bind(&results[2], &senderid);				//mg_messages.senderprofileid
-	query.Bind(&results[3], &recipientid);			//mg_messages.recipientprofileid
-	query.Bind(&results[4], message, &msgLength);	//mg_messages.message
+	query.Bind(&results[0], &id);
+	query.Bind(&results[1], &writtenat);
+	query.Bind(&results[2], &senderid);
+	query.Bind(&results[3], &recipientid);
+	query.Bind(&results[4], message, &msgLength);
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
 	{
-		DatabaseLog("QueryPendingMessages() failed: profile id(%d)", profileId);
+		DatabaseLog("QueryPendingMessages() failed: profileid(%u)", profileId);
 
 		//messages = NULL;
 		*dstMessageCount = 0;
@@ -1957,7 +2202,7 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
-		DatabaseLog("found %d pending messages for profile id(%d)", count, profileId);
+		DatabaseLog("found %u pending messages for profile id(%u)", count, profileId);
 
 		*dstMessageCount = 0;
 
@@ -1969,10 +2214,10 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 			while(query.StmtFetch())
 			{
 				tmp[i].m_MessageId = id;
-				tmp[i].m_WrittenAt = 0; // TODO
+				tmp[i].m_WrittenAt = writtenat;
 				this->QueryProfileName(senderid, &tmp[i].m_SenderProfile);
 				tmp[i].m_RecipientProfile = recipientid;
-				wcscpy_s(tmp[i].m_Message, message);
+				wcsncpy(tmp[i].m_Message, message, WIC_INSTANTMSG_MAX_LENGTH);
 
 				i++;
 			}
@@ -1982,7 +2227,10 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 		}
 	}
 
-	return query.Success();
+	if (!query.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::AddInstantMessage(const uint profileId, MMG_InstantMessageListener::InstantMessage *message)
@@ -1994,43 +2242,64 @@ bool MySQLDatabase::AddInstantMessage(const uint profileId, MMG_InstantMessageLi
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "INSERT INTO %s (writtenat, senderprofileid, recipientprofileid, message) VALUES (?, ?, ?, ?)", TABLENAME[MESSAGES_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "INSERT INTO mg_messages (writtenat, senderprofileid, recipientprofileid, message) VALUES (NOW(), ?, ?, ?)");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
-	MYSQL_BIND params[3];
+	MYSQL_BIND params[4];
 
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
 
 	// query specific variables
 	ulong msgLength = wcslen(message->m_Message);
-	MYSQL_TIME datetime;
 
-	// TODO store time as utc format
-	// might have to store as int rather than timestamp
+	time_t local_timestamp = time(NULL);
+	//struct tm* gtime = gmtime(&local_timestamp);
+	//time_t utc_timestamp = mktime(gtime);
+
+	message->m_WrittenAt = local_timestamp;
 
 	// bind parameters to prepared statement
-	query.Bind(&params[0], &message->m_SenderProfile.m_ProfileId);
-	query.Bind(&params[1], &message->m_RecipientProfile);
-	query.Bind(&params[2], message->m_Message, &msgLength);
+	query.Bind(&params[0], &message->m_WrittenAt);
+	query.Bind(&params[1], &message->m_SenderProfile.m_ProfileId);
+	query.Bind(&params[2], &message->m_RecipientProfile);
+	query.Bind(&params[3], message->m_Message, &msgLength);
 
 	// execute prepared statement
 	if (!query.StmtExecute(params))
 	{
-		DatabaseLog("AddInstantMessage() query failed: profile id(%d)", profileId);
+		DatabaseLog("AddInstantMessage() failed: profileid(%u)", profileId);
 		message->m_MessageId = 0;
 	}
 	else
 	{
 		message->m_MessageId = (uint)query.StmtInsertId();
-		//DatabaseLog("message id(%d) queued:", message->m_MessageId);
+		//DatabaseLog("message id(%u) queued:", message->m_MessageId);
 	}
 
-	return query.Success();
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
-bool MySQLDatabase::RemoveInstantMessage(const uint messageId)
+bool MySQLDatabase::RemoveInstantMessage(const uint profileId, uint messageId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -2039,25 +2308,44 @@ bool MySQLDatabase::RemoveInstantMessage(const uint messageId)
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "DELETE FROM %s WHERE id = ? AND recipientprofileid = ?", TABLENAME[MESSAGES_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "DELETE FROM mg_messages WHERE id = ?");  // AND recipientprofileid = ?
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
-	MYSQL_BIND param[1];
+	MYSQL_BIND param[2];
 
 	// initialize (zero) bind structures
 	memset(param, 0, sizeof(param));
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], &messageId);			//mg_messages.id
+	query.Bind(&param[0], &messageId);
+	query.Bind(&param[1], &profileId);
 
 	// execute prepared statement
 	if (!query.StmtExecute(param))
-		DatabaseLog("RemoveInstantMessage() query failed: message id(%d)", messageId);
+		DatabaseLog("RemoveInstantMessage() failed: profileid(%u)", profileId);
 	//else
-	//	DatabaseLog("message id(%d) acked", messageId);
+	//	DatabaseLog("message id(%u) acked", messageId);
 
-	return query.Success();
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }
 
 bool MySQLDatabase::AddAbuseReport(const uint profileId, const uint flaggedProfile, const wchar_t *report)
@@ -2069,11 +2357,20 @@ bool MySQLDatabase::AddAbuseReport(const uint profileId, const uint flaggedProfi
 		return false;
 	}
 
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "INSERT INTO %s (senderprofileid, reportedprofileid, report, datereported) VALUES (?, ?, ?, ?)", TABLENAME[ABUSEREPORTS_TABLE]);
+
 	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, "INSERT INTO mg_abusereports (senderprofileid, reportedprofileid, report, datereported) VALUES (?, ?, ?, NOW())");
+	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
-	MYSQL_BIND params[3];
+	MYSQL_BIND params[4];
 
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
@@ -2081,16 +2378,32 @@ bool MySQLDatabase::AddAbuseReport(const uint profileId, const uint flaggedProfi
 	// query specific variables
 	ulong reportLength = wcslen(report);
 
+	time_t local_timestamp = time(NULL);
+	//struct tm* gtime = gmtime(&local_timestamp);
+	//time_t utc_timestamp = mktime(gtime);
+
+	uint datereported = local_timestamp;
+
 	// bind parameters to prepared statement
 	query.Bind(&params[0], &profileId);
 	query.Bind(&params[1], &flaggedProfile);
 	query.Bind(&params[2], report, &reportLength);
+	query.Bind(&params[3], &datereported);
 
 	// execute prepared statement
 	if (!query.StmtExecute(params))
-		DatabaseLog("AddAbuseReport() query failed: profileid(%d)", profileId);
+		DatabaseLog("AddAbuseReport() failed: profileid(%u)", profileId);
 	else
-		DatabaseLog("player id(%d) reported player id(%d):", profileId, flaggedProfile);
+		DatabaseLog("player id(%u) reported player id(%u):", profileId, flaggedProfile);
 
-	return query.Success();
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
 }

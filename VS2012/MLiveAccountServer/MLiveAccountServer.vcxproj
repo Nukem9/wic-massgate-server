@@ -107,6 +107,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\zlib.h" />
     <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\zutil.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_Misc.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_MTwister.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_Singleton.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MI_Time.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MP_Pack.h" />
@@ -114,6 +115,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\stdafx.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\misc\debuglog.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\misc\stdafx.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\misc\tiger.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\misc\wsaerror.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProxy.h" />
@@ -158,7 +160,6 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\JSON.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\LiveAccount.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabase.h" />
-    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabaseInfo.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLQuery.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\PasswordHash.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\SQLQuery.h" />
@@ -196,10 +197,13 @@
     <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\uncompr.c" />
     <ClCompile Include="..\..\MLiveAccountServer\libraries\zlib\zutil.c" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MC_Misc.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MC_MTwister.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MI_Time.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MP_Pack.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MT_Mutex.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\misc\debuglog.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\misc\tiger.c" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\misc\tiger_sboxes.c" />
     <ClCompile Include="..\..\MLiveAccountServer\src\misc\wsaerror.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\MLiveAccountServer.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.cpp" />

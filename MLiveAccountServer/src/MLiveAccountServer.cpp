@@ -46,10 +46,6 @@ void Startup()
 	if (!MySQLDatabase::ourInstance->Initialize())
 		DebugLog(L_ERROR, "Failed to initialize database back end");
 
-	//only run once to create the tables, TODO: move the database schema to an .sql file
-	//if (!MySQLDatabase::ourInstance->InitializeSchema())
-	//	DebugLog(L_ERROR, "Failed to create database tables");
-
 	/* GeoIP init*/
 	if (!GeoIP::Initialize())
 		DebugLog(L_ERROR, "Failed to initialize GeoIP database");

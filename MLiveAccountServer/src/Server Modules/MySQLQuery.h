@@ -53,6 +53,15 @@ public:
 		param->length = 0;
 	}
 
+	//SMALLINT
+	void Bind(MYSQL_BIND *param, const ushort *Value)
+	{
+		param->buffer_type = MYSQL_TYPE_SHORT;
+		param->buffer = (void *)Value;
+		param->is_null = (my_bool *)0;
+		param->length = 0;
+	}
+
 	//INT
 	void Bind(MYSQL_BIND *param, const int *Value)
 	{

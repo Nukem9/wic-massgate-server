@@ -254,9 +254,6 @@
     <ClInclude Include="src\Server Modules\MySQLDatabase.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Server Modules\MySQLDatabaseInfo.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\Server Modules\MySQLQuery.h">
       <Filter>Header Files</Filter>
     </ClInclude>

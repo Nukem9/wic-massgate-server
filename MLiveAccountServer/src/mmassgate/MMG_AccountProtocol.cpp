@@ -306,9 +306,6 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 					MMG_AuthToken *myAuthToken = aClient->GetToken();
 
-					// set client communicaton options
-					aClient->GetOptions()->FromUInt(992);		//i dont remember the default values
-
 					//sync client->authtoken.profileid to client->profile.profileid
 					myAuthToken->m_ProfileId = 1234; //myAuthToken->m_ProfileId = aClient->GetProfile()->m_ProfileId;
 					myAuthToken->m_AccountId = 69;
@@ -337,7 +334,6 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
 				MMG_Profile *myProfile = aClient->GetProfile();
-				MMG_Options *myOptions = aClient->GetOptions();
 
 				//password check should be done by massgate server, not by database
 				PasswordHash hasher(8, true);
@@ -354,8 +350,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				bool AuthQueryOK = MySQLDatabase::ourInstance->AuthUserAccount(myQuery.m_Authenticate.m_Email, myPasswordHash, &isBanned, myAuthToken);
 
 				// TODO: generate a better authtoken
-				MTwist twist;
-				myAuthToken->m_TokenId = twist.randomMT();
+				myAuthToken->m_TokenId = MC_MTwister().Random();
 
 				//determine if credentials were valid
 				if(myAuthToken->m_AccountId == 0 && AuthQueryOK)		//account doesnt exist
@@ -392,7 +387,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					//profile selection box was used
 					if(myQuery.m_Authenticate.m_UseProfile)
 					{
-						ProfileQueryOK = MySQLDatabase::ourInstance->QueryUserProfile(myAuthToken->m_AccountId, myQuery.m_Authenticate.m_UseProfile, myProfile, myOptions);
+						ProfileQueryOK = MySQLDatabase::ourInstance->QueryUserProfile(myAuthToken->m_AccountId, myQuery.m_Authenticate.m_UseProfile, myProfile);
 
 						//if(myQuery.m_Authenticate.m_UseProfile > 0 && ProfileQueryOK)
 						if(ProfileQueryOK)											//ok to login, set active profile
@@ -415,7 +410,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 						//myQuery.m_Authenticate.m_Credentials, myQuery.m_Authenticate.m_Profile, myQuery.m_Authenticate.m_UseProfile
 						//myAuthToken, myProfile
 
-						ProfileQueryOK = MySQLDatabase::ourInstance->QueryUserProfile(myAuthToken->m_AccountId, myAuthToken->m_ProfileId, myProfile, myOptions);
+						ProfileQueryOK = MySQLDatabase::ourInstance->QueryUserProfile(myAuthToken->m_AccountId, myAuthToken->m_ProfileId, myProfile);
 
 						if(myAuthToken->m_ProfileId > 0 && ProfileQueryOK)			// ok to login, set active profile
 						{
@@ -630,7 +625,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				else													//should be ok to retrieve profile list
 				{
-					bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myQuery.m_RetrieveProfiles.m_Email, "", &myProfileCount, &myProfiles);
+					bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myAuthToken->m_AccountId, &myProfileCount, &myProfiles);
 
 					if(RetrieveProfilesQueryOK)
 					{
@@ -685,7 +680,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				uint myStatusCode = 0;
 				uint mySuccessFlag = 0;
 
-				if (myQuery.m_ModifyProfile.m_Operation == MODIFY_PROFILE_ADD)
+				if (myQuery.m_ModifyProfile.m_Operation == 'add')
 				{
 					DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: add profile %ws for %s", myQuery.m_ModifyProfile.m_Name, myQuery.m_ModifyProfile.m_Email);
 					
@@ -717,7 +712,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 						}
 					}
 				}
-				else if (myQuery.m_ModifyProfile.m_Operation == MODIFY_PROFILE_DELETE)
+				else if (myQuery.m_ModifyProfile.m_Operation == 'del')
 				{
 					DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: delete profile %d for %s", myQuery.m_ModifyProfile.m_ProfileId, myQuery.m_ModifyProfile.m_Email);
 
@@ -740,7 +735,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				
 				// retrieve and send profile list
-				bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myQuery.m_ModifyProfile.m_Email, "", &myProfileCount, &myProfiles);
+				bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myAuthToken->m_AccountId, &myProfileCount, &myProfiles);
 
 				if (RetrieveProfilesQueryOK && mySuccessFlag)
 				{

@@ -12,7 +12,6 @@
 #include "HTTPService.h"
 
 #include "MySQLQuery.h"
-#include "MySQLDatabaseInfo.h"
 #include "MySQLDatabase.h"
 #include "PasswordHash.h"
 #include "GeoIP.h"

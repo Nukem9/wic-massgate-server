@@ -9,7 +9,7 @@ public:
 		uint m_MessageId;
 		MMG_Profile m_SenderProfile;
 		uint m_RecipientProfile;
-		wchar_t m_Message[256];
+		wchar_t m_Message[WIC_INSTANTMSG_MAX_LENGTH];
 		uint m_WrittenAt;
 
 	private:

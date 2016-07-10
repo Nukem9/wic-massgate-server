@@ -1,6 +1,9 @@
 #pragma once
 
+#define _USE_32BIT_TIME_T
+
 #include <Windows.h>
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <winsock.h>

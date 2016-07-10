@@ -93,7 +93,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			profileList = new MMG_Profile[count];
 
 			// read profile ids from message
-			for (int i = 0; i < count; i++)
+			for (ushort i = 0; i < count; i++)
 			{
 				if (!aMessage->ReadUInt(profildIds[i]))
 					return false;
@@ -103,7 +103,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			MySQLDatabase::ourInstance->QueryProfileList(count, profildIds, profileList);
 
 			// write profiles to stream
-			for (int i = 0; i < count; i++)
+			for (ushort i = 0; i < count; i++)
 			{
 				// determine profiles' online status
 				MMG_AccountProxy::ourInstance->CheckProfileOnlineStatus(&profileList[i]);
@@ -285,7 +285,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			// message has been acked, remove it from queue
 
 #ifdef USING_MYSQL_DATABASE
-			MySQLDatabase::ourInstance->RemoveInstantMessage(messageId);
+			MySQLDatabase::ourInstance->RemoveInstantMessage(aClient->GetProfile()->m_ProfileId, messageId);
 #endif
 		}
 		break;
@@ -314,7 +314,16 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_GET_COMMUNICATION_OPTIONS_REQ:");
 
-			this->SendCommOptions(aClient, &responseMessage);
+#ifndef USING_MYSQL_DATABASE
+			aClient->GetOptions()->FromUInt(992); // i dont remember the default values
+#else
+			// no need for the query, MESSAGING_GET_IM_SETTINGS is sent first on startup
+
+			//uint commOptions;
+			//MySQLDatabase::ourInstance->QueryUserOptions(aClient->GetProfile()->m_ProfileId, &commOptions);
+#endif
+			if (!this->SendCommOptions(aClient, &responseMessage))
+				return false;
 		}
 		break;
 
@@ -322,7 +331,16 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_GET_IM_SETTINGS:");
 
-			this->SendIMSettings(aClient, &responseMessage);
+#ifndef USING_MYSQL_DATABASE
+			aClient->GetOptions()->FromUInt(992); // i dont remember the default values
+#else
+			uint commOptions;
+			MySQLDatabase::ourInstance->QueryUserOptions(aClient->GetProfile()->m_ProfileId, &commOptions);
+
+			aClient->GetOptions()->FromUInt(commOptions);
+#endif
+			if (!this->SendIMSettings(aClient, &responseMessage))
+				return false;
 		}
 		break;
 
@@ -892,13 +910,6 @@ bool MMG_Messaging::SendCommOptions(SvClient *aClient, MN_WriteMessage *aMessage
 	DebugLog(L_INFO, "MESSAGING_GET_COMMUNICATION_OPTIONS_RSP:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_COMMUNICATION_OPTIONS_RSP);
 
-	// Temporary
-	// to avoid another database query, a client now has an MMG_Options object which 
-	// is read on login (MySQLDatabase::ourInstance->QueryUserProfile) from the commoptions field.
-	// im not sure if this will cause problems later, the options will most likely
-	// need to be stored in another table as there are extra fields in the ida data structure
-	// that are not in the class.
-	//
 	aMessage->WriteUInt(aClient->GetOptions()->ToUInt());
 
 	return aClient->SendData(aMessage);
@@ -909,13 +920,6 @@ bool MMG_Messaging::SendIMSettings(SvClient *aClient, MN_WriteMessage *aMessage)
 	DebugLog(L_INFO, "MESSAGING_GET_IM_SETTINGS:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_IM_SETTINGS);
 
-	// Temporary
-	// to avoid another database query, a client now has an MMG_Options object which 
-	// is read on login (MySQLDatabase::ourInstance->QueryUserProfile) from the commoptions field.
-	// im not sure if this will cause problems later, the options will most likely
-	// need to be stored in another table as there are extra fields in the ida data structure
-	// that are not in the class.
-	//
 	IM_Settings mySettings;
 	mySettings.m_Friends = aClient->GetOptions()->m_ReceiveFromFriends;
 	mySettings.m_Clanmembers = aClient->GetOptions()->m_ReceiveFromClanMembers;

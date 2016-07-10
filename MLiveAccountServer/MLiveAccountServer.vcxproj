@@ -224,7 +224,6 @@
     <ClInclude Include="src\mcommon2\MP_Pack.h" />
     <ClInclude Include="src\mcommon2\MT_Mutex.h" />
     <ClInclude Include="src\Server Modules\MySQLDatabase.h" />
-    <ClInclude Include="src\Server Modules\MySQLDatabaseInfo.h" />
     <ClInclude Include="src\Server Modules\MySQLQuery.h" />
     <ClInclude Include="src\Server Modules\PasswordHash.h" />
     <ClInclude Include="src\Server Modules\SQLQuery.h" />

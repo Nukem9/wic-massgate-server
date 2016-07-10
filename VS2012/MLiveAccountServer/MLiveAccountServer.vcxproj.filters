@@ -249,9 +249,6 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabase.h">
       <Filter>Header Files\Server Modules</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLDatabaseInfo.h">
-      <Filter>Header Files\Server Modules</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\MLiveAccountServer\src\Server Modules\MySQLQuery.h">
       <Filter>Header Files\Server Modules</Filter>
     </ClInclude>
@@ -311,6 +308,12 @@
     </ClInclude>
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerFilter.h">
       <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_MTwister.h">
+      <Filter>Header Files\mcommon2</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\misc\tiger.h">
+      <Filter>Header Files\misc</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -529,6 +532,15 @@
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerFilter.cpp">
       <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MC_MTwister.cpp">
+      <Filter>Source Files\mcommon2</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\misc\tiger.c">
+      <Filter>Source Files\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\misc\tiger_sboxes.c">
+      <Filter>Source Files\misc</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
