@@ -45,6 +45,19 @@ public:
 	bool DeriveMessage	();
 
 private:
+	template<typename T>
+	bool ReadChecked(ushort aType, T &aValue)
+	{
+		if (!this->TypeCheck(aType))
+			return false;
+
+		if (!this->CheckReadSize(sizeof(T)))
+			return false;
+
+		aValue = this->Read<T>();
+		return true;
+	}
+
+	bool CheckReadSize	(sizeptr_t aSize);
 	void IncReadPos		(sizeptr_t aSize);
-	void CheckReadSize	(sizeptr_t aSize);
 };

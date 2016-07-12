@@ -2,67 +2,45 @@
 
 bool MN_ReadMessage::TypeCheck(ushort aType)
 {
-	return (!this->m_TypeChecks || aType == this->Read<ushort>());
+	// Succeed if checks not enabled
+	if (!this->m_TypeChecks)
+		return true;
+
+	// Validate size and read the delimiter
+	if (!this->CheckReadSize(sizeof(ushort)))
+		return false;
+
+	return (aType == this->Read<ushort>());
 }
 
 bool MN_ReadMessage::ReadDelimiter(ushort &aDelimiter)
 {
-	if (!this->TypeCheck('DL'))
-		return false;
-
-	aDelimiter = this->Read<ushort>();
-
-	return true;
+	return this->ReadChecked('DL', aDelimiter);
 }
 
 bool MN_ReadMessage::ReadBool(bool &aBool)
 {
-	if (!this->TypeCheck('BL'))
-		return false;
-
-	aBool = this->Read<bool>();
-
-	return true;
+	return this->ReadChecked('BL', aBool);
 }
 
 bool MN_ReadMessage::ReadChar(char &aChar)
 {
-	if (!this->TypeCheck('CH'))
-		return false;
-
-	aChar = this->Read<char>();
-
-	return true;
+	return this->ReadChecked('CH', aChar);
 }
 
 bool MN_ReadMessage::ReadUChar(uchar &aUChar)
 {
-	if (!this->TypeCheck('UC'))
-		return false;
-
-	aUChar = this->Read<uchar>();
-
-	return true;
+	return this->ReadChecked('UC', aUChar);
 }
 
 bool MN_ReadMessage::ReadUShort(ushort &aUShort)
 {
-	if (!this->TypeCheck('US'))
-		return false;
-
-	aUShort = this->Read<ushort>();
-
-	return true;
+	return this->ReadChecked('US', aUShort);
 }
 
 bool MN_ReadMessage::ReadUInt(uint &aUInt)
 {
-	if (!this->TypeCheck('UI'))
-		return false;
-
-	aUInt = this->Read<uint>();
-
-	return true;
+	return this->ReadChecked('UI', aUInt);
 }
 
 bool MN_ReadMessage::ReadULong(ulong &aULong)
@@ -73,34 +51,24 @@ bool MN_ReadMessage::ReadULong(ulong &aULong)
 
 bool MN_ReadMessage::ReadUInt64(uint64 &aUInt64)
 {
-	if (!this->TypeCheck('U6'))
-		return false;
-
-	aUInt64 = this->Read<uint64>();
-
-	return true;
+	return this->ReadChecked('U6', aUInt64);
 }
 
 bool MN_ReadMessage::ReadFloat(float &aFloat)
 {
-	if (!this->TypeCheck('FL'))
-		return false;
-
-	aFloat = this->Read<float>();
-
-	return true;
+	return this->ReadChecked('FL', aFloat);
 }
 
 bool MN_ReadMessage::ReadRawData(voidptr_t aBuffer, sizeptr_t aBufferSize, sizeptr_t *aTotalSize)
 {
 	assert((aBuffer && aBufferSize > 0) || aTotalSize);
 
-	if (!this->TypeCheck('RD'))
+	ushort dataLength = 0;
+	if (!this->ReadChecked('RD', dataLength))
 		return false;
 
-	ushort dataLength = this->Read<ushort>();
-
-	this->CheckReadSize(dataLength);
+	if (!this->CheckReadSize(dataLength))
+		return false;
 
 	if (aBuffer)
 	{
@@ -125,11 +93,15 @@ bool MN_ReadMessage::ReadString(char *aBuffer, sizeptr_t aStringSize)
 {
 	assert(aBuffer && aStringSize > 0);
 
+	if (!this->CheckReadSize(sizeof(ushort)))
+		return false;
+
 	// Packet will exceed bounds before it exceeds ushort
 	ushort bufferLength = (ushort)(aStringSize * sizeof(char));
 	ushort dataLength	= (ushort)(this->Read<ushort>() * sizeof(char));
 
-	this->CheckReadSize(dataLength);
+	if (!this->CheckReadSize(dataLength))
+		return false;
 
 	if (aBuffer)
 	{
@@ -142,7 +114,6 @@ bool MN_ReadMessage::ReadString(char *aBuffer, sizeptr_t aStringSize)
 	}
 
 	this->IncReadPos(dataLength);
-
 	return true;
 }
 
@@ -150,11 +121,15 @@ bool MN_ReadMessage::ReadString(wchar_t *aBuffer, sizeptr_t aStringSize)
 {
 	assert(aBuffer && aStringSize > 0);
 
+	if (!this->CheckReadSize(sizeof(ushort)))
+		return false;
+
 	// Packet will exceed bounds before it exceeds ushort
 	ushort bufferLength = (ushort)(aStringSize * sizeof(wchar_t));
 	ushort dataLength	= (ushort)(this->Read<ushort>() * sizeof(wchar_t));
 
-	this->CheckReadSize(dataLength);
+	if (!this->CheckReadSize(dataLength))
+		return false;
 
 	if (aBuffer)
 	{
@@ -167,7 +142,6 @@ bool MN_ReadMessage::ReadString(wchar_t *aBuffer, sizeptr_t aStringSize)
 	}
 
 	this->IncReadPos(dataLength);
-
 	return true;
 }
 
@@ -225,7 +199,7 @@ bool MN_ReadMessage::DeriveMessage()
 	if (remainder <= 0)
 		return false;
 
-	// Shift the data buffer over (<----, left)
+	// Shift the data buffer over (left)
 	{
 		// Copy the raw packet data
 		memmove((voidptr_t)this->m_PacketData, (voidptr_t)this->m_ReadPtr, remainder);
@@ -242,9 +216,16 @@ bool MN_ReadMessage::DeriveMessage()
 	return true;
 }
 
-void MN_ReadMessage::CheckReadSize(sizeptr_t aSize)
+bool MN_ReadMessage::CheckReadSize(sizeptr_t aSize)
 {
+#ifdef _DEBUG
 	assert((this->m_ReadPos + aSize) <= this->m_DataLen && "Packet read would exceed data length.");
+#endif
+
+	if ((this->m_ReadPos + aSize) > this->m_DataLen)
+		return false;
+
+	return true;
 }
 
 void MN_ReadMessage::IncReadPos(sizeptr_t aSize)

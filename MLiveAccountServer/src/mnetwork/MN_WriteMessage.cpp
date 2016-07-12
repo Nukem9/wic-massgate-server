@@ -78,7 +78,7 @@ void MN_WriteMessage::WriteRawData(voidptr_t aBuffer, sizeptr_t aBufferSize)
 		this->Write<ushort>('RD');
 
 	// Packet will exceed bounds before it exceeds ushort
-	this->Write<ushort>(aBufferSize);	// No typecheck
+	this->Write<ushort>(aBufferSize);// No typecheck
 	this->CheckWriteSize(aBufferSize);
 
 	memcpy((voidptr_t)this->m_WritePtr, aBuffer, aBufferSize);
@@ -100,7 +100,7 @@ void MN_WriteMessage::WriteString(char *aBuffer, sizeptr_t aStringSize)
 	ushort stringSize = (ushort)aStringSize;
 	ushort bufferSize = (ushort)(stringSize * sizeof(char));
 
-	this->Write<ushort>(stringSize);	// No typecheck
+	this->Write<ushort>(stringSize);// No typecheck
 	this->CheckWriteSize(bufferSize);
 
 	memcpy((voidptr_t)this->m_WritePtr, aBuffer, bufferSize);
@@ -122,7 +122,7 @@ void MN_WriteMessage::WriteString(wchar_t *aBuffer, sizeptr_t aStringSize)
 	ushort stringSize = (ushort)aStringSize;
 	ushort bufferSize = (ushort)(stringSize * sizeof(wchar_t));
 
-	this->Write<ushort>(stringSize);	// No typecheck
+	this->Write<ushort>(stringSize);// No typecheck
 	this->CheckWriteSize(bufferSize);
 
 	memcpy((voidptr_t)this->m_WritePtr, aBuffer, bufferSize);
@@ -165,7 +165,7 @@ sizeptr_t MN_WriteMessage::GetDataLength()
 
 void MN_WriteMessage::CheckWriteSize(sizeptr_t aSize)
 {
-	assert((this->m_DataLen + aSize) < this->m_PacketMaxSize && "Packet write exceeded bounds.");
+	assert((this->m_DataLen + aSize) < this->m_PacketMaxSize && "Packet write exceeded bounds. Increase packet allocation size.");
 }
 
 void MN_WriteMessage::IncWritePos(sizeptr_t aSize)
