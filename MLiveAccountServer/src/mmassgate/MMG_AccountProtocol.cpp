@@ -202,11 +202,11 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 			switch (this->m_ModifyProfile.m_Operation)
 			{
 			case 'add':
-				DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_REQ: (ADD) %ws %s", this->m_ModifyProfile.m_Name, this->m_ModifyProfile.m_Email);
+				DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_REQ: (ADD) %s", this->m_ModifyProfile.m_Email);
 				break;
 
 			case 'del':
-				DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_REQ: (DELETE) %d %s", this->m_ModifyProfile.m_ProfileId, this->m_ModifyProfile.m_Email);
+				DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_REQ: (DELETE) %u %s", this->m_ModifyProfile.m_ProfileId, this->m_ModifyProfile.m_Email);
 				break;
 
 			default:
@@ -682,7 +682,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				if (myQuery.m_ModifyProfile.m_Operation == 'add')
 				{
-					DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: add profile %ws for %s", myQuery.m_ModifyProfile.m_Name, myQuery.m_ModifyProfile.m_Email);
+					DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: add new profile for %s", myQuery.m_ModifyProfile.m_Email);
 					
 					bool CheckProfileQueryOK = MySQLDatabase::ourInstance->CheckIfProfileExists(myQuery.m_ModifyProfile.m_Name, &myProfileId);
 					

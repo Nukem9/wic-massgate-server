@@ -36,7 +36,7 @@ bool MMG_AccountProxy::SetClientPlaying(SvClient *aClient)
 
 bool MMG_AccountProxy::SetProfileOnlineStatus(SvClient *aClient, uint aStatus)
 {
-	DebugLog(L_INFO, "MMG_AccountProxy::SetProfileOnlineStatus(%ws, %d)", aClient->GetProfile()->m_Name, aStatus);
+	//DebugLog(L_INFO, "MMG_AccountProxy::SetProfileOnlineStatus(%ws, %u)", aClient->GetProfile()->m_Name, aStatus);
 
 	//TODO: use MMG_Profile instead of SvClient, maybe keep 2 lists, authtokens and profiles
 

@@ -676,19 +676,19 @@ bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
 	// execute prepared statement
 	if(!query.StmtExecute(param, result))
 	{
-		DatabaseLog("CheckIfProfileExists() query failed: %ws", name);
+		DatabaseLog("CheckIfProfileExists() query failed:");
 		*dstId = 0;
 	}
 	else
 	{
 		if (!query.StmtFetch())
 		{
-			DatabaseLog("profile %ws not found", name);
+			DatabaseLog("profile not found");
 			*dstId = 0;
 		}
 		else
 		{
-			DatabaseLog("profile %ws already exists", name);
+			DatabaseLog("profile already exists");
 			*dstId = id;
 		}
 	}
@@ -739,12 +739,12 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	// execute prepared statement
 	if (!query1.StmtExecute(params1))
 	{
-		DatabaseLog("%s create profile '%ws' failed for account id %u", email, name, accountId);
+		DatabaseLog("%s create profile failed for account id %u", email, accountId);
 		profile_insert_id = 0;
 	}
 	else
 	{
-		DatabaseLog("%s created profile %ws", email, name);
+		DatabaseLog("%s created new profile", email);
 		profile_insert_id = (uint)query1.StmtInsertId();
 	}
 
@@ -1155,7 +1155,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 		}
 		else
 		{
-			DatabaseLog("profile id(%u) %ws found", profileId, name);
+			DatabaseLog("profile id(%u) found", profileId);
 
 			profile->m_ProfileId = id;
 			wcsncpy(profile->m_Name, name, WIC_NAME_MAX_LENGTH);
@@ -1204,7 +1204,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 	if(!query2.StmtExecute(param2))
 		DatabaseLog("QueryUserProfile(query2) failed: accountid(%u), profileid(%u)", accountId, profile->m_ProfileId);
 	else
-		DatabaseLog("profile id(%u) %ws lastlogindate updated", profile->m_ProfileId, profile->m_Name);
+		DatabaseLog("profile id(%u) lastlogindate updated", profile->m_ProfileId);
 
 	if (!query2.Success())
 	{
@@ -1237,7 +1237,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 	if(!query3.StmtExecute(params3))
 		DatabaseLog("QueryUserProfile(query3) failed: accountid(%u), profileid(%u)", accountId, profile->m_ProfileId);
 	else
-		DatabaseLog("account id(%u) set active profile id(%u) %ws", accountId, profile->m_ProfileId, profile->m_Name);
+		DatabaseLog("account id(%u) set active profile id(%u)", accountId, profile->m_ProfileId);
 
 	if (!query3.Success())
 	{
@@ -1983,7 +1983,7 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 		}
 		else
 		{
-			DatabaseLog("profile id(%u) %ws found", profileId, name);
+			DatabaseLog("profile id(%u) found", profileId);
 
 			profile->m_ProfileId = id;
 			wcsncpy(profile->m_Name, name, WIC_NAME_MAX_LENGTH);

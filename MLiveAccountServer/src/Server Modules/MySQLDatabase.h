@@ -127,7 +127,7 @@ public:
 		// mysql connection options
 		this->reconnect = 1;
 		this->bind_interface = "localhost";
-		this->charset_name = "utf8";
+		this->charset_name = "latin1";
 
 		this->sleep_interval_h = 5;
 		this->sleep_interval_m = this->sleep_interval_h * 60;
