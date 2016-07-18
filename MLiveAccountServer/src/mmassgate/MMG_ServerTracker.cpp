@@ -274,7 +274,7 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			uint ProfileId = 0;
 			aMessage->ReadUInt(ProfileId);
 			
-			MMG_PlayerStats myPlayerStats;
+			MMG_Stats::PlayerStats myPlayerStats;
 			myPlayerStats.m_PlayerId = ProfileId;
 			myPlayerStats.m_LastMatchPlayed = 60;
 			myPlayerStats.m_ScoreTotal = 100;

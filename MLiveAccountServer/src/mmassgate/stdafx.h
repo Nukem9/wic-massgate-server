@@ -20,8 +20,6 @@ class SvClient;
 #include "MMG_AccountProxy.h"
 #include "MMG_Messaging.h"
 #include "MMG_OptionalContentProtocol.h"
-#include "MMG_ClanStats.h"
-#include "MMG_PlayerStats.h"
 #include "MMG_ProfileGuestBookEntry.h"
 #include "MMG_ProfileGuestBookProtocol.h"
 #include "MMG_ProfileEditableVariablesProtocol.h"
@@ -33,3 +31,4 @@ class SvClient;
 #include "MMG_ServerFilter.h"
 #include "MMG_ServerTracker.h"
 #include "MMG_TrackableServer.h"
+#include "MMG_Clan.h"

@@ -64,7 +64,7 @@
 */
 
 #ifndef USING_MYSQL_DATABASE
-//#define USING_MYSQL_DATABASE
+#define USING_MYSQL_DATABASE
 #endif
 
 CLASS_SINGLE(MySQLDatabase)
@@ -191,4 +191,12 @@ public:
 	bool	AddInstantMessage		(const uint profileId, MMG_InstantMessageListener::InstantMessage *message);
 	bool	RemoveInstantMessage	(const uint profileId, const uint messageId);
 	bool	AddAbuseReport		(const uint profileId, const uint flaggedProfile, const wchar_t *report);
+
+	//clans & clan related
+	bool	CheckIfClanExists	(const wchar_t* clanname, const wchar_t* clantag, uint *dstId);
+	bool	CreateClan			(const wchar_t* clanname, const wchar_t* clantag, const uchar tagpos, uint *dstId);
+	bool	DeleteClan			(const uint clanId);
+	bool	QueryClan			(const uint clanId, MMG_Clan *clanprofile);
+	bool	SaveClanEditableVariables	(const uint clanId, wchar_t *motto, wchar_t *messageOfTheDay, wchar_t *homepage);
+	bool	UpdatePlayerClanInfo(const uint profileId, const uint clanId, const uchar rankinclan);
 };

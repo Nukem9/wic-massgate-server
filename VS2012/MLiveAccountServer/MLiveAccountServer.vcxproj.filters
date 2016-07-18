@@ -270,9 +270,6 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerHeartbeat.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_PlayerStats.h">
-      <Filter>Header Files\mmassgate</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileEditableVariablesProtocol.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
@@ -283,9 +280,6 @@
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerStartupVariables.h">
-      <Filter>Header Files\mmassgate</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ClanStats.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProxy.h">
@@ -314,6 +308,9 @@
     </ClInclude>
     <ClInclude Include="..\..\MLiveAccountServer\src\misc\tiger.h">
       <Filter>Header Files\misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Clan.h">
+      <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -506,9 +503,6 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookProtocol.cpp">
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_PlayerStats.cpp">
-      <Filter>Source Files\mmassgate</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp">
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
@@ -516,9 +510,6 @@
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerStartupVariables.cpp">
-      <Filter>Source Files\mmassgate</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ClanStats.cpp">
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProxy.cpp">
@@ -541,6 +532,9 @@
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\misc\tiger_sboxes.c">
       <Filter>Source Files\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Clan.cpp">
+      <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

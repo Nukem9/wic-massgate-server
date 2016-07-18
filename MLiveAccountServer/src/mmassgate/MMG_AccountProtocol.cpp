@@ -716,17 +716,32 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				{
 					DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: delete profile %d for %s", myQuery.m_ModifyProfile.m_ProfileId, myQuery.m_ModifyProfile.m_Email);
 
-					bool DeleteProfileQueryOK = MySQLDatabase::ourInstance->DeleteUserProfile(myAuthToken->m_AccountId, myQuery.m_ModifyProfile.m_ProfileId, myQuery.m_ModifyProfile.m_Email);
+					MMG_Profile myProfile;
+					bool ProfileQueryOK = MySQLDatabase::ourInstance->QueryUserProfile(myAuthToken->m_AccountId, myQuery.m_ModifyProfile.m_ProfileId, &myProfile);
 					
-					if(DeleteProfileQueryOK)			//delete profile success
+					if (!ProfileQueryOK)
 					{
-						myStatusCode = ModifySuccess;
+						return false;
+					}
+					else if (ProfileQueryOK && myProfile.m_ClanId > 0)
+					{
+						myStatusCode = DeleteProfile_Failed_Clan;
 						mySuccessFlag = 1;
 					}
-					else //!DeleteProfileQueryOK		// something went wrong executing the query
+					else
 					{
-						myStatusCode = ModifyFailed_General; //ServerError
-						mySuccessFlag = 1;
+						bool DeleteProfileQueryOK = MySQLDatabase::ourInstance->DeleteUserProfile(myAuthToken->m_AccountId, myQuery.m_ModifyProfile.m_ProfileId, myQuery.m_ModifyProfile.m_Email);
+					
+						if(DeleteProfileQueryOK)			//delete profile success
+						{
+							myStatusCode = ModifySuccess;
+							mySuccessFlag = 1;
+						}
+						else //!DeleteProfileQueryOK		// something went wrong executing the query
+						{
+							myStatusCode = ModifyFailed_General; //ServerError
+							mySuccessFlag = 1;
+						}
 					}
 				}
 				else
