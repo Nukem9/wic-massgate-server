@@ -481,6 +481,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			responseMessage.WriteUChar(successflag); // successflag
 			responseMessage.WriteUInt(aClanId); // clan id
 			
+			//both MESSAGING_RESPOND_PROFILENAME or MESSAGING_PLAYER_JOINED_CLAN can be used here and cause no error.
+			//most likely MESSAGING_PLAYER_JOINED_CLAN should go to all players to update their friend list etc
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 			myUpdatedProfile.ToStream(&responseMessage);
 			
 			if (!aClient->SendData(&responseMessage))
