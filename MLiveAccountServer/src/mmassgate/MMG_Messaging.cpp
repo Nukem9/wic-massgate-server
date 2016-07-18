@@ -362,7 +362,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 		case MMG_ProtocolDelimiters::MESSAGING_CLAN_CREATE_REQUEST:
 		{
-			DebugLog(L_INFO, "MESSAGING_CLAN_CREATE_REQUEST:");
+			DebugLog(L_INFO, "MESSAGING_CLAN_CREATE_REQUEST:"); //sub_7A1020
 
 			// TODO - sub_7A1020
 			wchar_t clanName[32];
@@ -424,7 +424,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			wchar_t fullProfileName[25];
 			memset(fullProfileName, 0, sizeof(fullProfileName));
-			
+			MMG_Profile myUpdatedProfile;
+
 			if (tagpos == 1)
 			{
 				wcscat_s(fullProfileName, fullClanTag);
@@ -463,8 +464,10 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				else
 				{
 					successflag = 1;
-
+					
 					if (!MySQLDatabase::ourInstance->UpdatePlayerClanInfo(aClient->GetProfile()->m_ProfileId, aClanId, ClanLeader))
+						return false;
+					if (!MySQLDatabase::ourInstance->QueryProfileName(aClient->GetProfile()->m_ProfileId, &myUpdatedProfile))
 						return false;
 				}
 			}
@@ -478,6 +481,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			responseMessage.WriteUChar(successflag); // successflag
 			responseMessage.WriteUInt(aClanId); // clan id
 			
+			myUpdatedProfile.ToStream(&responseMessage);
+			
 			if (!aClient->SendData(&responseMessage))
 				return false;
 		}
@@ -485,11 +490,10 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 		case MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_REQUEST:
 		{
-			DebugLog(L_INFO, "MESSAGING_CLAN_FULL_INFO_REQUEST:");
+			DebugLog(L_INFO, "MESSAGING_CLAN_FULL_INFO_REQUEST:"); //MMG_Messaging::RequestFullClanInfo
 
 			uint ClanProfileId = 0, aZero = 0, membercountfound = 0;
 			MMG_Clan aClan;
-			uint *myClanMembers = NULL;
 			
 			if (!aMessage->ReadUInt(ClanProfileId) || !aMessage->ReadUInt(aZero))
 				return false;
@@ -499,17 +503,14 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!MySQLDatabase::ourInstance->QueryClan(ClanProfileId, &aClan))
 				return false;
 			
-			if (!aClan.m_isdeleted)
+			if (aClan.m_isdeleted)
 				return false;
 			
 			//sub_BD7720
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_RESPONSE);
-			aClan.ToStream(&responseMessage);
-			
+			aClan.ToStream(&responseMessage); //sub_BD7720
 #else
 			// TODO
-			MMG_Clan aClan;
-			
 			wcscpy(aClan.m_ClanName, L"Developers & Moderators");
 			wcscpy(aClan.m_FullClanTag, L"devs^");
 			wcscpy(aClan.m_ClanMotto, L"Today is a good day for clan wars!");
@@ -533,7 +534,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 		case MMG_ProtocolDelimiters::MESSAGING_CLAN_MODIFY_REQUEST:
 		{
-			DebugLog(L_INFO, "MESSAGING_CLAN_MODIFY_REQUEST:");
+			DebugLog(L_INFO, "MESSAGING_CLAN_MODIFY_REQUEST:"); //sub_7A0FE0
 
 			wchar_t ClanMotto[WIC_MOTTO_MAX_LENGTH];
 			wchar_t ClanMessageoftheday[WIC_MOTD_MAX_LENGTH];
@@ -552,13 +553,14 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 			if (!aMessage->ReadUInt(aZero))
 				return false;
-			
+
+#ifdef USING_MYSQL_DATABASE
 			if (!MySQLDatabase::ourInstance->SaveClanEditableVariables(clanId, ClanMotto, ClanMessageoftheday, ClanHomepage))
 				return false;
-			
 			if (!MySQLDatabase::ourInstance->QueryClan(clanId, &aClan))
 				return false;
-			
+#endif
+
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_RESPONSE);
 			aClan.ToStream(&responseMessage);
 			
@@ -569,16 +571,18 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		
 		case MMG_ProtocolDelimiters::MESSAGING_CLAN_MODIFY_RANKS_REQUEST:
 		{
-			DebugLog(L_INFO, "MESSAGING_CLAN_MODIFY_RANKS_REQUEST:");
+			DebugLog(L_INFO, "MESSAGING_CLAN_MODIFY_RANKS_REQUEST:"); //sub_7A0F60
 
 			uint playerid;
 			uint aZero;
 			if (!aMessage->ReadUInt(playerid) || !aMessage->ReadUInt(aZero))
 				return false;
 			
+#ifdef USING_MYSQL_DATABASE
 			MMG_Clan myClan;
-			MySQLDatabase::ourInstance->QueryClan(aClient->GetProfile()->m_ClanId, &myClan);
-
+			if (!MySQLDatabase::ourInstance->QueryClan(aClient->GetProfile()->m_ClanId, &myClan))
+				return false;
+			
 			//I expect the aZero to be something else when you actually do something different than leaving the clan (e.g. promoting / demoting / making someone clan leader)
 			//requires the main clan page to work tho
 			if (aZero == 0)
@@ -592,6 +596,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				if (!MySQLDatabase::ourInstance->UpdatePlayerClanInfo(aClient->GetProfile()->m_ProfileId, 0, 0))
 					return false;
 			}
+#endif
+			//no return message yet, maybe a full info request if the clan is not deleted
 			/*if (!aClient->SendData(&responseMessage))
 				return false;*/
 		}
