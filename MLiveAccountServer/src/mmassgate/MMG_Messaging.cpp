@@ -163,9 +163,12 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			this->SendStartupSequenceComplete(aClient, &responseMessage);
 			*/
 
-			if (!this->SendFriendsAcquaintances(aClient, &responseMessage))
+			//send acquaintances first, otherwise it screws up the contacts list
+			if (!this->SendAcquaintance(aClient, &responseMessage))
 				return false;
 
+			if (!this->SendFriend(aClient, &responseMessage))
+				return false;
 		}
 		break;
 
@@ -248,8 +251,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 			
 			//handle padding
-			uint aZero;
-			if (!aMessage->ReadUInt(aZero))
+			uint padZero;
+			if (!aMessage->ReadUInt(padZero))
 				return false;
 
 			//check to see if recipient is online
@@ -631,12 +634,14 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			*/
 
 			//handle padding
-			uint randomZero;
-			if (!aMessage->ReadUInt(randomZero))
+			uint padZero;
+			if (!aMessage->ReadUInt(padZero))
 				return false;
 
 			// not sure if this is right
+			aClient->GetProfile()->m_OnlineStatus = 1;
 			MMG_AccountProxy::ourInstance->SetClientOnline(aClient);
+			MMG_AccountProxy::ourInstance->UpdateClients(aClient->GetProfile());
 
 			// response maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
 		}
@@ -654,11 +659,12 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 
 			//handle padding
-			uint randomZero;
-			if (!aMessage->ReadUInt(randomZero))
+			uint padZero;
+			if (!aMessage->ReadUInt(padZero))
 				return false;
 
-			MMG_AccountProxy::ourInstance->SetProfileOnlineStatus(aClient, serverId);
+			aClient->GetProfile()->m_OnlineStatus = serverId;
+			MMG_AccountProxy::ourInstance->UpdateClients(aClient->GetProfile());
 
 			// response maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
 		}
@@ -669,12 +675,12 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			DebugLog(L_INFO, "MESSAGING_GET_CLIENT_METRICS:");
 
 			//handle padding
-			uchar randomZero;
-			if (!aMessage->ReadUChar(randomZero))
+			uchar padZero;
+			if (!aMessage->ReadUChar(padZero))
 				return false;
 
-			DebugLog(L_INFO, "MESSAGING_GET_CLIENT_METRICS:");
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS);
+			//DebugLog(L_INFO, "MESSAGING_GET_CLIENT_METRICS:");
+			//responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS);
 
 			//char key[16] = "";
 			//char value[96] = "";
@@ -712,8 +718,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			DebugLog(L_INFO, "MESSAGING_STARTUP_SEQUENCE_COMPLETE:");
 
 			//handle padding
-			uint randomZero;
-			if (!aMessage->ReadUInt(randomZero) || !aMessage->ReadUInt(randomZero))
+			uint padZero;
+			if (!aMessage->ReadUInt(padZero) || !aMessage->ReadUInt(padZero))
 				return false;
 
 			this->SendStartupSequenceComplete(aClient, &responseMessage);
@@ -883,15 +889,14 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			MMG_ProfileEditableVariablesProtocol::GetRsp myResponse;
 
-			// TODO: cant get the edit tab to enable
-			// read profileid, new motto, new homepage
-
-			DebugLog(L_INFO, "MESSAGING_PROFILE_GET_EDITABLES_RSP:");
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GET_EDITABLES_RSP);
-			myResponse.ToStream(&responseMessage);
-
-			if (!aClient->SendData(&responseMessage))
+			if (!myResponse.FromStream(aMessage))
 				return false;
+
+#ifdef USING_MYSQL_DATABASE
+			MySQLDatabase::ourInstance->SaveEditableVariables(aClient->GetProfile()->m_ProfileId, myResponse.motto, myResponse.homepage);
+#endif
+
+			// no response required
 		}
 		break;
 
@@ -900,7 +905,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			DebugLog(L_INFO, "MESSAGING_PROFILE_GET_EDITABLES_REQ:");
 
 			uint profileId;
-			if(!aMessage->ReadUInt(profileId))
+			if (!aMessage->ReadUInt(profileId))
 				return false;
 
 			MMG_ProfileEditableVariablesProtocol::GetRsp myResponse;
@@ -990,18 +995,6 @@ bool MMG_Messaging::SendProfileName(SvClient *aClient, MN_WriteMessage	*aMessage
 	return aClient->SendData(aMessage);
 }
 
-bool MMG_Messaging::SendFriendsAcquaintances(SvClient *aClient, MN_WriteMessage *aMessage)
-{
-	//send acquaintances first, otherwise it screws up the contacts list
-	if (!this->SendAcquaintance(aClient, aMessage))
-		return false;
-
-	if (!this->SendFriend(aClient, aMessage))
-		return false;
-
-	return aClient->SendData(aMessage);
-}
-
 bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 {
 	DebugLog(L_INFO, "MESSAGING_GET_FRIENDS_RESPONSE:");
@@ -1039,8 +1032,7 @@ bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 	myFriends = NULL;
 #endif
 
-	// return aClient->SendData(aMessage);
-	return true;
+	return aClient->SendData(aMessage);
 }
 
 bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessage)
@@ -1048,49 +1040,14 @@ bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessag
 	DebugLog(L_INFO, "MESSAGING_GET_ACQUAINTANCES_RESPONSE:");
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_ACQUAINTANCES_RESPONSE);
 
-#ifndef USING_MYSQL_DATABASE
-	//write uint (num acquaitances)
-	aMessage->WriteUInt(2);
-
-	aMessage->WriteUInt(1235);
-	aMessage->WriteUInt(0);
-	aMessage->WriteUInt(1236);
+	//write uint (num acquaintances)
 	aMessage->WriteUInt(0);
 
 	//for each acquaintance
 		//write uint (profile id)
 		//write uint number times played
-#else
 
-	//NOTE: this does not return acquaintances just yet, at the moment it sends
-	//everyone currently registered.
-
-	uint acquaintanceCount = 0;
-	uint *myAcquaintances = NULL;
-
-	bool QueryOK = MySQLDatabase::ourInstance->QueryAcquaintances(aClient->GetProfile()->m_ProfileId, &acquaintanceCount, &myAcquaintances);
-
-	if (QueryOK)
-	{
-		aMessage->WriteUInt(acquaintanceCount);
-
-		for (uint i=0; i < acquaintanceCount; i++)
-		{
-			aMessage->WriteUInt(myAcquaintances[i]);	//profileId
-			aMessage->WriteUInt(0);						//numTimesPlayed
-		}
-	}
-	else
-	{
-		aMessage->WriteUInt(0);
-	}
-	
-	delete [] myAcquaintances;
-	myAcquaintances = NULL;
-#endif
-
-	// return aClient->SendData(aMessage);
-	return true;
+	return aClient->SendData(aMessage);
 }
 
 bool MMG_Messaging::SendCommOptions(SvClient *aClient, MN_WriteMessage *aMessage)

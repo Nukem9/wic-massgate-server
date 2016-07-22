@@ -62,11 +62,6 @@ enum WIC_DS_REVISION_VER
 // Account values
 #define WIC_INVALID_ACCOUNT			((uint)-1)
 
-// profile online status
-#define WIC_PROFILE_STATUS_OFFLINE	0
-#define WIC_PROFILE_STATUS_ONLINE	1
-#define WIC_PROFILE_STATUS_PLAYING	2	//anything > 2 is valid
-
 // Ports
 #define WIC_HTTP_PORT				80
 

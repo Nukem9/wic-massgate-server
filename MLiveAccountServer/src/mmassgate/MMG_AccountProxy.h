@@ -9,11 +9,12 @@ public:
 
 	MMG_AccountProxy();
 
+	//TODO: use MMG_Profile instead of SvClient, maybe keep 2 lists, authtokens and profiles
 	bool SetClientOffline	(SvClient *aClient);
 	bool SetClientOnline	(SvClient *aClient);
-	bool SetClientPlaying	(SvClient *aClient);
 
-	bool SetProfileOnlineStatus		(SvClient *aClient, uint aStatus);
+	bool UpdateClients(MMG_Profile *profile);
+
 	void CheckProfileOnlineStatus	(MMG_Profile *profile);
 
 	bool AccountInUse		(MMG_AuthToken *authtoken);

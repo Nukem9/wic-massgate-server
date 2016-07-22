@@ -27,7 +27,6 @@ public:
 
 	bool HandleMessage				(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter);
 	bool SendProfileName			(SvClient *aClient, MN_WriteMessage *aMessage, MMG_Profile *aProfile);
-	bool SendFriendsAcquaintances	(SvClient *aClient, MN_WriteMessage *aMessage);
 	bool SendFriend					(SvClient *aClient, MN_WriteMessage *aMessage);
 	bool SendAcquaintance			(SvClient *aClient, MN_WriteMessage *aMessage);
 	bool SendCommOptions			(SvClient *aClient, MN_WriteMessage *aMessage);

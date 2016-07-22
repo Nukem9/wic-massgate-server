@@ -51,7 +51,11 @@ void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizept
 	{
 		// Tell MMG_AccountProxy
 		if (aClient->IsLoggedIn() && aClient->IsPlayer())
+		{
+			aClient->GetProfile()->m_OnlineStatus = 0;
 			MMG_AccountProxy::ourInstance->SetClientOffline(aClient);
+			MMG_AccountProxy::ourInstance->UpdateClients(aClient->GetProfile());
+		}
 
 		// Tell MMG_TrackableServer
 		if (aClient->IsServer())
