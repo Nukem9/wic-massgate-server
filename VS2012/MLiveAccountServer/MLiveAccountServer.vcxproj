@@ -142,6 +142,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerFilter.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerStartupVariables.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Stats.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerBriefInfo.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerFullInfo.h" />
@@ -225,6 +226,7 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerFilter.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerStartupVariables.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerTracker.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Stats.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServer.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerBriefInfo.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_TrackableServerFullInfo.cpp" />

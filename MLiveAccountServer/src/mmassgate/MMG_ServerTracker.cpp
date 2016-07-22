@@ -56,14 +56,6 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 
 	switch(aDelimiter)
 	{
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_MINIPINGREQUEST:
-		{
-			DebugLog(L_INFO, "SERVERTRACKER_USER_MINIPINGREQUEST:");
-			//responseDelimeter = MMG_ProtocolDelimiters::SERVERTRACKER_USER_MINIPINGRESPONSE;
-		}
-		break;
-		*/
-
 		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_LIST_SERVERS:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_LIST_SERVERS:");
@@ -72,12 +64,6 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			MMG_ServerFilter filters;
 			if (!filters.FromStream(aMessage))
 				return false;
-
-			//debug purposes
-			//if(filters.HasFlag(DEDICATED_FLAG))
-			//	printf("activefilters has DEDICATED_FLAG\n");
-			//
-			//filters.PrintFilters();
 
 			// list of matched servers retrieved from global list, currently disregarding filters
 			uint serverCount, matchedCount;
@@ -167,13 +153,6 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		}
 		break;
 
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_GET_SERVERS_BY_NAME:
-		{
-			DebugLog(L_INFO, "SERVERTRACKER_USER_GET_SERVERS_BY_NAME:");
-		}
-		break;
-		*/
-
 		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CYCLE_MAP_LIST_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_CYCLE_MAP_LIST_REQ:");
@@ -246,90 +225,25 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		break;
 		*/
 
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_FRIENDS_LADDER_GET_REQ:
-		{
-			DebugLog(L_INFO, "SERVERTRACKER_USER_FRIENDS_LADDER_GET_REQ:");
-		}
-		break;
-		*/
-
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_LADDER_GET_REQ: //sub_791940
-		{
-			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_LADDER_GET_REQ:");
-		}
-		break;
-		*/
-
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_LADDER_TOPTEN_REQ: //sub_791940
-		{
-			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_LADDER_TOPTEN_REQ:");
-		}
-		break;
-		*/
-
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_STATS_REQ: //sub_791710
+		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_STATS_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_STATS_REQ:");
 
-			uint ProfileId = 0;
-			aMessage->ReadUInt(ProfileId);
+			uint profileId;
+			if (!aMessage->ReadUInt(profileId))
+				return false;
 			
-			MMG_Stats::PlayerStats myPlayerStats;
-			myPlayerStats.m_PlayerId = ProfileId;
-			myPlayerStats.m_LastMatchPlayed = 60;
-			myPlayerStats.m_ScoreTotal = 100;
-			myPlayerStats.m_ScoreAsInfantry = 10;
-			myPlayerStats.m_HighScoreAsInfantry = 10;
-			myPlayerStats.m_ScoreAsSupport = 30;
-			myPlayerStats.m_HighScoreAsSupport = 30;
-			myPlayerStats.m_ScoreAsArmor = 10;
-			myPlayerStats.m_HighScoreAsArmor = 10;
-			myPlayerStats.m_ScoreAsAir = 30;
-			myPlayerStats.m_HighScoreAsAir = 30;
-			myPlayerStats.m_ScoreByDamagingEnemies = 15;
-			myPlayerStats.m_ScoreByUsingTacticalAid = 20;
-			myPlayerStats.m_ScoreByCapturingCommandPoints = 25;
-			myPlayerStats.m_ScoreByRepairing = 30;
-			myPlayerStats.m_ScoreByFortifying = 10;
-			myPlayerStats.m_HighestScore = 10;
-			myPlayerStats.m_CurrentLadderPosition = 7;
-			myPlayerStats.m_TimeTotalMatchLength = 3003000; // shit ain't working
-			myPlayerStats.m_TimePlayedAsUSA = 320;
-			myPlayerStats.m_TimePlayedAsUSSR = 340;
-			myPlayerStats.m_TimePlayedAsNATO = 360;
-			myPlayerStats.m_TimePlayedAsInfantry = 400;
-			myPlayerStats.m_TimePlayedAsSupport = 420;
-			myPlayerStats.m_TimePlayedAsArmor = 440;
-			myPlayerStats.m_TimePlayedAsAir = 460;
-			myPlayerStats.m_NumberOfMatches = 10;
-			myPlayerStats.m_NumberOfMatchesWon = 49;
-			myPlayerStats.m_NumberOfMatchesLost = 51;
-			myPlayerStats.m_CurrentWinningStreak = 2;
-			myPlayerStats.m_BestWinningStreak = 3;
-			myPlayerStats.m_NumberOfAssaultMatches = 20;	// not listed
-			myPlayerStats.m_NumberOfAssaultMatchesWon = 11;
-			myPlayerStats.m_NumberOfDominationMatches = 30;	// not listed
-			myPlayerStats.m_NumberOfDominationMatchesWon = 21;
-			myPlayerStats.m_NumberOfTugOfWarMatches = 40;	// not listed
-			myPlayerStats.m_NumberOfTugOfWarMatchesWon = 31;
-			myPlayerStats.m_NumberOfMatchesWonByTotalDomination = 19;
-			myPlayerStats.m_NumberOfPerfectDefensesInAssaultMatch = 9;
-			myPlayerStats.m_NumberOfPerfectPushesInTugOfWarMatch = 29;
-			myPlayerStats.m_NumberOfUnitsKilled = 4000;
-			myPlayerStats.m_NumberOfUnitsLost = 4100;
-			myPlayerStats.m_NumberOfReinforcementPointsSpent = 400000;
-			myPlayerStats.m_NumberOfTacticalAidPointsSpent = 300000;
-			myPlayerStats.m_NumberOfNukesDeployed = 23;
-			myPlayerStats.m_NumberOfTacticalAidCriticalHits = 30000;
+			MMG_Stats::PlayerStatsRsp playerStats;
+			playerStats.m_ProfileId = profileId;
 
+			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_STATS_RSP:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_STATS_RSP);
-			myPlayerStats.ToStream(&responseMessage);
+			playerStats.ToStream(&responseMessage);
 
 			if (!aClient->SendData(&responseMessage))
 				return false;
 		}
 		break;
-		*/
 
 		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_MEDALS_REQ: //sub_791650
 		{
@@ -370,68 +284,27 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		break;
 		*/
 		
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_STATS_REQ:
+		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_STATS_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_STATS_REQ:");
 
-			uint ClanProfileId = 0;
-			aMessage->ReadUInt(ClanProfileId);
+			uint clanId;
+			if (!aMessage->ReadUInt(clanId))
+				return false;
 			
-			MMG_ClanStats myClanStats;
-			myClanStats.m_ClanId = ClanProfileId;
-			myClanStats.m_LastMatchPlayed = 60;
-			myClanStats.m_NumberOfMatches = 150;
-			myClanStats.m_NumberOfMatchesWon = 100;
-			myClanStats.m_BestWinningStreak = 55;
-			myClanStats.m_CurrentWinningStreak = 10;
-			myClanStats.m_CurrentLadderPosition = 30; // +1 in the profile screen tho
-			myClanStats.m_NumberOfTournaments = 21; // not listed
-			myClanStats.m_NumberOfTournamentsWon = 3; // not listed
+			MMG_Stats::ClanStatsRsp clanStats;
+			clanStats.m_ClanId = clanId;
 
-			myClanStats.m_NumberOfDominationMatches = 77; // not listed
-			myClanStats.m_NumberOfDominationMatchesWon = 50;
-			myClanStats.m_NumberOfMatchesWonByTotalDomination = 46;
-			myClanStats.m_NumberOfAssaultMatches = 22;  // not listed
-			myClanStats.m_NumberOfAssaultMatchesWon = 15;
-			myClanStats.m_NumberOfPerfectDefensesInAssaultMatch = 13;
-			myClanStats.m_NumberOfTugOfWarMatches = 51;  // not listed
-			myClanStats.m_NumberOfTugOfWarMatchesWon = 41;
-			myClanStats.m_NumberOfPerfectPushesInTugOfWarMatch = 33;
-			
-			myClanStats.m_NumberOfUnitsKilled = 1500; // not listed
-			myClanStats.m_NumberOfUnitsLost = 1200; // not listed
-			myClanStats.m_NumberOfNukesDeployed = 32;
-			myClanStats.m_NumberOfTacticalAidCriticalHits = 123;
-			
-			myClanStats.m_TimePlayedAsUSA = 320; // in seconds
-			myClanStats.m_TimePlayedAsUSSR = 340; // in seconds
-			myClanStats.m_TimePlayedAsNATO = 360; // in seconds
-			myClanStats.m_ScoreTotal = 40000;
-			myClanStats.m_HighestScore = 8000;
-
-			myClanStats.m_ScoreByDamagingEnemies = 12000;
-			myClanStats.m_ScoreByRepairing = 9000;
-			myClanStats.m_ScoreByUsingTacticalAid = 11000;
-			myClanStats.m_ScoreByFortifying = 4500;
-			myClanStats.m_ScoreAsInfantry = 12121;
-			myClanStats.m_ScoreAsSupport = 13131;
-			myClanStats.m_ScoreAsAir = 4545;
-			myClanStats.m_ScoreAsArmor = 14141;
-			myClanStats.m_HighScoreAsInfantry = 2109;
-			myClanStats.m_HighScoreAsSupport = 2209;
-			myClanStats.m_HighScoreAsAir = 1509;
-			myClanStats.m_HighScoreAsArmor = 2009;
-
+			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_STATS_RSP:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_STATS_RSP);
-			myClanStats.ToStream(&responseMessage);
+			clanStats.ToStream(&responseMessage);
 
 			if (!aClient->SendData(&responseMessage))
 				return false;
 		}
 		break;
-		*/
 
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_MEDALS_REQ: //sub_791590
+		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_MEDALS_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_MEDALS_REQ:");
 

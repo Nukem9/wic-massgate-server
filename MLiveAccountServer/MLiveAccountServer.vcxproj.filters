@@ -272,9 +272,6 @@
     <ClInclude Include="src\mmassgate\MMG_TrackableServerFullInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\mmassgate\MMG_PlayerStats.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -285,9 +282,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\mmassgate\MMG_ServerStartupVariables.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\mmassgate\MMG_ClanStats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\mmassgate\MMG_AccountProxy.h">
@@ -315,6 +309,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\misc\tiger.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mmassgate\MMG_Clan.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mmassgate\MMG_Stats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -505,9 +505,6 @@
     <ClCompile Include="src\mmassgate\MMG_TrackableServerHeartbeat.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\mmassgate\MMG_PlayerStats.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -518,9 +515,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\mmassgate\MMG_ServerStartupVariables.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\mmassgate\MMG_ClanStats.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\mmassgate\MMG_AccountProxy.cpp">
@@ -542,6 +536,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\misc\tiger_sboxes.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mmassgate\MMG_Stats.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mmassgate\MMG_Clan.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

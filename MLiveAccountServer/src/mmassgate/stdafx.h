@@ -23,6 +23,7 @@ class SvClient;
 #include "MMG_ProfileGuestBookEntry.h"
 #include "MMG_ProfileGuestBookProtocol.h"
 #include "MMG_ProfileEditableVariablesProtocol.h"
+#include "MMG_Stats.h"
 #include "MMG_TrackableServerBriefInfo.h"
 #include "MMG_TrackableServerFullInfo.h"
 #include "MMG_TrackableServerHeartbeat.h"
