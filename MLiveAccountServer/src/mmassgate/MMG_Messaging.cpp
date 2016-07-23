@@ -1,13 +1,5 @@
 #include "../stdafx.h"
 
-enum RankInClan : uchar
-{
-		NotInClan,
-		ClanLeader,
-		Officer,
-		Grunt,
-};
-
 void MMG_Messaging::IM_Settings::ToStream(MN_WriteMessage *aMessage)
 {
 	aMessage->WriteUChar(this->m_Friends);
@@ -37,14 +29,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 	switch(aDelimiter)
 	{
-		/*case MMG_ProtocolDelimiters::MESSAGING_PROTOCOL_ERROR:
-		{
-			DebugLog(L_INFO, "MESSAGING_PROTOCOL_ERROR:");
-			//DebugBreak();
-		}
-		break;
-		*/
-
 		case MMG_ProtocolDelimiters::MESSAGING_RETRIEVE_PROFILENAME:
 		{
 			DebugLog(L_INFO, "MESSAGING_RETRIEVE_PROFILENAME:");
@@ -109,6 +93,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			// query database
 			MySQLDatabase::ourInstance->QueryProfileList(count, profildIds, profileList);
+
+			DebugLog(L_INFO, "MESSAGING_RESPOND_PROFILENAME: sending %d profile name/s", count);
 
 			// write profiles to stream
 			for (ushort i = 0; i < count; i++)
@@ -204,7 +190,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			DebugLog(L_INFO, "MESSAGING_REMOVE_FRIEND_RESPONSE:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_REMOVE_FRIEND_RESPONSE);
 			responseMessage.WriteUInt(profileId);
-			aClient->SendData(&responseMessage);
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 		break;
 
@@ -365,217 +353,140 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 		case MMG_ProtocolDelimiters::MESSAGING_CLAN_CREATE_REQUEST:
 		{
-			DebugLog(L_INFO, "MESSAGING_CLAN_CREATE_REQUEST:"); //sub_7A1020
+			DebugLog(L_INFO, "MESSAGING_CLAN_CREATE_REQUEST:");
 
 			// TODO - sub_7A1020
 			wchar_t clanName[32];
 			wchar_t clanTag[11];
-			char displayTag[8];
-			uint aZero;
+			char displayTag[8]; // todo: verify length
+			uint padZero;
 			memset(clanName, 0, sizeof(clanName));
 			memset(clanTag, 0, sizeof(clanTag));
 			memset(displayTag, 0, sizeof(displayTag));
 			
-			uchar successflag = 0, tagpos = 0;
-			uint aClanId = 0;
-			
 			if (!aMessage->ReadString(clanName, ARRAYSIZE(clanName)))
 				return false;
+
 			if (!aMessage->ReadString(clanTag, ARRAYSIZE(clanTag)))
 				return false;
+
 			if (!aMessage->ReadString(displayTag, ARRAYSIZE(displayTag)))
 				return false;
-			if (!aMessage->ReadUInt(aZero))
+
+			if (!aMessage->ReadUInt(padZero))
 				return false;
+
+#ifndef USING_MYSQL_DATABASE
+
+			aClient->GetProfile()->m_ClanId = 4321;
+			aClient->GetProfile()->m_RankInClan = 1;
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_CREATE_RESPONSE);
+			responseMessage.WriteUChar(1);
+			responseMessage.WriteUInt(4321);
+			aClient->SendData(&responseMessage);
+
+			MN_WriteMessage responseMessage2(2048);
+
+			SendProfileName(aClient, &responseMessage2, aClient->GetProfile());
+
+#else
+			uchar myStatusCode;
+			uint myClanId;
+
+			uint nameId = 0, tagId = 0;
+
+			bool ClanNameQueryOK = MySQLDatabase::ourInstance->CheckIfClanNameExists(clanName, &nameId);
+			bool ClanTagQueryOK = MySQLDatabase::ourInstance->CheckIfClanTagExists(clanTag, &tagId);
 			
-			wchar_t fullClanTag[11];
-			memset(fullClanTag, 0, sizeof(fullClanTag));
-			
-			// generate clan tag text out of clanTag and displayTag
-			if (!strcmp(displayTag, "[C]P"))
+			if (nameId > 0 && ClanNameQueryOK)
 			{
-				wcscat_s(fullClanTag, L"[");
-				wcscat_s(fullClanTag, clanTag);
-				wcscat_s(fullClanTag, L"]");
-				tagpos = 1;
+				myStatusCode = myClanStrings::FAIL_INVALID_NAME;
+				myClanId = 0;
 			}
-			else if (!strcmp(displayTag, "P[C]"))
+			else if (tagId > 0 && ClanTagQueryOK)
 			{
-				wcscat_s(fullClanTag, L"[");
-				wcscat_s(fullClanTag, clanTag);
-				wcscat_s(fullClanTag, L"]");
-				tagpos = 2;
+				myStatusCode = myClanStrings::FAIL_TAG_TAKEN;
+				myClanId = 0;
 			}
-			else if (!strcmp(displayTag, "C^P"))
+			else if (!ClanNameQueryOK || !ClanTagQueryOK)
 			{
-				wcscat_s(fullClanTag, clanTag);
-				wcscat_s(fullClanTag, L"^");
-				tagpos = 1;
-			}
-			else if (!strcmp(displayTag, "-=C=-P"))
-			{
-				wcscat_s(fullClanTag, L"-=");
-				wcscat_s(fullClanTag, clanTag);
-				wcscat_s(fullClanTag, L"=-");
-				tagpos = 1;
+				myStatusCode = myClanStrings::FAIL_MASSGATE;	// myClanStrings::InternalMassgateError
+				myClanId = 0;
 			}
 			else
 			{
-				wcscat_s(fullClanTag, L"|dev|");
-				tagpos = 1;
-			}
+				uint newClanId=0;
 
-			wchar_t fullProfileName[25];
-			memset(fullProfileName, 0, sizeof(fullProfileName));
-			MMG_Profile myUpdatedProfile;
-
-			if (tagpos == 1)
-			{
-				wcscat_s(fullProfileName, fullClanTag);
-				wcscat_s(fullProfileName, aClient->GetProfile()->m_Name);
-			}
-			else if (tagpos == 2)
-			{
-				wcscat_s(fullProfileName, aClient->GetProfile()->m_Name);
-				wcscat_s(fullProfileName, fullClanTag);
-			}
-			else
-			{
-				wcscpy(fullProfileName, aClient->GetProfile()->m_Name);
-			}
-
-#ifdef USING_MYSQL_DATABASE
-			if (!MySQLDatabase::ourInstance->CheckIfClanExists(clanName, fullClanTag, &aClanId))
-			{
-				return false;
-			}
-			else if (aClanId)
-			{
-				successflag = 0;
-			}
-			else
-			{
 				// creates clan, updates profile info to "in a clan"
-				if (!MySQLDatabase::ourInstance->CreateClan(clanName, fullClanTag, tagpos, &aClanId))
+				bool CreateClanQueryOk = MySQLDatabase::ourInstance->CreateClan(aClient->GetProfile()->m_ProfileId, clanName, clanTag, displayTag, &newClanId);
+
+				if (CreateClanQueryOk)
 				{
-					return false;
-				}
-				else if (!aClanId)
-				{
-					successflag = 0;
+					myStatusCode = 1;
+					myClanId = newClanId;
+
+					aClient->GetProfile()->m_ClanId = newClanId;
+					aClient->GetProfile()->m_RankInClan = 1;
+
+					MySQLDatabase::ourInstance->UpdatePlayerClanInfo(aClient->GetProfile()->m_ProfileId, newClanId, 1);
 				}
 				else
 				{
-					successflag = 1;
-					
-					if (!MySQLDatabase::ourInstance->UpdatePlayerClanInfo(aClient->GetProfile()->m_ProfileId, aClanId, ClanLeader))
-						return false;
-					if (!MySQLDatabase::ourInstance->QueryProfileName(aClient->GetProfile()->m_ProfileId, &myUpdatedProfile))
-						return false;
+					myStatusCode = myClanStrings::InternalMassgateError;
+					myClanId = 0;
 				}
 			}
-#else
-			successflag = 1;
-			myNewClan.m_ClanId = 4321;
-#endif
 
+			DebugLog(L_INFO, "MESSAGING_CLAN_CREATE_RESPONSE:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_CREATE_RESPONSE);
-			
-			responseMessage.WriteUChar(successflag); // successflag
-			responseMessage.WriteUInt(aClanId); // clan id
-			
-			//both MESSAGING_RESPOND_PROFILENAME or MESSAGING_PLAYER_JOINED_CLAN can be used here and cause no error.
-			//most likely MESSAGING_PLAYER_JOINED_CLAN should go to all players to update their friend list etc
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
-			myUpdatedProfile.ToStream(&responseMessage);
-			
+			responseMessage.WriteUChar(myStatusCode);
+			responseMessage.WriteUInt(myClanId);
+
 			if (!aClient->SendData(&responseMessage))
 				return false;
-		}
-		break;
 
-		case MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_REQUEST:
-		{
-			DebugLog(L_INFO, "MESSAGING_CLAN_FULL_INFO_REQUEST:"); //MMG_Messaging::RequestFullClanInfo
-
-			uint ClanProfileId = 0, aZero = 0, membercountfound = 0;
-			MMG_Clan aClan;
-			
-			if (!aMessage->ReadUInt(ClanProfileId) || !aMessage->ReadUInt(aZero))
-				return false;
-			
-#ifdef USING_MYSQL_DATABASE
-			// request clan info from database
-			if (!MySQLDatabase::ourInstance->QueryClan(ClanProfileId, &aClan))
-				return false;
-			
-			if (aClan.m_isdeleted)
-				return false;
-			
-			//sub_BD7720
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_RESPONSE);
-			aClan.ToStream(&responseMessage); //sub_BD7720
-#else
-			// TODO
-			wcscpy(aClan.m_ClanName, L"Developers & Moderators");
-			wcscpy(aClan.m_FullClanTag, L"devs^");
-			wcscpy(aClan.m_ClanMotto, L"Today is a good day for clan wars!");
-			wcscpy(aClan.m_ClanMessageoftheday, L"Welcome clanmembers!");
-			wcscpy(aClan.m_ClanHomepage, L"massgate.org");
-			aClan.m_MemberCount = 1;
-			aClan.m_MemberIds[0] = aClient->GetProfile()->m_ProfileId;
-			aClan.m_ClanId = 4321;
-			aClan.m_PlayerOfTheWeekId = 0;
-			aClan.m_isdeleted = 0;
-			aClan.m_tagpos = 1;
-
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_RESPONSE);
-			aClan.ToStream(&responseMessage);
+			// TODO update friends and acquaintances
+			MMG_AccountProxy::ourInstance->UpdateClients(aClient->GetProfile());
 #endif
-
-			if (!aClient->SendData(&responseMessage))
-				return false;
 		}
 		break;
 
 		case MMG_ProtocolDelimiters::MESSAGING_CLAN_MODIFY_REQUEST:
 		{
-			DebugLog(L_INFO, "MESSAGING_CLAN_MODIFY_REQUEST:"); //sub_7A0FE0
+			DebugLog(L_INFO, "MESSAGING_CLAN_MODIFY_REQUEST:");
 
 			wchar_t ClanMotto[WIC_MOTTO_MAX_LENGTH];
 			wchar_t ClanMessageoftheday[WIC_MOTD_MAX_LENGTH];
 			wchar_t ClanHomepage[WIC_HOMEPAGE_MAX_LENGTH];
-			MMG_Clan aClan;
-			uint clanId = aClient->GetProfile()->m_ClanId, aZero = 0;;
 			memset(ClanMotto, 0, sizeof(ClanMotto));
 			memset(ClanMessageoftheday, 0, sizeof(ClanMessageoftheday));
 			memset(ClanHomepage, 0, sizeof(ClanHomepage));
 			
 			if (!aMessage->ReadString(ClanMotto, ARRAYSIZE(ClanMotto)))
 				return false;
+
 			if (!aMessage->ReadString(ClanMessageoftheday, ARRAYSIZE(ClanMessageoftheday)))
 				return false;
+
 			if (!aMessage->ReadString(ClanHomepage, ARRAYSIZE(ClanHomepage)))
 				return false;
-			if (!aMessage->ReadUInt(aZero))
+
+			uint profileId;
+			if (!aMessage->ReadUInt(profileId))
 				return false;
+
+			// TODO get clan id of sent profileId
+			uint clanId = aClient->GetProfile()->m_ClanId;
 
 #ifdef USING_MYSQL_DATABASE
-			if (!MySQLDatabase::ourInstance->SaveClanEditableVariables(clanId, ClanMotto, ClanMessageoftheday, ClanHomepage))
-				return false;
-			if (!MySQLDatabase::ourInstance->QueryClan(clanId, &aClan))
-				return false;
+			MySQLDatabase::ourInstance->SaveClanEditableVariables(profileId, clanId, ClanMotto, ClanMessageoftheday, ClanHomepage);
 #endif
-
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_RESPONSE);
-			aClan.ToStream(&responseMessage);
-			
-			if (!aClient->SendData(&responseMessage))
-				return false;
+			// no response, rest of packet at this point is another delimiter (sub_7A0FE0, MESSAGING_CLAN_FULL_INFO_REQUEST)
 		}
 		break;
 		
-		case MMG_ProtocolDelimiters::MESSAGING_CLAN_MODIFY_RANKS_REQUEST:
+		/*case MMG_ProtocolDelimiters::MESSAGING_CLAN_MODIFY_RANKS_REQUEST:
 		{
 			DebugLog(L_INFO, "MESSAGING_CLAN_MODIFY_RANKS_REQUEST:"); //sub_7A0F60
 
@@ -604,14 +515,91 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			}
 #endif
 			//no return message yet, maybe a full info request if the clan is not deleted
-			/*if (!aClient->SendData(&responseMessage))
-				return false;*/
+			//if (!aClient->SendData(&responseMessage))
+			//	return false;
 		}
 		break;
+		*/
+
 		/*
 		clan invites: MESSAGING_CLAN_INVITE_PLAYER_REQUEST, MESSAGING_CLAN_INVITE_PLAYER_RESPONSE
 		use MySQLDatabase::UpdatePlayerClanInfo
 		*/
+
+		case MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_REQUEST:
+		{
+			DebugLog(L_INFO, "MESSAGING_CLAN_FULL_INFO_REQUEST:");
+			
+			uint clanId, padZero;
+			if (!aMessage->ReadUInt(clanId) || !aMessage->ReadUInt(padZero))
+				return false;
+			
+#ifndef USING_MYSQL_DATABASE
+
+			// TODO
+			wchar_t clanName[32];
+			wchar_t clanTag[11];
+			wchar_t clanMotto[256];
+			wchar_t clanMessageOfTheDay[256];
+			wchar_t clanHomepage[256];
+			uint clanNumberOfPlayers = 0;
+			uint clanPlayerId[512];
+			uint clanLeaderId = 0, clanPlayerOfTheWeekId = 0;
+			memset(clanName, 0, sizeof(clanName));
+			memset(clanTag, 0, sizeof(clanTag));
+			memset(clanMotto, 0, sizeof(clanMotto));
+			memset(clanMessageOfTheDay, 0, sizeof(clanMessageOfTheDay));
+			memset(clanHomepage, 0, sizeof(clanHomepage));
+
+			wcscpy(clanName, L"Developers & Moderators");
+			wcscpy(clanTag, L"devs");
+			wcscpy(clanMotto, L"Today is a good day for clan wars!");
+			wcscpy(clanMessageOfTheDay, L"Welcome clanmembers!");
+			wcscpy(clanHomepage, L"massgate.org");
+			
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_RESPONSE);
+			responseMessage.WriteString(clanName);
+			responseMessage.WriteString(clanTag);
+			responseMessage.WriteString(clanMotto);
+			responseMessage.WriteString(clanMessageOfTheDay);
+			responseMessage.WriteString(clanHomepage);
+			
+			responseMessage.WriteUInt(1);	// number of players
+			responseMessage.WriteUInt(1234);	// player list
+
+			responseMessage.WriteUInt(4321);	// clan id
+			responseMessage.WriteUInt(1234);	// player of the week
+			
+			aClient->SendData(&responseMessage);
+#else
+			uint memberCount;
+			MMG_Clan::FullInfo clanFullInfo;
+
+			// request clan info from database
+			MySQLDatabase::ourInstance->QueryClan(clanId, &memberCount, &clanFullInfo);
+
+			DebugLog(L_INFO, "MESSAGING_CLAN_FULL_INFO_RESPONSE:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_FULL_INFO_RESPONSE);
+			
+			responseMessage.WriteString(clanFullInfo.m_FullClanName);
+			responseMessage.WriteString(clanFullInfo.m_ShortClanName);
+			responseMessage.WriteString(clanFullInfo.m_Motto);
+			responseMessage.WriteString(clanFullInfo.m_LeaderSays);
+			responseMessage.WriteString(clanFullInfo.m_Homepage);
+
+			responseMessage.WriteUInt(memberCount);
+
+			for (int i = 0; i < memberCount; i++)
+				responseMessage.WriteUInt(clanFullInfo.m_ClanMembers[i]);
+
+			responseMessage.WriteUInt(clanFullInfo.m_ClanId);
+			responseMessage.WriteUInt(clanFullInfo.m_PlayerOfWeek);
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
+#endif
+		}
+		break;
 		
 		case MMG_ProtocolDelimiters::MESSAGING_SET_STATUS_ONLINE:
 		{
@@ -670,7 +658,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 
-		case MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS:
+		/*case MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS:
 		{
 			DebugLog(L_INFO, "MESSAGING_GET_CLIENT_METRICS:");
 
@@ -702,6 +690,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			//	return false;
 		}
 		break;
+		*/
 
 		/*case MMG_ProtocolDelimiters::MESSAGING_SET_CLIENT_SETTINGS:
 		{
@@ -726,7 +715,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 
-		case MMG_ProtocolDelimiters::MESSAGING_CLIENT_REQ_GET_PCC:
+		/*case MMG_ProtocolDelimiters::MESSAGING_CLIENT_REQ_GET_PCC:
 		{
 			DebugLog(L_INFO, "MESSAGING_CLIENT_REQ_GET_PCC:");
 
@@ -758,6 +747,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 		}
 		break;
+		*/
 
 		case MMG_ProtocolDelimiters::MESSAGING_ABUSE_REPORT:
 		{
@@ -805,7 +795,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 
-		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_POST_REQ:
+		/*case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_POST_REQ:
 		{
 			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_POST_REQ: Sending information");
 
@@ -827,8 +817,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			//	return false;
 		}
 		break;
+		*/
 		
-		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_REQ:
+		/*case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_REQ:
 		{
 			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_GET_REQ: Sending information");
 
@@ -869,8 +860,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			//	return false;
 		}
 		break;
+		*/
 		
-		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_DELETE_REQ:
+		/*case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_DELETE_REQ:
 		{
 			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_DELETE_REQ: Sending information");
 
@@ -882,6 +874,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			//	return false;
 		}
 		break;
+		*/
 
 		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_SET_EDITABLES_REQ:
 		{
@@ -959,14 +952,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			DebugLog(L_INFO, "MESSAGING_IGNORELIST_GET_REQ:");
 
 			this->SendProfileIgnoreList(aClient, &responseMessage);
-		}
-		break;
-
-		case MMG_ProtocolDelimiters::MESSAGING_CLAN_COLOSSEUM_UNREGISTER_REQ:
-		{
-			DebugLog(L_INFO, "MESSAGING_CLAN_COLOSSEUM_UNREGISTER_REQ:");
-
-			//TODO : no response required
 		}
 		break;
 
