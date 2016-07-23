@@ -1,7 +1,9 @@
 #include "../stdafx.h"
 
-MMG_ProfileEditableVariablesProtocol::MMG_ProfileEditableVariablesProtocol()
+MMG_ProfileEditableVariablesProtocol::GetRsp::GetRsp()
 {
+	memset(this->motto, 0, sizeof(this->motto));
+	memset(this->homepage, 0, sizeof(this->homepage));
 }
 
 void MMG_ProfileEditableVariablesProtocol::GetRsp::ToStream(MN_WriteMessage *aMessage)
@@ -21,8 +23,6 @@ bool MMG_ProfileEditableVariablesProtocol::GetRsp::FromStream(MN_ReadMessage *aM
 	return true;
 }
 
-MMG_ProfileEditableVariablesProtocol::GetRsp::GetRsp()
+MMG_ProfileEditableVariablesProtocol::MMG_ProfileEditableVariablesProtocol()
 {
-	memset(this->motto, 0, sizeof(this->motto));
-	memset(this->homepage, 0, sizeof(this->homepage));
 }

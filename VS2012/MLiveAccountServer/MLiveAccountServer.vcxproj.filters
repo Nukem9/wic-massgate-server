@@ -315,6 +315,9 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Stats.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_LadderProtocol.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\dump.c">
@@ -540,6 +543,9 @@
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Stats.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_LadderProtocol.cpp">
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
   </ItemGroup>

@@ -178,52 +178,55 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		}
 		break;
 
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_REQ:
+		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_LADDER_GET_REQ:");
 
-			uint aUInt1 = 0;
-			uint ProfileId = 0;
-			uint aUInt2 = 0;
-			uint aUInt3 = 0;
-			aMessage->ReadUInt(aUInt1);
-			aMessage->ReadUInt(ProfileId);
-			aMessage->ReadUInt(aUInt2);
-			aMessage->ReadUInt(aUInt3);
-			
-			uchar msgcase = 1;
-			uint numberofplayers = 0;
-			MMG_Profile aProfile[2];
+			uint startPos, numItems;
+			uint profileId, requestId;
+			uint foundItems;
+
+			MMG_LadderProtocol::LadderRsp myResponse;
+
+			if (!aMessage->ReadUInt(startPos)
+				|| !aMessage->ReadUInt(profileId)
+				|| !aMessage->ReadUInt(numItems)
+				|| !aMessage->ReadUInt(requestId))
+				return false;
+
+			//printf("%d %d %d %d \n", startPos, profileId, numItems, requestId);
+
+			foundItems = 0;
+
+			// write case 1
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
-			responseMessage.WriteUChar(msgcase);
-			
-			switch (msgcase)
-			{
-				case 1:
-					responseMessage.WriteUInt(1);
-					responseMessage.WriteUInt(1);
-					responseMessage.WriteUInt(1);
-					responseMessage.WriteUInt(numberofplayers);
-					for (int i = 0; i < numberofplayers; i++)
-					{
-						responseMessage.WriteUInt(1);
-					}
-					break;
-				case 2:
-					responseMessage.WriteUInt(numberofplayers);
-					for (int i = 0; i < numberofplayers; i++)
-					{
-						aProfile[i].ToStream(&responseMessage);
-					}
-					break;
-				case 3:
-					break;
-			
+			responseMessage.WriteUChar(1);
+
+			responseMessage.WriteUInt(0);			//startpos
+			responseMessage.WriteUInt(requestId);	//requestid
+			responseMessage.WriteUInt(0);			//ladder total size
+			responseMessage.WriteUInt(0);			//ladder page size
+
+			for (int i = 0; i < foundItems; i++)
+				responseMessage.WriteUInt(myResponse.ladderItems[i].score);
+
+			//write case 2
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
+			responseMessage.WriteUChar(2);
+
+			responseMessage.WriteUInt(foundItems);	//ladder page size
+
+			for (int i = 0; i < foundItems; i++)
+				myResponse.ladderItems[i].profile.ToStream(&responseMessage);
+
+			//write case 3
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
+			responseMessage.WriteUChar(3);
+
 			if (!aClient->SendData(&responseMessage))
 				return false;
 		}
 		break;
-		*/
 
 		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_STATS_REQ:
 		{

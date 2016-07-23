@@ -317,6 +317,9 @@
     <ClInclude Include="src\mmassgate\MMG_Stats.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\mmassgate\MMG_LadderProtocol.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Server Modules\Database.cpp">
@@ -543,6 +546,9 @@
     </ClCompile>
     <ClCompile Include="src\mmassgate\MMG_Clan.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mmassgate\MMG_LadderProtocol.cpp">
+      <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

@@ -173,6 +173,7 @@
     <ClInclude Include="src\mmassgate\MMG_Chat.h" />
     <ClInclude Include="src\mmassgate\MMG_Clan.h" />
     <ClInclude Include="src\mmassgate\MMG_InstantMessageListener.h" />
+    <ClInclude Include="src\mmassgate\MMG_LadderProtocol.h" />
     <ClInclude Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.h" />
     <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookEntry.h" />
     <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookProtocol.h" />
@@ -254,6 +255,7 @@
     <ClCompile Include="src\mmassgate\MMG_Chat.cpp" />
     <ClCompile Include="src\mmassgate\MMG_Clan.cpp" />
     <ClCompile Include="src\mmassgate\MMG_InstantMessageListener.cpp" />
+    <ClCompile Include="src\mmassgate\MMG_LadderProtocol.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookEntry.cpp" />
     <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookProtocol.cpp" />
