@@ -222,7 +222,19 @@ bool MMG_AccountProtocol::Query::FromStream(MMG_ProtocolDelimiters::Delimiter aD
 
 bool MMG_AccountProtocol::Query::VerifyProductId()
 {
-	return (this->m_ProductId == WIC_PRODUCT_ID && this->m_DistributionId == WIC_CLIENT_DISTRIBUTION);
+	if (this->m_DistributionId != WIC_CLIENT_DISTRIBUTION)
+		return false;
+
+	switch (this->m_ProductId)
+	{
+	case PRODUCT_ID_WIC07_STANDARD_KEY:
+	case PRODUCT_ID_WIC07_TIMELIMITED_KEY:
+	case PRODUCT_ID_WIC08_STANDARD_KEY:
+	case PRODUCT_ID_WIC08_TIMELIMITED_KEY:
+		return true;
+	}
+
+	return false;
 }
 
 bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter)
