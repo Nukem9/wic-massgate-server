@@ -170,6 +170,7 @@
     <ClInclude Include="src\misc\stdafx.h" />
     <ClInclude Include="src\misc\tiger.h" />
     <ClInclude Include="src\mmassgate\MMG_AccountProxy.h" />
+    <ClInclude Include="src\mmassgate\MMG_BitStream.h" />
     <ClInclude Include="src\mmassgate\MMG_Chat.h" />
     <ClInclude Include="src\mmassgate\MMG_Clan.h" />
     <ClInclude Include="src\mmassgate\MMG_InstantMessageListener.h" />

@@ -320,6 +320,9 @@
     <ClInclude Include="src\mmassgate\MMG_LadderProtocol.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
+    <ClInclude Include="src\mmassgate\MMG_BitStream.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Server Modules\Database.cpp">
