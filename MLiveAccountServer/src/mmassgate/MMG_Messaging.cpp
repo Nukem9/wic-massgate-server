@@ -715,39 +715,38 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 
-		/*case MMG_ProtocolDelimiters::MESSAGING_CLIENT_REQ_GET_PCC:
+		case MMG_ProtocolDelimiters::MESSAGING_CLIENT_REQ_GET_PCC:
 		{
 			DebugLog(L_INFO, "MESSAGING_CLIENT_REQ_GET_PCC:");
 
-			// This is called when the clan profile page is opened, clan collosseum filters
+			// This is called when the clan profile page is opened, player created content
 
-			uint PCCRequestCount = 0;
-			uint PCCRequestId = 0;
-			uchar PCCRequestType = 0;
-			aMessage->ReadUInt(PCCRequestCount);
-			for (int i = 0; i < PCCRequestCount; i++)
-			{
-				aMessage->ReadUInt(PCCRequestId);
-				aMessage->ReadUChar(PCCRequestType);
-			}
+			uint requestCount;
+			if (!aMessage->ReadUInt(requestCount))
+				return false;
 
-			uint NumberOfPlayers = 0;
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLIENT_RSP_GET_PCC);
-			responseMessage.WriteUInt(NumberOfPlayers);	// number of players
+			responseMessage.WriteUInt(requestCount);// Number of responses
 
-			for (int i = 0; i < NumberOfPlayers; i++)
+			for (int i = 0; i < requestCount; i++)
 			{
-				responseMessage.WriteUInt(1); // ProfileId ???
-				responseMessage.WriteUInt(1); // ???
-				responseMessage.WriteUChar(1); // player rank?
-				responseMessage.WriteString(""); // ??? 256 byte size
+				uint requestId;
+				uchar requestType;
+
+				aMessage->ReadUInt(requestId);
+				aMessage->ReadUChar(requestType);
+
+				// Write these back to the outgoing messages
+				responseMessage.WriteUInt(requestId);		// Content id
+				responseMessage.WriteUInt(1);				// Content sequence number
+				responseMessage.WriteUChar(requestType);	// Content type (0 is profile image, 1 is clan image)
+				responseMessage.WriteString("https://my_domain_here.abc/my_image.dds"); // Image url
 			}
-			
+
 			if (!aClient->SendData(&responseMessage))
 				return false;
 		}
 		break;
-		*/
 
 		case MMG_ProtocolDelimiters::MESSAGING_ABUSE_REPORT:
 		{
