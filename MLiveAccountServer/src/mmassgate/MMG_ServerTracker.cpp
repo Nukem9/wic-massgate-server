@@ -307,39 +307,33 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		}
 		break;
 
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_MEDALS_REQ:
+		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_MEDALS_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_CLAN_MEDALS_REQ:");
 
-			uint ClanProfileId = 0;
-			aMessage->ReadUInt(ClanProfileId);
+			uint clanProfileId;
+			if (!aMessage->ReadUInt(clanProfileId))
+				return false;
 			
-			uchar ClanMedalBuffer[9];
-			for (int i = 0; i < 9; i++)
-				ClanMedalBuffer[i] = 0;
-
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_MEDALS_RSP);
-			responseMessage.WriteUInt(4321); // ClanId
-			responseMessage.WriteUInt(9); // medal count
-			//responseMessage.WriteUInt(64); // max size
-			responseMessage.WriteUInt(9*4); // data
-			
-			for (int j = 0; j < 9; j++)
+			responseMessage.WriteUInt(clanProfileId);	// ClanId
+			responseMessage.WriteUInt(8);				// Medal count (MUST be 8)
+
+			uint buffer[256];
+			MMG_BitWriter<unsigned int> writer(buffer, sizeof(buffer) * 8);
+
+			for (int i = 0; i < 8; i++)
 			{
-				// per medal
-				responseMessage.WriteUShort(1); // medal level
-				responseMessage.WriteUShort(1); // number of stars
+				writer.WriteBits(3, 2);// Medal type (0 to 3)
+				writer.WriteBits(0, 2);// Medal stars (0 to 3)
 			}
 
-
-			//responseMessage.WriteRawData(&ClanMedalBuffer, sizeof(ClanMedalBuffer));
-
+			responseMessage.WriteRawData(buffer, sizeof(buffer));
 
 			if (!aClient->SendData(&responseMessage))
 				return false;
 		}
 		break;
-		*/
 
 		default:
 			DebugLog(L_WARN, "Unknown delimiter %i", aDelimiter);
