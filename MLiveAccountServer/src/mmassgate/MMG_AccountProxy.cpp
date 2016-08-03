@@ -44,17 +44,21 @@ bool MMG_AccountProxy::UpdateClients(MMG_Profile *profile)
 	return true;
 }
 
-void MMG_AccountProxy::CheckProfileOnlineStatus(MMG_Profile *profile)
+bool MMG_AccountProxy::SendPlayerJoinedClan(MMG_Profile *profile)
 {
-	//TODO 
-
 	std::map<uint, SvClient*>::iterator iter;
 
 	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); ++iter)
 	{
-		if (iter->second->GetProfile()->m_ProfileId == profile->m_ProfileId)
-			profile->m_OnlineStatus = iter->second->GetProfile()->m_OnlineStatus;
+		MN_WriteMessage	responseMessage(2048);
+		responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PLAYER_JOINED_CLAN);
+		profile->ToStream(&responseMessage);
+
+		if (!iter->second->SendData(&responseMessage))
+			continue;
 	}
+
+	return true;
 }
 
 bool MMG_AccountProxy::AccountInUse(MMG_AuthToken *authtoken)

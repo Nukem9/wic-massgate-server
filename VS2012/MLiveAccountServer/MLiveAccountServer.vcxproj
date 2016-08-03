@@ -120,6 +120,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProtocol.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AccountProxy.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_AuthToken.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BitStream.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Clan.h" />

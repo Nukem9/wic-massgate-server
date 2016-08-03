@@ -11,3 +11,10 @@ MMG_Clan::FullInfo::FullInfo()
 	memset(this->m_ClanMembers, 0, sizeof(this->m_ClanMembers));
 	m_PlayerOfWeek	= 0;
 }
+
+MMG_Clan::Description::Description()
+{
+	m_ClanId		= 0;
+	memset(this->m_FullName, 0, sizeof(this->m_FullName));
+	memset(this->m_ClanTag, 0, sizeof(this->m_ClanTag));
+}

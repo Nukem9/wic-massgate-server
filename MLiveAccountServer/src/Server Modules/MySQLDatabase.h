@@ -196,10 +196,14 @@ public:
 	bool	CheckIfClanNameExists		(const wchar_t* clanname, uint *dstId);
 	bool	CheckIfClanTagExists		(const wchar_t* clantag, uint *dstId);
 	bool	CreateClan					(const uint profileId, const wchar_t* clanname, const wchar_t* clantag, const char* displayTag, uint *dstId);
-	bool	DeleteClan					(const uint profileId, const uint clanId);
-	bool	QueryClan					(const uint clanId, uint *dstMemberCount, MMG_Clan::FullInfo *fullinfo);
+	bool	UpdatePlayerClanId			(const uint profileId, const uint clanId);
+	bool	UpdatePlayerClanRank		(const uint profileId, const uchar rankInClan);
+	bool	UpdateClanPlayerOfWeek		(const uint clanId, const uint profileId);
+	bool	DeleteClan					(const uint clanId);
+	bool	QueryClanFullInfo			(const uint clanId, uint *dstMemberCount, MMG_Clan::FullInfo *fullinfo);
+	bool	QueryClanDescription		(const uint clanId, MMG_Clan::Description *description);
 	bool	QueryClanTag				(const uint clanId, wchar_t *shortclanname, char *displaytag);
 	bool	AppendClanTag				(MMG_Profile *profile);
-	bool	SaveClanEditableVariables	(const uint profileId, const uint clanId, wchar_t *motto, wchar_t *messageOfTheDay, wchar_t *homepage);
-	bool	UpdatePlayerClanInfo		(const uint profileId, const uint clanId, const uchar rankinclan);
+	bool	SaveClanEditableVariables	(const uint clanId, const uint profileId, const wchar_t *motto, const wchar_t *motd, const wchar_t *homepage);
+	bool	CheckIfInvitedAlready		(const uint clanId, const uint inviteeProfileId, uint *dstId);
 };

@@ -119,7 +119,7 @@ bool MySQLDatabase::ConnectDatabase()
 
 	//set the connection options
 	mysql_options(this->m_Connection, MYSQL_OPT_RECONNECT, &this->reconnect);
-	mysql_options(this->m_Connection, MYSQL_OPT_BIND, this->bind_interface);
+	//mysql_options(this->m_Connection, MYSQL_OPT_BIND, this->bind_interface);
 	mysql_options(this->m_Connection, MYSQL_SET_CHARSET_NAME, this->charset_name);
 	mysql_options(this->m_Connection, MYSQL_INIT_COMMAND, "SET autocommit=1");
 
@@ -1131,7 +1131,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 	// execute prepared statement
 	if(!query1.StmtExecute(param1, results1))
 	{
-		DatabaseLog("QueryUserProfile(query1) failed: accountid(%u), profileid(%u)", accountId, profileId);
+		DatabaseLog("QueryUserProfile() query1 failed: accountid(%u), profileid(%u)", accountId, profileId);
 
 		profile->m_ProfileId = 0;
 		wcsncpy(profile->m_Name, L"", WIC_NAME_MAX_LENGTH);
@@ -1205,9 +1205,9 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 		
 	// execute prepared statement
 	if(!query2.StmtExecute(param2))
-		DatabaseLog("QueryUserProfile(query2) failed: accountid(%u), profileid(%u)", accountId, profile->m_ProfileId);
+		DatabaseLog("QueryUserProfile() query2 failed: accountid(%u), profileid(%u)", accountId, profileId);
 	else
-		DatabaseLog("profile id(%u) lastlogindate updated", profile->m_ProfileId);
+		DatabaseLog("profile id(%u) lastlogindate updated", profileId);
 
 	if (!query2.Success())
 	{
@@ -1238,9 +1238,9 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 		
 	// execute prepared statement
 	if(!query3.StmtExecute(params3))
-		DatabaseLog("QueryUserProfile(query3) failed: accountid(%u), profileid(%u)", accountId, profile->m_ProfileId);
+		DatabaseLog("QueryUserProfile() query3 failed: accountid(%u), profileid(%u)", accountId, profileId);
 	else
-		DatabaseLog("account id(%u) set active profile id(%u)", accountId, profile->m_ProfileId);
+		DatabaseLog("account id(%u) set active profile id(%u)", accountId, profileId);
 
 	if (!query3.Success())
 	{
@@ -1487,7 +1487,7 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT friendprofileid FROM %s WHERE profileid = ? LIMIT 64", TABLENAME[FRIENDS_TABLE]);
+	sprintf(SQL, "SELECT friendprofileid FROM %s WHERE profileid = ? ORDER BY id ASC LIMIT 100", TABLENAME[FRIENDS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -1753,7 +1753,7 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT ignoredprofileid FROM %s WHERE profileid = ? LIMIT 64", TABLENAME[IGNORED_TABLE]);
+	sprintf(SQL, "SELECT ignoredprofileid FROM %s WHERE profileid = ? ORDER BY id ASC LIMIT 64", TABLENAME[IGNORED_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -2168,7 +2168,7 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 	
-	// TODO temporarily limiting returned pending messages to 20, real limit for the client may be 128
+	// TODO temporarily limiting returned pending messages to 20, real limit for the client is unknown
 
 	// build sql query using table names defined in settings file
 	sprintf(SQL, "SELECT id, writtenat, senderprofileid, recipientprofileid, message FROM %s WHERE recipientprofileid = ? ORDER BY writtenat ASC LIMIT 20", TABLENAME[MESSAGES_TABLE]);
@@ -2557,13 +2557,13 @@ bool MySQLDatabase::CreateClan(const uint profileId, const wchar_t* clanname, co
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "INSERT INTO %s (clanleaderid, clanname, clantag, shortclanname, displaytag, playeroftheweekid, motto, motd, homepage) VALUES (?, ?, ?, ?, ?, ?, NULL, NULL, NULL)", TABLENAME[CLANS_TABLE]);
+	sprintf(SQL, "INSERT INTO %s (clanname, clantag, shortclanname, displaytag, playeroftheweekid, motto, motd, homepage) VALUES (?, ?, ?, ?, ?, NULL, NULL, NULL)", TABLENAME[CLANS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
 	
 	// prepared statement binding structures
-	MYSQL_BIND params1[6];
+	MYSQL_BIND params1[5];
 
 	// initialize (zero) bind structures
 	memset(params1, 0, sizeof(params1));
@@ -2585,17 +2585,16 @@ bool MySQLDatabase::CreateClan(const uint profileId, const wchar_t* clanname, co
 	else if (strcmp(displayTag, "-=C=-P") == 0)
 		swprintf(temptags, L"-=%ws=-", clantag);
 	else
-		DebugBreak();
+		assert(false);
 
 	ulong temptagsLength = wcslen(temptags);
 
 	// bind parameters to prepared statement
-	query.Bind(&params1[0], &profileId);
-	query.Bind(&params1[1], clanname, &clannameLength);
-	query.Bind(&params1[2], temptags, &temptagsLength);
-	query.Bind(&params1[3], clantag, &clantagLength);
-	query.Bind(&params1[4], displayTag, &displayTagLength);
-	query.Bind(&params1[5], &profileId);
+	query.Bind(&params1[0], clanname, &clannameLength);
+	query.Bind(&params1[1], temptags, &temptagsLength);
+	query.Bind(&params1[2], clantag, &clantagLength);
+	query.Bind(&params1[3], displayTag, &displayTagLength);
+	query.Bind(&params1[4], &profileId);
 	
 	// execute prepared statement
 	if (!query.StmtExecute(params1))
@@ -2621,7 +2620,7 @@ bool MySQLDatabase::CreateClan(const uint profileId, const wchar_t* clanname, co
 	return true;
 }
 
-bool MySQLDatabase::DeleteClan(const uint profileId, const uint clanId)
+bool MySQLDatabase::UpdatePlayerClanId(const uint profileId, const uint clanId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -2637,26 +2636,26 @@ bool MySQLDatabase::DeleteClan(const uint profileId, const uint clanId)
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "DELETE FROM %s WHERE id = ? AND clanleaderid = ?", TABLENAME[CLANS_TABLE]);
+	sprintf(SQL, "UPDATE %s SET clanid = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
-	MYSQL_BIND param1[2];
+	MYSQL_BIND params[2];
 
 	// initialize (zero) bind structures
-	memset(param1, 0, sizeof(param1));
+	memset(params, 0, sizeof(params));
 
 	// bind parameters to prepared statement
-	query.Bind(&param1[0], &clanId);
-	query.Bind(&param1[1], &profileId);
+	query.Bind(&params[0], &clanId);
+	query.Bind(&params[1], &profileId);
 
 	// execute prepared statement
-	if (!query.StmtExecute(param1))
-		DatabaseLog("DeleteClan() failed: clan id(%u)", clanId);
+	if(!query.StmtExecute(params))
+		DatabaseLog("UpdatePlayerClanId() failed: profileid(%u)", profileId);
 	else
-		DatabaseLog("Deleted clan id(%u)", clanId);
+		DatabaseLog("UpdatePlayerClanId() success: profileid(%u)", profileId);
 
 	if (!query.Success())
 	{
@@ -2670,7 +2669,195 @@ bool MySQLDatabase::DeleteClan(const uint profileId, const uint clanId)
 	return true;
 }
 
-bool MySQLDatabase::QueryClan(const uint clanId, uint *dstMemberCount, MMG_Clan::FullInfo *fullinfo)
+bool MySQLDatabase::UpdatePlayerClanRank(const uint profileId, const uchar rankInClan)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "UPDATE %s SET rankinclan = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
+
+	// prepared statement binding structures
+	MYSQL_BIND params[2];
+
+	// initialize (zero) bind structures
+	memset(params, 0, sizeof(params));
+
+	// bind parameters to prepared statement
+	query.Bind(&params[0], &rankInClan);
+	query.Bind(&params[1], &profileId);
+
+	// execute prepared statement
+	if(!query.StmtExecute(params))
+		DatabaseLog("UpdatePlayerClanRank() failed: profileid(%u)", profileId);
+	else
+		DatabaseLog("UpdatePlayerClanRank() success: profileid(%u)", profileId);
+
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::UpdateClanPlayerOfWeek(const uint clanId, const uint profileId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "UPDATE %s SET playeroftheweekid = ? WHERE id = ?", TABLENAME[CLANS_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
+
+	// prepared statement binding structures
+	MYSQL_BIND params[2];
+
+	// initialize (zero) bind structures
+	memset(params, 0, sizeof(params));
+
+	// bind parameters to prepared statement
+	query.Bind(&params[0], &profileId);
+	query.Bind(&params[1], &clanId);
+
+	// execute prepared statement
+	if(!query.StmtExecute(params))
+		DatabaseLog("UpdateClanPlayerOfWeek() failed: clanid(%u)", profileId);
+	else
+		DatabaseLog("UpdateClanPlayerOfWeek() success: clanid(%u)", profileId);
+
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::DeleteClan(const uint clanId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	// *Step 1: delete clan* //
+
+	char SQL1[4096];
+	memset(SQL1, 0, sizeof(SQL1));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL1, "DELETE FROM %s WHERE id = ?", TABLENAME[CLANS_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query1(this->m_Connection, SQL1);
+
+	// prepared statement binding structures
+	MYSQL_BIND param1[1];
+
+	// initialize (zero) bind structures
+	memset(param1, 0, sizeof(param1));
+
+	// bind parameters to prepared statement
+	query1.Bind(&param1[0], &clanId);
+
+	// execute prepared statement
+	if (!query1.StmtExecute(param1))
+		DatabaseLog("DeleteClan() query1 failed: clan id(%u)", clanId);
+	else
+		DatabaseLog("deleted clanid(%u)", clanId);
+
+	if (!query1.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// *Step 2: delete clan invites* //
+
+	char SQL2[4096];
+	memset(SQL2, 0, sizeof(SQL2));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL2, "DELETE FROM %s WHERE message LIKE ?", TABLENAME[MESSAGES_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query2(this->m_Connection, SQL2);
+
+	// prepared statement binding structures
+	MYSQL_BIND params2[1];
+
+	// initialize (zero) bind structures
+	memset(params2, 0, sizeof(params2));
+
+	// query specific variables
+	wchar_t message[WIC_INSTANTMSG_MAX_LENGTH];
+	memset(message, 0, sizeof(message));
+
+	swprintf(message, L"|clan|%u%%", clanId);
+
+	ulong msgLength = wcslen(message);
+
+	// bind parameters to prepared statement
+	query2.Bind(&params2[0], message, &msgLength);
+
+	// execute prepared statement
+	if (!query2.StmtExecute(params2))
+		DatabaseLog("DeleteClan() query2 failed: clan id(%u)", clanId);
+	else
+		DatabaseLog("deleted clanid(%u) pending invites", clanId);
+
+	if (!query2.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::QueryClanFullInfo(const uint clanId, uint *dstMemberCount, MMG_Clan::FullInfo *fullinfo)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -2783,7 +2970,7 @@ bool MySQLDatabase::QueryClan(const uint clanId, uint *dstMemberCount, MMG_Clan:
 	memset(SQL2, 0, sizeof(SQL2));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL2, "SELECT id FROM %s WHERE clanid = ?", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL2, "SELECT id FROM %s WHERE clanid = ? ORDER BY id ASC, rankinclan ASC LIMIT 512", TABLENAME[PROFILES_TABLE]);
 	
 	// prepared statement wrapper object
 	MySQLQuery query2(this->m_Connection, SQL2);
@@ -2809,8 +2996,7 @@ bool MySQLDatabase::QueryClan(const uint clanId, uint *dstMemberCount, MMG_Clan:
 	{
 		DatabaseLog("QueryClanProfile(q2) failed: clanid(%u)", clanId);
 		
-		// todo clanmembers
-
+		memset(fullinfo->m_ClanMembers, 0, sizeof(fullinfo->m_ClanMembers));
 		*dstMemberCount = 0;
 	}
 	else
@@ -2835,6 +3021,84 @@ bool MySQLDatabase::QueryClan(const uint clanId, uint *dstMemberCount, MMG_Clan:
 	}
 
 	if (!query2.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::QueryClanDescription(const uint clanId, MMG_Clan::Description *description)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT id, clanname, clantag FROM %s WHERE id = ? LIMIT 1", TABLENAME[CLANS_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
+	
+	// prepared statement binding structures
+	MYSQL_BIND param[1], results[3];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+	memset(results, 0, sizeof(results));
+
+	// query specific variables
+	uint id;
+	wchar_t clanname[WIC_CLANNAME_MAX_LENGTH];
+	wchar_t clantag[WIC_CLANTAG_MAX_LENGTH];
+	memset(clanname, 0, sizeof(clanname));
+	memset(clantag, 0, sizeof(clantag));
+
+	ulong clannameLength = ARRAYSIZE(clanname);
+	ulong clantagLength = ARRAYSIZE(clantag);
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], &clanId);
+	
+	// bind results
+	query.Bind(&results[0], &id);
+	query.Bind(&results[1], clanname, &clannameLength);
+	query.Bind(&results[2], clantag, &clantagLength);
+
+	// execute prepared statement
+	if(!query.StmtExecute(param, results))
+	{
+		DatabaseLog("QueryClanDescription() failed: clanid(%u)", clanId);
+
+		description->m_ClanId = 0;
+		wcsncpy(description->m_FullName, L"", WIC_CLANNAME_MAX_LENGTH);
+		wcsncpy(description->m_ClanTag, L"", WIC_CLANTAG_MAX_LENGTH);
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			//DatabaseLog("");
+
+			description->m_ClanId = 0;
+			wcsncpy(description->m_FullName, L"", WIC_CLANNAME_MAX_LENGTH);
+			wcsncpy(description->m_ClanTag, L"", WIC_CLANTAG_MAX_LENGTH);
+		}
+		else
+		{
+			//DatabaseLog("");
+			
+			description->m_ClanId = id;
+			wcsncpy(description->m_FullName, clanname, WIC_CLANNAME_MAX_LENGTH);
+			wcsncpy(description->m_ClanTag, clantag, WIC_CLANTAG_MAX_LENGTH);
+		}
+	}
+
+	if (!query.Success())
 		return false;
 
 	return true;
@@ -2893,13 +3157,14 @@ bool MySQLDatabase::QueryClanTag(const uint clanId, wchar_t *shortclanname, char
 	{
 		if (!query.StmtFetch())
 		{
-			DatabaseLog("clantag id(%u) not found", clanId);
+			//DatabaseLog("");
+
 			shortclanname = L"";
 			displaytag = "";
 		}
 		else
 		{
-			//DatabaseLog("clantag id(%u) found", clanId);
+			//DatabaseLog("");
 			
 			wcsncpy(shortclanname, clantag, WIC_CLANTAG_MAX_LENGTH);
 			strncpy(displaytag, disptag, WIC_CLANTAG_MAX_LENGTH);
@@ -2921,27 +3186,35 @@ bool MySQLDatabase::AppendClanTag(MMG_Profile *profile)
 
 	QueryClanTag(profile->m_ClanId, clantag, disptag);
 
-	wchar_t tempname[WIC_NAME_MAX_LENGTH];
-	memset(tempname, 0, sizeof(tempname));
+	wchar_t oldNameBuffer[WIC_NAME_MAX_LENGTH];
+	memset(oldNameBuffer, 0, sizeof(oldNameBuffer));
 
-	wcsncpy(tempname, profile->m_Name, WIC_NAME_MAX_LENGTH);
+	// store old name in temp location
+	wcsncpy(oldNameBuffer, profile->m_Name, WIC_NAME_MAX_LENGTH);
 	memset(profile->m_Name, 0, sizeof(profile->m_Name));
 
+	wchar_t fullNameBuffer[WIC_NAME_MAX_LENGTH];
+	memset(fullNameBuffer, 0, sizeof(fullNameBuffer));
+
+	// craft new name, using old name
 	if (strcmp(disptag, "[C]P") == 0)
-		swprintf(profile->m_Name, L"[%ws]%ws", clantag, tempname);
+		swprintf(fullNameBuffer, L"[%ws]%ws", clantag, oldNameBuffer);
 	else if (strcmp(disptag, "P[C]") == 0)
-		swprintf(profile->m_Name, L"%ws[%ws]", tempname, clantag);
+		swprintf(fullNameBuffer, L"%ws[%ws]", oldNameBuffer, clantag);
 	else if (strcmp(disptag, "C^P") == 0)
-		swprintf(profile->m_Name, L"%ws^%ws", clantag, tempname);
+		swprintf(fullNameBuffer, L"%ws^%ws", clantag, oldNameBuffer);
 	else if (strcmp(disptag, "-=C=-P") == 0)
-		swprintf(profile->m_Name, L"-=%ws=-%ws", clantag, tempname);
+		swprintf(fullNameBuffer, L"-=%ws=-%ws", clantag, oldNameBuffer);
 	else
-		DebugBreak();
+		assert(false);
+
+	// copy new name into the profile name
+	wcsncpy(profile->m_Name, fullNameBuffer, WIC_NAME_MAX_LENGTH);
 
 	return true;
 }
 
-bool MySQLDatabase::SaveClanEditableVariables(const uint profileId, const uint clanId, wchar_t *motto, wchar_t *messageOfTheDay, wchar_t *homepage)
+bool MySQLDatabase::SaveClanEditableVariables(const uint clanId, const uint profileId, const wchar_t *motto, const wchar_t *motd, const wchar_t *homepage)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -2957,7 +3230,7 @@ bool MySQLDatabase::SaveClanEditableVariables(const uint profileId, const uint c
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "UPDATE %s SET motto = ?, motd = ?, homepage = ? WHERE id = ? AND clanleaderid = ?", TABLENAME[CLANS_TABLE]);
+	sprintf(SQL, "UPDATE %s SET playeroftheweekid = ?, motto = ?, motd = ?, homepage = ? WHERE id = ?", TABLENAME[CLANS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -2970,28 +3243,29 @@ bool MySQLDatabase::SaveClanEditableVariables(const uint profileId, const uint c
 
 	// query specific variables
 	ulong mottoLength = wcslen(motto);
-	ulong motdLength = wcslen(messageOfTheDay);
+	ulong motdLength = wcslen(motd);
 	ulong homepageLength = wcslen(homepage);
 
 	// bind parameters to prepared statement
+	query.Bind(&params[0], &profileId);
+
 	// if either string is empty BindNull
 	if (mottoLength)
-		query.Bind(&params[0], motto, &mottoLength);
-	else
-		query.BindNull(&params[0]);
-
-	if (motdLength)
-		query.Bind(&params[1], messageOfTheDay, &motdLength);
+		query.Bind(&params[1], motto, &mottoLength);
 	else
 		query.BindNull(&params[1]);
 
-	if (homepageLength)
-		query.Bind(&params[2], homepage, &homepageLength);
+	if (motdLength)
+		query.Bind(&params[2], motd, &motdLength);
 	else
 		query.BindNull(&params[2]);
 
-	query.Bind(&params[3], &clanId);
-	query.Bind(&params[4], &profileId);
+	if (homepageLength)
+		query.Bind(&params[3], homepage, &homepageLength);
+	else
+		query.BindNull(&params[3]);
+
+	query.Bind(&params[4], &clanId);
 
 	// execute prepared statement
 	if(!query.StmtExecute(params))
@@ -3011,7 +3285,7 @@ bool MySQLDatabase::SaveClanEditableVariables(const uint profileId, const uint c
 	return true;
 }
 
-bool MySQLDatabase::UpdatePlayerClanInfo(const uint profileId, const uint clanId, const uchar rankinclan)
+bool MySQLDatabase::CheckIfInvitedAlready(const uint clanId, const uint inviteeProfileId, uint *dstId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -3020,43 +3294,60 @@ bool MySQLDatabase::UpdatePlayerClanInfo(const uint profileId, const uint clanId
 		return false;
 	}
 
-	// begin an sql transaction
-	this->BeginTransaction();
-
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "UPDATE %s SET clanid = ?, rankinclan = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "SELECT id FROM %s WHERE recipientprofileid = ? AND message LIKE ? LIMIT 1", TABLENAME[MESSAGES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
-	MYSQL_BIND params[3];
+	MYSQL_BIND params[2], result[1];
 
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
+	memset(result, 0, sizeof(result));
+
+	// query specific variables
+	wchar_t message[WIC_INSTANTMSG_MAX_LENGTH];
+	memset(message, 0, sizeof(message));
+
+	swprintf(message, L"|clan|%%");	// in SQL % is wildcard used with LIKE, use %% to escape
+
+	ulong msgLength = wcslen(message);
+	uint id;
 
 	// bind parameters to prepared statement
-	query.Bind(&params[0], &clanId);
-	query.Bind(&params[1], &rankinclan);
-	query.Bind(&params[2], &profileId);
+	query.Bind(&params[0], &inviteeProfileId);
+	query.Bind(&params[1], message, &msgLength);
+	
+	// bind results
+	query.Bind(&result[0], &id);
 
 	// execute prepared statement
-	if(!query.StmtExecute(params))
-		DatabaseLog("UpdatePlayerClanInfo() failed: profileid(%u)", profileId);
-	else
-		DatabaseLog("UpdatePlayerClanInfo() success: profileid(%u)", profileId);
-
-	if (!query.Success())
+	if(!query.StmtExecute(params, result))
 	{
-		this->RollbackTransaction();
-		return false;
+		DatabaseLog("CheckIfInvitedAlready() query failed.");
+		*dstId = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			//DatabaseLog("");
+			*dstId = 0;
+		}
+		else
+		{
+			//DatabaseLog("");
+			*dstId = id;
+		}
 	}
 
-	// commit the transaction
-	this->CommitTransaction();
+	if (!query.Success())
+		return false;
 
 	return true;
 }

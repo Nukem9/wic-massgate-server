@@ -14,8 +14,7 @@ public:
 	bool SetClientOnline	(SvClient *aClient);
 
 	bool UpdateClients(MMG_Profile *profile);
-
-	void CheckProfileOnlineStatus	(MMG_Profile *profile);
+	bool SendPlayerJoinedClan	(MMG_Profile *profile);
 
 	bool AccountInUse		(MMG_AuthToken *authtoken);
 	bool ProfileInUse		(MMG_Profile *profile);
