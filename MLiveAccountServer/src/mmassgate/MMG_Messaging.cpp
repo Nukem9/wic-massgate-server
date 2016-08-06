@@ -520,65 +520,104 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			bool requestedProfileDirty = false;
 			uint memberCount = 0;
 			MMG_Clan::FullInfo myClan;
+			MMG_Profile profile;
 
-			MySQLDatabase::ourInstance->QueryClanFullInfo(aClient->GetProfile()->m_ClanId, &memberCount, &myClan);
+			MySQLDatabase::ourInstance->QueryProfileName(profileId, &profile);
+			MySQLDatabase::ourInstance->QueryClanFullInfo(profile.m_ClanId, &memberCount, &myClan);
 
 			switch (option)
 			{
-				// if client->profileiD = profileId then leave, otherwise kick
+				// if client->profileid = profileId then leave, otherwise kick
 				case 0:
 				{
-					// if leaving/kicking profile is playerofweek then clear it from clan table
+					// if leaving/kicked profile is playerofweek, set potw 0 in clans table
 					if (myClan.m_PlayerOfWeek == profileId)
 						MySQLDatabase::ourInstance->UpdateClanPlayerOfWeek(myClan.m_ClanId, 0);
 
+					if (profile.m_RankInClan < 3)
+						MySQLDatabase::ourInstance->DeleteProfileClanInvites(profileId, myClan.m_ClanId);
+
+					if (profile.m_RankInClan < 2)
+						MySQLDatabase::ourInstance->DeleteProfileClanMessages(profileId);
+
+					MySQLDatabase::ourInstance->UpdatePlayerClanId(profileId, 0);
+					MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 0);
+
 					if (aClient->GetProfile()->m_ProfileId == profileId)
 					{
-						// TODO
-						// im not sure if this is right, at the moment the clan leader cant leave the
-						// clan if there are members, so the leader has to either kick all 
-						// members or assign a new clan leader before leaving
-
-						// leader
-						if (aClient->GetProfile()->m_RankInClan == 1)
+						// randomly assign new clan leader 
+						if (aClient->GetProfile()->m_RankInClan == 1 && memberCount > 1)
 						{
-							if (memberCount > 1)
-							{
-								responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE);
-								responseMessage.WriteUChar(myClanStrings::MODIFY_FAIL_OTHER);
+							MMG_Profile p[512];
+							uint officers[512]={0}, grunts[512]={0};
+							int j=0, k=0;
 
-								if (!aClient->SendData(&responseMessage))
-									return false;
+							MySQLDatabase::ourInstance->QueryProfileList(512, myClan.m_ClanMembers, p);
+
+							int i=0;
+							while (myClan.m_ClanMembers[i] > 0)
+							{
+								if (myClan.m_ClanMembers[i] != profileId)
+								{
+									if (p[i].m_RankInClan == 2)
+										officers[j++] = p[i].m_ProfileId;
+
+									if (p[i].m_RankInClan == 3)
+										grunts[k++] = p[i].m_ProfileId;
+								}
+
+								i++;
+							}
+							
+							int pos = 0;
+							uint ldrId = 0;
+
+							if (j>0)
+							{
+								pos = MC_MTwister().Random(0, j-1);
+								ldrId = officers[pos];
 							}
 							else
 							{
-								// delete clan
-								MySQLDatabase::ourInstance->DeleteClan(myClan.m_ClanId);
-
-								MySQLDatabase::ourInstance->UpdatePlayerClanId(profileId, 0);
-								MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 0);
-								myProfileDirty = true;
+								pos = MC_MTwister().Random(0, k-1);
+								ldrId = grunts[pos];
 							}
+							
+							MySQLDatabase::ourInstance->UpdatePlayerClanRank(ldrId, 1);
+
+							MMG_Profile modifiedProfile;
+							MySQLDatabase::ourInstance->QueryProfileName(ldrId, &modifiedProfile);
+
+							// if profile/player is online, update the logged in client object, preserve online status
+							SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(ldrId);
+							if (player)
+							{
+								modifiedProfile.m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
+								MySQLDatabase::ourInstance->QueryProfileName(ldrId, player->GetProfile());
+								player->GetProfile()->m_OnlineStatus = modifiedProfile.m_OnlineStatus;
+							}
+
+							// send the profile to all online players
+							MMG_AccountProxy::ourInstance->UpdateClients(&modifiedProfile);
 						}
-						else
+						else if (aClient->GetProfile()->m_RankInClan == 1 && memberCount == 1)
 						{
-							MySQLDatabase::ourInstance->UpdatePlayerClanId(profileId, 0);
-							MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 0);
-							myProfileDirty = true;
+							MySQLDatabase::ourInstance->DeleteClan(myClan.m_ClanId);
 						}
+
+						myProfileDirty = true;
 					}
 					else
-					{
-						MySQLDatabase::ourInstance->UpdatePlayerClanId(profileId, 0);
-						MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 0);
 						requestedProfileDirty = true;
-					}
 				}
 				break;
 
 				// assign clan leader
 				case 1:
 				{
+					// change sender profile id of leader message to new profile id
+					MySQLDatabase::ourInstance->DeleteProfileClanMessages(aClient->GetProfile()->m_ProfileId);
+
 					// update my profile
 					MySQLDatabase::ourInstance->UpdatePlayerClanRank(aClient->GetProfile()->m_ProfileId, 2);
 					myProfileDirty = true;
@@ -594,13 +633,14 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				{
 					MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 2);
 					requestedProfileDirty = true;
-					
 				}
 				break;
 
 				// demote
 				case 3:
 				{
+					MySQLDatabase::ourInstance->DeleteProfileClanInvites(profileId, myClan.m_ClanId);
+
 					MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 3);
 					requestedProfileDirty = true;
 				}
@@ -807,8 +847,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadString(myMessage, ARRAYSIZE(myMessage)))
 				return false;
 
-			MMG_Clan::FullInfo myClan;
 			uint memberCount = 0;
+			MMG_Clan::FullInfo myClan;
 
 			MySQLDatabase::ourInstance->QueryClanFullInfo(aClient->GetProfile()->m_ClanId, &memberCount, &myClan);
 
@@ -821,8 +861,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					wchar_t msgBuffer[WIC_INSTANTMSG_MAX_LENGTH];
 					memset(msgBuffer, 0, sizeof(msgBuffer));
 
-					//swprintf(msgBuffer, L"|clam|%ws", myMessage); // TODO unknown clan message format
-					swprintf(msgBuffer, L"WRONG %ws", myMessage);
+					swprintf(msgBuffer, L"|clms|%ws", myMessage);
 
 					wcsncpy(im.m_Message, msgBuffer, WIC_INSTANTMSG_MAX_LENGTH);
 					im.m_RecipientProfile = myClan.m_ClanMembers[i];

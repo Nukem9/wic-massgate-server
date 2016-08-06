@@ -77,6 +77,7 @@ public:
 	MC_MTwister(uint32 UserSeed);
 
 	uint32 Random();
+	uint32 Random(int lo, int hi);
 
 private:
 	void Seed(uint32 UserSeed);

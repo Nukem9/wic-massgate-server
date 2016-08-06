@@ -33,6 +33,11 @@ uint32 MC_MTwister::Random()
 	return (y ^ (y >> 18));
 }
 
+uint32 MC_MTwister::Random(int lo, int hi)
+{
+	return lo + (Random() % (hi - lo + 1));
+}
+
 void MC_MTwister::Seed(uint32 UserSeed)
 {
 	//

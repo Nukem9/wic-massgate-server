@@ -198,6 +198,8 @@ public:
 	bool	CreateClan					(const uint profileId, const wchar_t* clanname, const wchar_t* clantag, const char* displayTag, uint *dstId);
 	bool	UpdatePlayerClanId			(const uint profileId, const uint clanId);
 	bool	UpdatePlayerClanRank		(const uint profileId, const uchar rankInClan);
+	bool	DeleteProfileClanInvites	(const uint profileId, const uint clanId);
+	bool	DeleteProfileClanMessages	(const uint profileId);
 	bool	UpdateClanPlayerOfWeek		(const uint clanId, const uint profileId);
 	bool	DeleteClan					(const uint clanId);
 	bool	QueryClanFullInfo			(const uint clanId, uint *dstMemberCount, MMG_Clan::FullInfo *fullinfo);

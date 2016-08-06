@@ -2594,7 +2594,8 @@ bool MySQLDatabase::CreateClan(const uint profileId, const wchar_t* clanname, co
 	query.Bind(&params1[1], temptags, &temptagsLength);
 	query.Bind(&params1[2], clantag, &clantagLength);
 	query.Bind(&params1[3], displayTag, &displayTagLength);
-	query.Bind(&params1[4], &profileId);
+	uint aZero = 0; // temporary
+	query.Bind(&params1[4], &aZero);
 	
 	// execute prepared statement
 	if (!query.StmtExecute(params1))
@@ -2705,6 +2706,111 @@ bool MySQLDatabase::UpdatePlayerClanRank(const uint profileId, const uchar rankI
 		DatabaseLog("UpdatePlayerClanRank() failed: profileid(%u)", profileId);
 	else
 		DatabaseLog("UpdatePlayerClanRank() success: profileid(%u)", profileId);
+
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::DeleteProfileClanInvites(const uint profileId, const uint clanId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "DELETE FROM %s WHERE senderprofileid = ? AND message LIKE ?", TABLENAME[MESSAGES_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
+
+	// prepared statement binding structures
+	MYSQL_BIND params[2];
+
+	// initialize (zero) bind structures
+	memset(params, 0, sizeof(params));
+
+	// query specific variables
+	wchar_t message[WIC_INSTANTMSG_MAX_LENGTH];
+	memset(message, 0, sizeof(message));
+
+	swprintf(message, L"|clan|%u%%", clanId);
+
+	ulong msgLength = wcslen(message);
+
+	// bind parameters to prepared statement
+	query.Bind(&params[0], &profileId);
+	query.Bind(&params[1], message, &msgLength);
+
+	// execute prepared statement
+	if (!query.StmtExecute(params))
+		DatabaseLog("DeleteProfileClanInvites() failed:");
+	else
+		DatabaseLog("DeleteProfileClanInvites() success:");
+
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::DeleteProfileClanMessages(const uint profileId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "DELETE FROM %s WHERE senderprofileid = ? AND message LIKE '|clms|%'", TABLENAME[MESSAGES_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
+
+	// prepared statement binding structures
+	MYSQL_BIND params[1];
+
+	// initialize (zero) bind structures
+	memset(params, 0, sizeof(params));
+
+	// bind parameters to prepared statement
+	query.Bind(&params[0], &profileId);
+
+	// execute prepared statement
+	if(!query.StmtExecute(params))
+		DatabaseLog("DeleteProfileClanMessages() failed:");
+	else
+		DatabaseLog("DeleteProfileClanMessages() success:");
 
 	if (!query.Success())
 	{
@@ -2920,7 +3026,7 @@ bool MySQLDatabase::QueryClanFullInfo(const uint clanId, uint *dstMemberCount, M
 	// execute prepared statement
 	if(!query1.StmtExecute(param1, results1))
 	{
-		DatabaseLog("QueryClanProfile(q1) failed: clanid(%u)", clanId);
+		DatabaseLog("QueryClanFullInfo(q1) failed: clanid(%u)", clanId);
 
 		fullinfo->m_ClanId = 0;
 		wcsncpy(fullinfo->m_FullClanName, L"", WIC_CLANNAME_MAX_LENGTH);
@@ -2970,7 +3076,7 @@ bool MySQLDatabase::QueryClanFullInfo(const uint clanId, uint *dstMemberCount, M
 	memset(SQL2, 0, sizeof(SQL2));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL2, "SELECT id FROM %s WHERE clanid = ? ORDER BY id ASC, rankinclan ASC LIMIT 512", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL2, "SELECT id FROM %s WHERE clanid = ? ORDER BY id ASC LIMIT 512", TABLENAME[PROFILES_TABLE]);
 	
 	// prepared statement wrapper object
 	MySQLQuery query2(this->m_Connection, SQL2);
