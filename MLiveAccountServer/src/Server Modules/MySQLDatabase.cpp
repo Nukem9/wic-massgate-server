@@ -2735,13 +2735,13 @@ bool MySQLDatabase::DeleteProfileClanInvites(const uint profileId, const uint cl
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "DELETE FROM %s WHERE senderprofileid = ? AND message LIKE ?", TABLENAME[MESSAGES_TABLE]);
+	sprintf(SQL, "DELETE FROM %s WHERE (senderprofileid = ? OR recipientprofileid = ?) AND message LIKE ?", TABLENAME[MESSAGES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
-	MYSQL_BIND params[2];
+	MYSQL_BIND params[3];
 
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
@@ -2756,7 +2756,8 @@ bool MySQLDatabase::DeleteProfileClanInvites(const uint profileId, const uint cl
 
 	// bind parameters to prepared statement
 	query.Bind(&params[0], &profileId);
-	query.Bind(&params[1], message, &msgLength);
+	query.Bind(&params[1], &profileId);
+	query.Bind(&params[2], message, &msgLength);
 
 	// execute prepared statement
 	if (!query.StmtExecute(params))
@@ -2792,19 +2793,29 @@ bool MySQLDatabase::DeleteProfileClanMessages(const uint profileId)
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "DELETE FROM %s WHERE senderprofileid = ? AND message LIKE '|clms|%'", TABLENAME[MESSAGES_TABLE]);
+	sprintf(SQL, "DELETE FROM %s WHERE (senderprofileid = ? OR recipientprofileid = ?) AND message LIKE ?", TABLENAME[MESSAGES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
-	MYSQL_BIND params[1];
+	MYSQL_BIND params[3];
 
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
 
+	// query specific variables
+	wchar_t message[WIC_INSTANTMSG_MAX_LENGTH];
+	memset(message, 0, sizeof(message));
+
+	swprintf(message, L"|clms|%%");
+
+	ulong msgLength = wcslen(message);
+
 	// bind parameters to prepared statement
 	query.Bind(&params[0], &profileId);
+	query.Bind(&params[1], &profileId);
+	query.Bind(&params[2], message, &msgLength);
 
 	// execute prepared statement
 	if(!query.StmtExecute(params))

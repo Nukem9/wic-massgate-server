@@ -420,11 +420,11 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				myStatusCode = myClanStrings::FAIL_TAG_TAKEN;
 				myClanId = 0;
 			}
-			else if(wcsncmp(clanName, clanTag, WIC_CLANTAG_MAX_LENGTH) == 0)
-			{
-				myStatusCode = myClanStrings::FAIL_OTHER;
-				myClanId = 0;
-			}
+			//else if(wcsncmp(clanName, clanTag, WIC_CLANTAG_MAX_LENGTH) == 0)
+			//{
+			//	myStatusCode = myClanStrings::FAIL_OTHER;
+			//	myClanId = 0;
+			//}
 			//else if (checkvalidchars)
 			//{
 			//	myStatusCode = myClanStrings::FAIL_OTHER;
@@ -537,8 +537,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					if (profile.m_RankInClan < 3)
 						MySQLDatabase::ourInstance->DeleteProfileClanInvites(profileId, myClan.m_ClanId);
 
-					if (profile.m_RankInClan < 2)
-						MySQLDatabase::ourInstance->DeleteProfileClanMessages(profileId);
+					MySQLDatabase::ourInstance->DeleteProfileClanMessages(profileId);
 
 					MySQLDatabase::ourInstance->UpdatePlayerClanId(profileId, 0);
 					MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 0);
@@ -549,12 +548,14 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 						if (aClient->GetProfile()->m_RankInClan == 1 && memberCount > 1)
 						{
 							MMG_Profile p[512];
-							uint officers[512]={0}, grunts[512]={0};
-							int j=0, k=0;
+							uint officers[512], grunts[512];
+							int i=0, j=0, k=0;
 
-							MySQLDatabase::ourInstance->QueryProfileList(512, myClan.m_ClanMembers, p);
+							memset(officers, 0, sizeof(officers));
+							memset(grunts, 0, sizeof(grunts));
 
-							int i=0;
+							MySQLDatabase::ourInstance->QueryProfileList(memberCount, myClan.m_ClanMembers, p);
+
 							while (myClan.m_ClanMembers[i] > 0)
 							{
 								if (myClan.m_ClanMembers[i] != profileId)
@@ -615,7 +616,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				// assign clan leader
 				case 1:
 				{
-					// change sender profile id of leader message to new profile id
+					// delete any clan message the previous leader sent
 					MySQLDatabase::ourInstance->DeleteProfileClanMessages(aClient->GetProfile()->m_ProfileId);
 
 					// update my profile
