@@ -191,7 +191,8 @@ public:
 	bool	QueryPendingMessages	(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages[]);
 	bool	AddInstantMessage		(const uint profileId, MMG_InstantMessageListener::InstantMessage *message);
 	bool	RemoveInstantMessage	(const uint profileId, const uint messageId);
-	bool	AddAbuseReport		(const uint profileId, const uint flaggedProfile, const wchar_t *report);
+	bool	AddAbuseReport				(const uint profileId, const MMG_Profile senderProfile, const uint flaggedProfileId, const wchar_t *report);
+	bool	QueryProfileAccountId		(const uint profileId, uint *dstAccountId);
 
 	//clans & clan related
 	bool	CheckIfClanNameExists		(const wchar_t* clanname, uint *dstId);

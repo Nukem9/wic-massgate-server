@@ -1050,7 +1050,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 
 #ifdef USING_MYSQL_DATABASE
-			MySQLDatabase::ourInstance->AddAbuseReport(aClient->GetProfile()->m_ProfileId, profileIdReported, anAbuseReport);
+			MMG_Profile myProfile = *aClient->GetProfile();
+			MySQLDatabase::ourInstance->AddAbuseReport(myProfile.m_ProfileId, myProfile, profileIdReported, anAbuseReport);
 #endif
 		}
 		break;

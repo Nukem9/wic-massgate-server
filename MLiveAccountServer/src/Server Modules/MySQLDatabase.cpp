@@ -861,7 +861,7 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 	memset(SQL1, 0, sizeof(SQL1));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL1, "INSERT INTO %s (oldprofileid, accountid, name, rank, clanid, rankinclan, commoptions, lastlogindate, motto, homepage) SELECT id, accountid, name, rank, clanid, rankinclan, commoptions, lastlogindate, motto, homepage FROM %s WHERE id = ?", TABLENAME[DELETED_PROFILES_TABLE], TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL1, "INSERT INTO %s (oldprofileid, accountid, name, rank, clanid, rankinclan, commoptions, lastlogindate, motto, homepage) SELECT id, accountid, name, rank, clanid, rankinclan, commoptions, lastlogindate, motto, homepage FROM %s WHERE id = ? LIMIT 1", TABLENAME[DELETED_PROFILES_TABLE], TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query1(this->m_Connection, SQL1);
@@ -2293,7 +2293,7 @@ bool MySQLDatabase::RemoveInstantMessage(const uint profileId, uint messageId)
 	return true;
 }
 
-bool MySQLDatabase::AddAbuseReport(const uint profileId, const uint flaggedProfile, const wchar_t *report)
+bool MySQLDatabase::AddAbuseReport(const uint profileId, const MMG_Profile senderProfile, const uint flaggedProfileId, const wchar_t *report)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -2305,22 +2305,31 @@ bool MySQLDatabase::AddAbuseReport(const uint profileId, const uint flaggedProfi
 	// begin an sql transaction
 	this->BeginTransaction();
 
+	// get all the ids.
+	uint senderAccountId, flaggedAccountId;
+	MMG_Profile flaggedProfile;
+	QueryProfileName(flaggedProfileId, &flaggedProfile);
+	QueryProfileAccountId(profileId, &senderAccountId);
+	QueryProfileAccountId(flaggedProfileId, &flaggedAccountId);
+
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "INSERT INTO %s (senderprofileid, reportedprofileid, report, datereported) VALUES (?, ?, ?, ?)", TABLENAME[ABUSEREPORTS_TABLE]);
+	sprintf(SQL, "INSERT INTO %s (senderaccountid, senderprofileid, sendername, reportedaccountid, reportedprofileid, reportedname, report, datereported, actiontaken, comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, NULL)", TABLENAME[ABUSEREPORTS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
-	MYSQL_BIND params[4];
+	MYSQL_BIND params[8];
 
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
 
 	// query specific variables
+	ulong senderNameLength = wcslen(senderProfile.m_Name);
+	ulong reportedNameLength = wcslen(flaggedProfile.m_Name);
 	ulong reportLength = wcslen(report);
 
 	time_t local_timestamp = time(NULL);
@@ -2330,16 +2339,25 @@ bool MySQLDatabase::AddAbuseReport(const uint profileId, const uint flaggedProfi
 	uint datereported = local_timestamp;
 
 	// bind parameters to prepared statement
-	query.Bind(&params[0], &profileId);
-	query.Bind(&params[1], &flaggedProfile);
-	query.Bind(&params[2], report, &reportLength);
-	query.Bind(&params[3], &datereported);
+	query.Bind(&params[0], &senderAccountId);
+	query.Bind(&params[1], &senderProfile.m_ProfileId);
+	query.Bind(&params[2], senderProfile.m_Name, &senderNameLength);
+	query.Bind(&params[3], &flaggedAccountId);
+	query.Bind(&params[4], &flaggedProfile.m_ProfileId);
+
+	if (reportedNameLength)
+		query.Bind(&params[5], flaggedProfile.m_Name, &reportedNameLength);
+	else
+		query.BindNull(&params[5]);
+	
+	query.Bind(&params[6], report, &reportLength);
+	query.Bind(&params[7], &datereported);
 
 	// execute prepared statement
 	if (!query.StmtExecute(params))
-		DatabaseLog("AddAbuseReport() failed: profileid(%u)", profileId);
+		DatabaseLog("AddAbuseReport() failed: accountid(%u)", senderAccountId);
 	else
-		DatabaseLog("player id(%u) reported player id(%u):", profileId, flaggedProfile);
+		DatabaseLog("account id(%u) reported account id(%u):", senderAccountId, flaggedAccountId);
 
 	if (!query.Success())
 	{
@@ -2349,6 +2367,66 @@ bool MySQLDatabase::AddAbuseReport(const uint profileId, const uint flaggedProfi
 
 	// commit the transaction
 	this->CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::QueryProfileAccountId(const uint profileId, uint *dstAccountId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT accountid FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
+	
+	// prepared statement binding structures
+	MYSQL_BIND param[1], result[1];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	// query specific variables
+	uint accountid;
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], &profileId);
+
+	// bind results
+	query.Bind(&result[0], &accountid);
+
+	// execute prepared statement
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("QueryProfileAccountId() query failed: %u", profileId);
+		*dstAccountId = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			DatabaseLog("profileid(%u) not found", profileId);
+			*dstAccountId = 0;
+		}
+		else
+		{
+			DatabaseLog("profileid(%u) found", profileId);
+			*dstAccountId = accountid;
+		}
+	}
+
+	if (!query.Success())
+		return false;
 
 	return true;
 }
