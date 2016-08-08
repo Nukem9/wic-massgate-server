@@ -103,11 +103,12 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 	strncpy(this->TABLENAME[ACCOUNTS_TABLE],		strstr(settings[5], "=") + 1, sizeof(this->TABLENAME[ACCOUNTS_TABLE]));
 	strncpy(this->TABLENAME[CDKEYS_TABLE],			strstr(settings[6], "=") + 1, sizeof(this->TABLENAME[CDKEYS_TABLE]));
 	strncpy(this->TABLENAME[PROFILES_TABLE],		strstr(settings[7], "=") + 1, sizeof(this->TABLENAME[PROFILES_TABLE]));
-	strncpy(this->TABLENAME[FRIENDS_TABLE],			strstr(settings[8], "=") + 1, sizeof(this->TABLENAME[FRIENDS_TABLE]));
-	strncpy(this->TABLENAME[IGNORED_TABLE],			strstr(settings[9], "=") + 1, sizeof(this->TABLENAME[IGNORED_TABLE]));
-	strncpy(this->TABLENAME[MESSAGES_TABLE],		strstr(settings[10], "=") + 1, sizeof(this->TABLENAME[MESSAGES_TABLE]));
-	strncpy(this->TABLENAME[ABUSEREPORTS_TABLE],	strstr(settings[11], "=") + 1, sizeof(this->TABLENAME[ABUSEREPORTS_TABLE]));
-	strncpy(this->TABLENAME[CLANS_TABLE],			strstr(settings[12], "=") + 1, sizeof(this->TABLENAME[CLANS_TABLE]));
+	strncpy(this->TABLENAME[DELETED_PROFILES_TABLE],strstr(settings[8], "=") + 1, sizeof(this->TABLENAME[DELETED_PROFILES_TABLE]));
+	strncpy(this->TABLENAME[FRIENDS_TABLE],			strstr(settings[9], "=") + 1, sizeof(this->TABLENAME[FRIENDS_TABLE]));
+	strncpy(this->TABLENAME[IGNORED_TABLE],			strstr(settings[10], "=") + 1, sizeof(this->TABLENAME[IGNORED_TABLE]));
+	strncpy(this->TABLENAME[MESSAGES_TABLE],		strstr(settings[11], "=") + 1, sizeof(this->TABLENAME[MESSAGES_TABLE]));
+	strncpy(this->TABLENAME[ABUSEREPORTS_TABLE],	strstr(settings[12], "=") + 1, sizeof(this->TABLENAME[ABUSEREPORTS_TABLE]));
+	strncpy(this->TABLENAME[CLANS_TABLE],			strstr(settings[13], "=") + 1, sizeof(this->TABLENAME[CLANS_TABLE]));
 
 	return true;
 }
@@ -651,7 +652,7 @@ bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT id FROM %s WHERE name = ? AND isdeleted = 0 LIMIT 1", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "SELECT id FROM %s WHERE name = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -717,7 +718,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	memset(SQL1, 0, sizeof(SQL1));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL1, "INSERT INTO %s (accountid, name, rank, clanid, rankinclan, isdeleted, commoptions, lastlogindate, motto, homepage) VALUES (?, ?, 0, 0, 0, 0, 992, 0, NULL, NULL)", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL1, "INSERT INTO %s (accountid, name, rank, clanid, rankinclan, commoptions, lastlogindate, motto, homepage) VALUES (?, ?, 0, 0, 0, 992, 0, NULL, NULL)", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query1(this->m_Connection, SQL1);
@@ -760,7 +761,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	memset(SQL2, 0, sizeof(SQL2));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL2, "SELECT id FROM %s WHERE accountid = ? AND isdeleted = 0 ORDER BY lastlogindate DESC, id ASC LIMIT 5", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL2, "SELECT id FROM %s WHERE accountid = ? ORDER BY lastlogindate DESC, id ASC LIMIT 5", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query2(this->m_Connection, SQL2);
@@ -854,13 +855,13 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 	// begin an sql transaction
 	this->BeginTransaction();
 
-	// *Step 1: set the isdeleted field to 1, dis-associating the profile from the account* //
+	// *Step 1: copy deleted profile to the other table* //
 
 	char SQL1[4096];
 	memset(SQL1, 0, sizeof(SQL1));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL1, "UPDATE %s SET isdeleted = 1 WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL1, "INSERT INTO %s (oldprofileid, accountid, name, rank, clanid, rankinclan, commoptions, lastlogindate, motto, homepage) SELECT id, accountid, name, rank, clanid, rankinclan, commoptions, lastlogindate, motto, homepage FROM %s WHERE id = ?", TABLENAME[DELETED_PROFILES_TABLE], TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query1(this->m_Connection, SQL1);
@@ -876,9 +877,9 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 
 	// execute prepared statement
 	if (!query1.StmtExecute(param1))
-		DatabaseLog("DeleteUserProfile(query1) failed: %s, profile id(%u)", email, profileId);
+		DatabaseLog("DeleteUserProfile() query1 failed: %s", email);
 	else
-		DatabaseLog("%s deleted profile id(%u)", email, profileId);
+		DatabaseLog("%s moved profileid(%u)", email, profileId);
 
 	if (!query1.Success())
 	{
@@ -886,45 +887,31 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 		return false;
 	}
 
-	// *Step 2: get profile count for current account* //
+	// *Step 2: remove the profile from the main table* //
 
 	char SQL2[4096];
 	memset(SQL2, 0, sizeof(SQL2));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL2, "SELECT id FROM %s WHERE accountid = ? AND isdeleted = 0 ORDER BY lastlogindate DESC, id ASC LIMIT 5", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL2, "DELETE FROM %s WHERE id = ?", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query2(this->m_Connection, SQL2);
 
 	// prepared statement binding structures
-	MYSQL_BIND param2[1], result2[1];
+	MYSQL_BIND param2[1];
 
 	// initialize (zero) bind structures
 	memset(param2, 0, sizeof(param2));
-	memset(result2, 0, sizeof(result2));
-
-	// query specific variables
-	uint id;
-	ulong profileCount;
 
 	// bind parameters to prepared statement
-	query2.Bind(&param2[0], &accountId);
-
-	// bind results
-	query2.Bind(&result2[0], &id);
+	query2.Bind(&param2[0], &profileId);
 
 	// execute prepared statement
-	if(!query2.StmtExecute(param2, result2))
-	{
-		DatabaseLog("DeleteUserProfile(query2) failed: %s", email);
-		profileCount = 0;
-	}
+	if (!query2.StmtExecute(param2))
+		DatabaseLog("DeleteUserProfile() query2 failed: %s", email);
 	else
-	{
-		profileCount = (ulong)query2.StmtNumRows();
-		DatabaseLog("%s found %u profiles", email, profileCount);
-	}
+		DatabaseLog("%s deleted profileid(%u)", email, profileId);
 
 	if (!query2.Success())
 	{
@@ -932,42 +919,45 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 		return false;
 	}
 
-	// *Step 3: set active profile to last used profile id, if there are no profiles set active profile id to 0* //
-	uint activeprofile;
-
-	if(profileCount > 0)
-	{
-		//fetch first row from query2, this is the last used id, as it is sorted by date
-		query2.StmtFetch();
-		activeprofile = id;
-	}
-	else
-		activeprofile = 0;
+	// *Step 3: get profile count for current account* //
 
 	char SQL3[4096];
 	memset(SQL3, 0, sizeof(SQL3));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL3, "UPDATE %s SET activeprofileid = ? WHERE id = ?", TABLENAME[ACCOUNTS_TABLE]);
+	sprintf(SQL3, "SELECT id FROM %s WHERE accountid = ? ORDER BY lastlogindate DESC, id ASC LIMIT 5", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query3(this->m_Connection, SQL3);
 
 	// prepared statement binding structures
-	MYSQL_BIND params3[2];
+	MYSQL_BIND param3[1], result3[1];
 
 	// initialize (zero) bind structures
-	memset(params3, 0, sizeof(params3));
+	memset(param3, 0, sizeof(param3));
+	memset(result3, 0, sizeof(result3));
+
+	// query specific variables
+	uint id;
+	ulong profileCount;
 
 	// bind parameters to prepared statement
-	query3.Bind(&params3[0], &activeprofile);
-	query3.Bind(&params3[1], &accountId);
-		
+	query3.Bind(&param3[0], &accountId);
+
+	// bind results
+	query3.Bind(&result3[0], &id);
+
 	// execute prepared statement
-	if(!query3.StmtExecute(params3))
-		DatabaseLog("DeleteUserProfile(query3) failed: account id(%u), profile id(%u)", email, accountId, activeprofile);
+	if (!query3.StmtExecute(param3, result3))
+	{
+		DatabaseLog("DeleteUserProfile() query3 failed: %s", email);
+		profileCount = 0;
+	}
 	else
-		DatabaseLog("%s set active profile id(%u)", email, activeprofile);
+	{
+		profileCount = (ulong)query3.StmtNumRows();
+		DatabaseLog("%s found %u profiles", email, profileCount);
+	}
 
 	if (!query3.Success())
 	{
@@ -975,13 +965,23 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 		return false;
 	}
 
-	// *Step 4: delete friends list for profile id and delete profile id from all friends lists* //
+	// *Step 4: set active profile to last used profile id, if there are no profiles set active profile id to 0* //
+	uint activeprofile;
+
+	if (profileCount > 0)
+	{
+		//fetch first row from query3, this is the last used id, as it is sorted by date
+		query3.StmtFetch();
+		activeprofile = id;
+	}
+	else
+		activeprofile = 0;
 
 	char SQL4[4096];
 	memset(SQL4, 0, sizeof(SQL4));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL4, "DELETE FROM %s WHERE profileid = ? OR friendprofileid = ?", TABLENAME[FRIENDS_TABLE]);
+	sprintf(SQL4, "UPDATE %s SET activeprofileid = ? WHERE id = ?", TABLENAME[ACCOUNTS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query4(this->m_Connection, SQL4);
@@ -993,82 +993,16 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 	memset(params4, 0, sizeof(params4));
 
 	// bind parameters to prepared statement
-	query4.Bind(&params4[0], &profileId);
-	query4.Bind(&params4[1], &profileId);
-
+	query4.Bind(&params4[0], &activeprofile);
+	query4.Bind(&params4[1], &accountId);
+		
 	// execute prepared statement
 	if (!query4.StmtExecute(params4))
-		DatabaseLog("DeleteUserProfile(query4) failed: profile id(%u)", email, profileId);
+		DatabaseLog("DeleteUserProfile() query4 failed: %s", email);
 	else
-		DatabaseLog("%s deleted friends list for profile id(%u)", email, profileId);
+		DatabaseLog("%s set active profile id(%u)", email, activeprofile);
 
 	if (!query4.Success())
-	{
-		this->RollbackTransaction();
-		return false;
-	}
-
-	// *Step 5: delete ignore list for profile id and delete profile id from all ignore lists* //
-
-	char SQL5[4096];
-	memset(SQL5, 0, sizeof(SQL5));
-
-	// build sql query using table names defined in settings file
-	sprintf(SQL5, "DELETE FROM %s WHERE profileid = ? OR ignoredprofileid = ?", TABLENAME[IGNORED_TABLE]);
-
-	// prepared statement wrapper object
-	MySQLQuery query5(this->m_Connection, SQL5);
-
-	// prepared statement binding structures
-	MYSQL_BIND params5[2];
-
-	// initialize (zero) bind structures
-	memset(params5, 0, sizeof(params5));
-
-	// bind parameters to prepared statement
-	query5.Bind(&params5[0], &profileId);
-	query5.Bind(&params5[1], &profileId);
-
-	// execute prepared statement
-	if (!query5.StmtExecute(params5))
-		DatabaseLog("DeleteUserProfile(query5) failed: profile id(%u)", email, profileId);
-	else
-		DatabaseLog("%s deleted ignore list for profile id(%u)", email, profileId);
-
-	if (!query5.Success())
-	{
-		this->RollbackTransaction();
-		return false;
-	}
-
-	// *Step 6: delete pending and sent messages for profile
-
-	char SQL6[4096];
-	memset(SQL6, 0, sizeof(SQL6));
-
-	// build sql query using table names defined in settings file
-	sprintf(SQL6, "DELETE FROM %s WHERE senderprofileid = ? OR recipientprofileid = ?", TABLENAME[MESSAGES_TABLE]);
-
-	// prepared statement wrapper object
-	MySQLQuery query6(this->m_Connection, SQL6);
-
-	// prepared statement binding structures
-	MYSQL_BIND params6[2];
-
-	// initialize (zero) bind structures
-	memset(params6, 0, sizeof(params6));
-
-	// bind parameters to prepared statement
-	query6.Bind(&params6[0], &profileId);
-	query6.Bind(&params6[1], &profileId);
-
-	// execute prepared statement
-	if (!query6.StmtExecute(params6))
-		DatabaseLog("DeleteUserProfile(query6) failed: profile id(%u)", email, profileId);
-	else
-		DatabaseLog("%s deleted all messages for/from profile id(%u)", email, profileId);
-
-	if (!query6.Success())
 	{
 		this->RollbackTransaction();
 		return false;
@@ -1267,7 +1201,7 @@ bool MySQLDatabase::RetrieveUserProfiles(const uint accountId, ulong *dstProfile
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT id, name, rank, clanid, rankinclan FROM %s WHERE accountid = ? AND isdeleted = 0 ORDER BY lastlogindate DESC, id ASC LIMIT 5", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "SELECT id, name, rank, clanid, rankinclan FROM %s WHERE accountid = ? ORDER BY lastlogindate DESC, id ASC LIMIT 5", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -1671,7 +1605,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file, AND lastlogindate > (UNIX_TIMESTAMP(UTC_TIMESTAMP())
-	sprintf(SQL, "SELECT id FROM %s WHERE id <> ? AND isdeleted = 0 AND lastlogindate > (UNIX_TIMESTAMP(NOW()) - 604800) LIMIT 64", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "SELECT id FROM %s WHERE id <> ? AND lastlogindate > (UNIX_TIMESTAMP(NOW()) - 604800) LIMIT 64", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
