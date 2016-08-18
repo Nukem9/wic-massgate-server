@@ -1,32 +1,23 @@
 #include "../stdafx.h"
 
-void MMG_ProfileGuestBookProtocol::ToStream(MN_WriteMessage *aMessage)
+MMG_ProfileGuestBookProtocol::GetRsp::GuestbookEntry::GuestbookEntry()
 {
-	aMessage->WriteUInt(this->m_RequestId);
-	aMessage->WriteUChar(this->m_IgnoresGettingProfile);
-	aMessage->WriteUInt(this->m_Count);
-	for (int i = 0; i < 1; i++)
-	{
-		this->m_GuestBookEntry[i].ToStream(aMessage);
-	}
-
+	memset(this->m_Message, 0, sizeof(this->m_Message));
+	this->m_Timestamp = 0;
+	this->m_ProfileId = 0;
+	this->m_MessageId = 0;
 }
 
-bool MMG_ProfileGuestBookProtocol::FromStream(MN_ReadMessage *aMessage)
+MMG_ProfileGuestBookProtocol::GetRsp::GetRsp() : m_Entries()
 {
-	if (!aMessage->ReadUInt(this->m_RequestId))
-		return false;
-	
-	if (!aMessage->ReadUChar(this->m_IgnoresGettingProfile))
-		return false;
+	this->m_ProfileId = 0;
+	this->m_RequestId = 0;
+}
 
-	if (!aMessage->ReadUInt(this->m_Count))
-		return false;
+void MMG_ProfileGuestBookProtocol::GetRsp::ToStream(MN_WriteMessage *aMessage)
+{
+}
 
-	for (int i = 0; i < 1; i++)
-	{
-		this->m_GuestBookEntry[i].FromStream(aMessage);
-	}
-
-	return true;
+MMG_ProfileGuestBookProtocol::MMG_ProfileGuestBookProtocol()
+{
 }

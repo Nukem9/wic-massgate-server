@@ -22,7 +22,7 @@ class SvClient;
 #include "MMG_LadderProtocol.h"
 #include "MMG_Messaging.h"
 #include "MMG_OptionalContentProtocol.h"
-#include "MMG_ProfileGuestBookEntry.h"
+#include "MMG_ClanGuestbookProtocol.h"
 #include "MMG_ProfileGuestBookProtocol.h"
 #include "MMG_ProfileEditableVariablesProtocol.h"
 #include "MMG_Stats.h"

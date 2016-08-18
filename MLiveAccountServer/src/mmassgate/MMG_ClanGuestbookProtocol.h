@@ -1,6 +1,6 @@
 #pragma once
 
-CLASS_SINGLE(MMG_ProfileGuestBookProtocol)
+CLASS_SINGLE(MMG_ClanGuestbookProtocol)
 {
 public:
 	class GetRsp
@@ -19,7 +19,7 @@ public:
 			GuestbookEntry();
 		};
 
-		uint m_ProfileId;
+		uint m_ClanId;
 		uint m_RequestId;
 		GuestbookEntry m_Entries[32];
 
@@ -34,5 +34,5 @@ public:
 private:
 
 public:
-	MMG_ProfileGuestBookProtocol();
+	MMG_ClanGuestbookProtocol();
 };

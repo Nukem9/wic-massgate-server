@@ -275,12 +275,6 @@
     <ClInclude Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookEntry.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookProtocol.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\mmassgate\MMG_ServerStartupVariables.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -322,6 +316,12 @@
     </ClInclude>
     <ClInclude Include="src\mmassgate\MMG_BitStream.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mmassgate\MMG_ProfileGuestBookProtocol.h">
+      <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mmassgate\MMG_ClanGuestbookProtocol.h">
+      <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -514,12 +514,6 @@
     <ClCompile Include="src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookEntry.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookProtocol.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\mmassgate\MMG_ServerStartupVariables.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -551,6 +545,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\mmassgate\MMG_LadderProtocol.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mmassgate\MMG_ProfileGuestBookProtocol.cpp">
+      <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="src\mmassgate\MMG_ClanGuestbookProtocol.cpp">
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
   </ItemGroup>

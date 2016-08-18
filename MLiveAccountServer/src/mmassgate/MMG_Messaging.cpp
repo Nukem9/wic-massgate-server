@@ -756,7 +756,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				wchar_t msgBuffer[WIC_INSTANTMSG_MAX_LENGTH];
 				memset(msgBuffer, 0, sizeof(msgBuffer));
 
-				swprintf(msgBuffer, L"|clan|%u|%ws|%ws|", myClan.m_ClanId, aClient->GetProfile()->m_Name, myClan.m_FullName);
+				swprintf(msgBuffer, WIC_INSTANTMSG_MAX_LENGTH, L"|clan|%u|%ws|%ws|", myClan.m_ClanId, aClient->GetProfile()->m_Name, myClan.m_FullName);
 
 				wcsncpy(im.m_Message, msgBuffer, WIC_INSTANTMSG_MAX_LENGTH);
 				im.m_RecipientProfile = profileId;
@@ -836,6 +836,116 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 
+		case MMG_ProtocolDelimiters::MESSAGING_CLAN_GUESTBOOK_POST_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_CLAN_GUESTBOOK_POST_REQ:");
+
+			uint clanId, messageId, requestId;
+
+			MMG_ClanGuestbookProtocol::GetRsp::GuestbookEntry entry;
+
+			if (!aMessage->ReadUInt(clanId) || !aMessage->ReadUInt(messageId) || !aMessage->ReadUInt(requestId))
+				return false;
+
+			if (!aMessage->ReadString(entry.m_Message, ARRAYSIZE(entry.m_Message)))
+				return false;
+
+			entry.m_ProfileId = aClient->GetProfile()->m_ProfileId;
+			MySQLDatabase::ourInstance->AddClanGuestbookEntry(clanId, requestId, &entry);
+
+			if (messageId)
+			{
+				// refresh the guestbook (todo: temporary)
+				MN_WriteMessage responseMessage(2048);
+				responseMessage.WriteUInt(requestId);
+				responseMessage.WriteUInt(clanId);
+
+				MN_ReadMessage temp(2048);
+				temp.BuildMessage(responseMessage.GetDataStream(), responseMessage.GetDataLength());
+				this->HandleMessage(aClient, &temp, MMG_ProtocolDelimiters::MESSAGING_CLAN_GUESTBOOK_GET_REQ);
+			}
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_CLAN_GUESTBOOK_GET_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_CLAN_GUESTBOOK_GET_REQ:");
+			
+			MN_WriteMessage	responseMessage(8192);
+
+			uint requestId, clanId;
+			if (!aMessage->ReadUInt(requestId) || !aMessage->ReadUInt(clanId))
+				return false;
+
+			uint entryCount = 0;
+			MMG_ClanGuestbookProtocol::GetRsp myResponse;
+			
+			MySQLDatabase::ourInstance->QueryClanGuestbook(clanId, &entryCount, &myResponse);
+
+			MMG_Profile poster[32];	// todo
+			MN_WriteMessage profileMsg(2048);
+
+			for (uint i = 0; i < entryCount; i++)
+			{
+				MySQLDatabase::ourInstance->QueryProfileName(myResponse.m_Entries[i].m_ProfileId, &poster[i]);
+
+				SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(poster[i].m_ProfileId);
+
+				if (player)
+					poster[i].m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
+
+				profileMsg.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+				poster[i].ToStream(&profileMsg);
+			}
+
+			if (entryCount > 0)
+			{
+				if (!aClient->SendData(&profileMsg))
+					return false;
+			}
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_GUESTBOOK_GET_RSP);
+			responseMessage.WriteUInt(requestId);
+			responseMessage.WriteUInt(entryCount);
+
+			for (uint i = 0; i < entryCount; i++)
+			{
+				responseMessage.WriteString(myResponse.m_Entries[i].m_Message);
+				responseMessage.WriteUInt(myResponse.m_Entries[i].m_Timestamp);
+				responseMessage.WriteUInt(myResponse.m_Entries[i].m_ProfileId);
+				responseMessage.WriteUInt(myResponse.m_Entries[i].m_MessageId);
+			}
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_CLAN_GUESTBOOK_DELETE_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_CLAN_GUESTBOOK_DELETE_REQ:");
+
+			uint messageId;
+			uchar deleteAll;
+			if (!aMessage->ReadUInt(messageId) || !aMessage->ReadUChar(deleteAll))
+				return false;
+
+			MMG_Profile *myProfile = aClient->GetProfile();
+			bool QueryOK = MySQLDatabase::ourInstance->DeleteClanGuestbookEntry(myProfile->m_ClanId, messageId, deleteAll);
+
+			/*if (!QueryOK)
+			{
+				MN_WriteMessage responseMessage(2048);
+				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE);
+				responseMessage.WriteUChar(myClanStrings::MODIFY_FAIL_INVALID_PRIVILIGES);
+
+				if (!aClient->SendData(&responseMessage))
+					return false;
+			}
+			*/
+		}
+		break;
+
 		case MMG_ProtocolDelimiters::MESSAGING_CLAN_MESSAGE_SEND_REQ:
 		{
 			DebugLog(L_INFO, "MESSAGING_CLAN_MESSAGE_SEND_REQ:");
@@ -862,7 +972,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					wchar_t msgBuffer[WIC_INSTANTMSG_MAX_LENGTH];
 					memset(msgBuffer, 0, sizeof(msgBuffer));
 
-					swprintf(msgBuffer, L"|clms|%ws", myMessage);
+					swprintf(msgBuffer, WIC_INSTANTMSG_MAX_LENGTH, L"|clms|%ws", myMessage);
 
 					wcsncpy(im.m_Message, msgBuffer, WIC_INSTANTMSG_MAX_LENGTH);
 					im.m_RecipientProfile = myClan.m_ClanMembers[i];
@@ -1081,88 +1191,108 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			// this->SendOptionalContent(aClient, &responseMessage);
 		}
 		break;
-
-		/*case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_POST_REQ:
+#ifdef USING_MYSQL_DATABASE
+		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_POST_REQ:
 		{
-			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_POST_REQ: Sending information");
-
-			//18:00:76:00:4a:00:00:00:01:00:00:00:02:00:00:00:04:00:68:00:69:00:21:00:00:00 for text "hi!" 180076004a000000010000000200000004006800690021000000
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_POST_REQ:");
 			
-			uint RequestId = 0, ProfileId = 0, MessageId = 0;
-			wchar_t GuestBookMessage[128];
+			uint profileId, messageId, requestId;
 
-			aMessage->ReadUInt(ProfileId);
-			aMessage->ReadUInt(RequestId);
-			aMessage->ReadUInt(MessageId);
-			aMessage->ReadString(GuestBookMessage, ARRAYSIZE(GuestBookMessage));
-			
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
-			
-			//currentEditables->ToStream(&responseMessage);
+			MMG_ProfileGuestBookProtocol::GetRsp::GuestbookEntry entry;
 
-			//if (!aClient->SendData(&responseMessage))
-			//	return false;
-		}
-		break;
-		*/
-		
-		/*case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_REQ:
-		{
-			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_GET_REQ: Sending information");
+			if (!aMessage->ReadUInt(profileId) || !aMessage->ReadUInt(messageId) || !aMessage->ReadUInt(requestId))
+				return false;
 
-			//0a:00:77:00:01:00:00:00:4a:00:00:00
+			if (!aMessage->ReadString(entry.m_Message, ARRAYSIZE(entry.m_Message)))
+				return false;
 
-			MN_WriteMessage	responseMessage1(8192);
+			entry.m_ProfileId = aClient->GetProfile()->m_ProfileId;
+			MySQLDatabase::ourInstance->AddProfileGuestbookEntry(profileId, requestId, &entry);
 
-			uint RequestId = 0, ProfileId = 0;
-			aMessage->ReadUInt(RequestId);
-			aMessage->ReadUInt(ProfileId);
-			
-			MMG_ProfileGuestBookProtocol myProfileGuestBook;
-
-			myProfileGuestBook.m_RequestId = RequestId;
-			myProfileGuestBook.m_IgnoresGettingProfile = 0;
-			myProfileGuestBook.m_Count = 1;
-			myProfileGuestBook.m_MaxSize = 8192;
-			
-			const int guestbooklength = 1;
-			MMG_ProfileGuestBookEntry myGuestBookEntry[guestbooklength];
-			for (int i = 0; i < guestbooklength; i++)
+			if (messageId)
 			{
-				wcscpy(myGuestBookEntry[i].m_GuestBookMessage, L"Sup b1tches");
-				myGuestBookEntry[i].m_TimeStamp = 6060 * i;
-				myGuestBookEntry[i].m_ProfileId = ProfileId;
-				myGuestBookEntry[i].m_MessageId = 1;
-				
-				myProfileGuestBook.m_GuestBookEntry[i] = myGuestBookEntry[i];
+				// refresh the guestbook (todo: temporary)
+				MN_WriteMessage responseMessage(2048);
+				responseMessage.WriteUInt(requestId);
+				responseMessage.WriteUInt(profileId);
+
+				MN_ReadMessage temp(2048);
+				temp.BuildMessage(responseMessage.GetDataStream(), responseMessage.GetDataLength());
+				this->HandleMessage(aClient, &temp, MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_REQ);
 			}
-			
-			myProfileGuestBook.m_Data = sizeof(myProfileGuestBook.m_GuestBookEntry);
-			
-			responseMessage1.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
-			
-			myProfileGuestBook.ToStream(&responseMessage1);
-
-			//if (!aClient->SendData(&responseMessage))
-			//	return false;
 		}
 		break;
-		*/
 		
-		/*case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_DELETE_REQ:
+		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_REQ:
 		{
-			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_DELETE_REQ: Sending information");
-
-			//responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_GET_REQ:");
 			
-			//currentEditables->ToStream(&responseMessage);
+			MN_WriteMessage	responseMessage(8192);
 
-			//if (!aClient->SendData(&responseMessage))
-			//	return false;
+			uint requestId, profileId;
+			if (!aMessage->ReadUInt(requestId) || !aMessage->ReadUInt(profileId))
+				return false;
+
+			uint entryCount = 0;
+			MMG_ProfileGuestBookProtocol::GetRsp myResponse;
+			
+			MySQLDatabase::ourInstance->QueryProfileGuestbook(profileId, &entryCount, &myResponse);
+
+			MMG_Profile poster[32];	// todo
+			MN_WriteMessage profileMsg(2048);
+
+			for (uint i = 0; i < entryCount; i++)
+			{
+				MySQLDatabase::ourInstance->QueryProfileName(myResponse.m_Entries[i].m_ProfileId, &poster[i]);
+
+				SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(poster[i].m_ProfileId);
+
+				if (player)
+					poster[i].m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
+
+				profileMsg.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+				poster[i].ToStream(&profileMsg);
+			}
+
+			if (entryCount > 0)
+			{
+				if (!aClient->SendData(&profileMsg))
+					return false;
+			}
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
+			responseMessage.WriteUInt(requestId);
+			responseMessage.WriteUChar(0);			//TODO: IgnoresGettingProfile?
+			responseMessage.WriteUInt(entryCount);
+
+			for (uint i = 0; i < entryCount; i++)
+			{
+				responseMessage.WriteString(myResponse.m_Entries[i].m_Message);
+				responseMessage.WriteUInt(myResponse.m_Entries[i].m_Timestamp);
+				responseMessage.WriteUInt(myResponse.m_Entries[i].m_ProfileId);
+				responseMessage.WriteUInt(myResponse.m_Entries[i].m_MessageId);
+			}
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 		break;
-		*/
+		
+		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_DELETE_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_DELETE_REQ:");
 
+			uint messageId;
+			uchar deleteAll;	//deleteAllByThisProfile
+			if (!aMessage->ReadUInt(messageId) || !aMessage->ReadUChar(deleteAll))
+				return false;
+
+			MySQLDatabase::ourInstance->DeleteProfileGuestbookEntry(aClient->GetProfile()->m_ProfileId, messageId, deleteAll);
+
+			// no response, rest of packet is MESSAGING_PROFILE_GUESTBOOK_GET_REQ
+		}
+		break;
+#endif
 		case MMG_ProtocolDelimiters::MESSAGING_PROFILE_SET_EDITABLES_REQ:
 		{
 			DebugLog(L_INFO, "MESSAGING_PROFILE_SET_EDITABLES_REQ:");
@@ -1175,7 +1305,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 #ifdef USING_MYSQL_DATABASE
 			MySQLDatabase::ourInstance->SaveEditableVariables(aClient->GetProfile()->m_ProfileId, myResponse.motto, myResponse.homepage);
 #endif
-
 			// no response required
 		}
 		break;
@@ -1292,18 +1421,14 @@ bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 
 	bool QueryOK = MySQLDatabase::ourInstance->QueryFriends(aClient->GetProfile()->m_ProfileId, &friendCount, &myFriends);
 
-	if (QueryOK)
+	if (!QueryOK)
+		aMessage->WriteUInt(0);
+	else
 	{
 		aMessage->WriteUInt(friendCount);
 
 		for (uint i=0; i < friendCount; i++)
-		{
 			aMessage->WriteUInt(myFriends[i]);
-		}
-	}
-	else
-	{
-		aMessage->WriteUInt(0);
 	}
 
 	delete [] myFriends;
@@ -1395,28 +1520,47 @@ bool MMG_Messaging::SendProfileIgnoreList(SvClient *aClient, MN_WriteMessage *aM
 #else
 	uint ignoredCount = 0;
 	uint *myIgnoreList = NULL;
+	MMG_Profile profiles[64];
 
 	bool QueryOK = MySQLDatabase::ourInstance->QueryIgnoredProfiles(aClient->GetProfile()->m_ProfileId, &ignoredCount, &myIgnoreList);
 
-	if (QueryOK)
+	if (!QueryOK)
+		aMessage->WriteUInt(0);
+	else
 	{
 		aMessage->WriteUInt(ignoredCount);
 
 		for (uint i=0; i < ignoredCount; i++)
-		{
 			aMessage->WriteUInt(myIgnoreList[i]);
+
+		MN_WriteMessage responseMessage(4096);
+		for (uint i=0; i < ignoredCount; i++)
+		{
+			MySQLDatabase::ourInstance->QueryProfileName(myIgnoreList[i], &profiles[i]);
+
+			SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(profiles[i].m_ProfileId);
+
+			if (player)
+				profiles[i].m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+			profiles->ToStream(&responseMessage);
+		}
+
+		delete [] myIgnoreList;
+		myIgnoreList = NULL;
+
+		if (!aClient->SendData(aMessage))
+			return false;
+
+		if (ignoredCount > 0)
+		{
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 	}
-	else
-	{
-		aMessage->WriteUInt(0);
-	}
-
-	delete [] myIgnoreList;
-	myIgnoreList = NULL;
 #endif
-
-	return aClient->SendData(aMessage);
+	return true;
 }
 
 bool MMG_Messaging::SendClanWarsFilterWeights(SvClient *aClient, MN_WriteMessage *aMessage)

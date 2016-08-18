@@ -124,6 +124,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Clan.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ClanGuestbookProtocol.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Constants.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_GroupMemberships.h" />
@@ -137,7 +138,6 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Options.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Profile.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileEditableVariablesProtocol.h" />
-    <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookEntry.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookProtocol.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProtocolDelimiters.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Protocols.h" />
@@ -214,6 +214,7 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_BlockTEA.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Chat.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Clan.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ClanGuestbookProtocol.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_CryptoHash.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ICipher.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_InstantMessageListener.cpp" />
@@ -224,7 +225,6 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Options.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_Profile.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileEditableVariablesProtocol.cpp" />
-    <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookEntry.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ProfileGuestBookProtocol.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerFilter.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mmassgate\MMG_ServerStartupVariables.cpp" />

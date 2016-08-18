@@ -77,12 +77,13 @@ private:
 		ACCOUNTS_TABLE,
 		CDKEYS_TABLE,
 		PROFILES_TABLE,
-		DELETED_PROFILES_TABLE,
+		PROFILE_GB_TABLE,
 		FRIENDS_TABLE,
 		IGNORED_TABLE,
 		MESSAGES_TABLE,
 		ABUSEREPORTS_TABLE,
 		CLANS_TABLE,
+		CLAN_GB_TABLE,
 
 		TOTAL_TABLES
 	};
@@ -193,6 +194,9 @@ public:
 	bool	RemoveInstantMessage	(const uint profileId, const uint messageId);
 	bool	AddAbuseReport				(const uint profileId, const MMG_Profile senderProfile, const uint flaggedProfileId, const wchar_t *report);
 	bool	QueryProfileAccountId		(const uint profileId, uint *dstAccountId);
+	bool	QueryProfileGuestbook		(const uint profileId, uint *dstEntryCount, MMG_ProfileGuestBookProtocol::GetRsp *guestbook);
+	bool	AddProfileGuestbookEntry	(const uint profileId, const uint requestId, MMG_ProfileGuestBookProtocol::GetRsp::GuestbookEntry *entry);
+	bool	DeleteProfileGuestbookEntry	(const uint profileId, const uint messageId, const uchar deleteAllByProfile);
 
 	//clans & clan related
 	bool	CheckIfClanNameExists		(const wchar_t* clanname, uint *dstId);
@@ -210,4 +214,7 @@ public:
 	bool	AppendClanTag				(MMG_Profile *profile);
 	bool	SaveClanEditableVariables	(const uint clanId, const uint profileId, const wchar_t *motto, const wchar_t *motd, const wchar_t *homepage);
 	bool	CheckIfInvitedAlready		(const uint clanId, const uint inviteeProfileId, uint *dstId);
+	bool	QueryClanGuestbook			(const uint clanId, uint *dstEntryCount, MMG_ClanGuestbookProtocol::GetRsp *guestbook);
+	bool	AddClanGuestbookEntry		(const uint clanId, const uint requestId, MMG_ClanGuestbookProtocol::GetRsp::GuestbookEntry *entry);
+	bool	DeleteClanGuestbookEntry	(const uint clanId, const uint messageId, const uchar deleteAllByProfile);
 };
