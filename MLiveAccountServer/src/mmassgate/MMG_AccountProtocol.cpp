@@ -385,6 +385,11 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myStatusCode = AuthFailed_RequestedProfileNotFound;
 					mySuccessFlag = 0;
 				}
+				else if(MMG_AccountProxy::ourInstance->AccountInUse(myAuthToken->m_AccountId))
+				{
+					myStatusCode = AuthFailed_AccountInUse;
+					mySuccessFlag = 0;
+				}
 				else if(!AuthQueryOK)									// something went wrong executing the query
 				{
 					myStatusCode = AuthFailed_General; //ServerError
@@ -392,6 +397,19 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				else													//should be ok to retrieve a profile
 				{
+					// TODO insert missing data
+					if (myAuthToken->m_AccountId > 0)
+					{
+						// update geoip info
+						// update profile ip usage
+
+						// update missing cipherkeys for handmade accounts
+						MySQLDatabase::ourInstance->UpdateCipherKeys(myAuthToken->m_AccountId, myQuery.m_CipherKeys);
+
+						// update missing sequence number
+						MySQLDatabase::ourInstance->UpdateSequenceNumber(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber);
+					}
+
 					bool ProfileQueryOK;
 
 					//AuthFailed_AccountInUse, AuthFailed_ProfileInUse, AuthFailed_CdKeyInUse, AuthFailed_IllegalCDKey(not using)
@@ -518,7 +536,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					hasher.HashPassword(myPasswordHash, myQuery.m_Create.m_Password);
 
 					bool CreateQueryOK = MySQLDatabase::ourInstance->CreateUserAccount(myQuery.m_Create.m_Email, myPasswordHash, 
-						myQuery.m_Create.m_Country, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail, myQuery.m_CipherKeys);
+						myQuery.m_Create.m_Country, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
 
 					if(CreateQueryOK)			//create user account succeeded
 					{
@@ -630,6 +648,11 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myStatusCode = AuthFailed_AccountBanned;
 					mySuccessFlag = 0;
 				}
+				else if(MMG_AccountProxy::ourInstance->AccountInUse(myAuthToken->m_AccountId))
+				{
+					myStatusCode = AuthFailed_AccountInUse;
+					mySuccessFlag = 0;
+				}
 				else if(!AuthQueryOK)									// something went wrong executing the query
 				{
 					myStatusCode = AuthFailed_General; //ServerError
@@ -637,6 +660,19 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				else													//should be ok to retrieve profile list
 				{
+					// TODO insert missing data
+					if (myAuthToken->m_AccountId > 0)
+					{
+						// update geoip info
+						// update profile ip usage
+
+						// update missing cipherkeys for handmade accounts
+						MySQLDatabase::ourInstance->UpdateCipherKeys(myAuthToken->m_AccountId, myQuery.m_CipherKeys);
+
+						// update missing sequence number
+						MySQLDatabase::ourInstance->UpdateSequenceNumber(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber);
+					}
+
 					bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myAuthToken->m_AccountId, &myProfileCount, &myProfiles);
 
 					if(RetrieveProfilesQueryOK)

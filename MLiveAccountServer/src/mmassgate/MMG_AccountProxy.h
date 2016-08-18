@@ -16,9 +16,8 @@ public:
 	bool UpdateClients(MMG_Profile *profile);
 	bool SendPlayerJoinedClan	(MMG_Profile *profile);
 
-	bool AccountInUse		(MMG_AuthToken *authtoken);
-	bool ProfileInUse		(MMG_Profile *profile);
+	bool AccountInUse		(uint accountId);
+	bool ProfileInUse		(uint profileId);
 
-	//SvClient* GetClientByProfile	(MMG_Profile *profile);
 	SvClient* GetClientByProfileId	(uint profileId);
 };

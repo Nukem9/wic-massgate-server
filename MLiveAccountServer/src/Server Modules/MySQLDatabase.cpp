@@ -398,7 +398,7 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	return true;
 }
 
-bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const ulong cipherKeys[])
+bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[])
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -464,23 +464,24 @@ bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, c
 	memset(SQL2, 0, sizeof(SQL2));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL2, "INSERT INTO %s (accountid, cipherkeys0, cipherkeys1, cipherkeys2, cipherkeys3) VALUES (?, ?, ?, ?, ?)", TABLENAME[CDKEYS_TABLE]);
+	sprintf(SQL2, "INSERT INTO %s (accountid, sequencenum, cipherkeys0, cipherkeys1, cipherkeys2, cipherkeys3) VALUES (?, ?, ?, ?, ?, ?)", TABLENAME[CDKEYS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query2(this->m_Connection, SQL2);
 
 	// prepared statement binding structures
-	MYSQL_BIND params2[5];
+	MYSQL_BIND params2[6];
 
 	// initialize (zero) bind structures
 	memset(params2, 0, sizeof(params2));
 
 	// bind parameters to prepared statement
 	query2.Bind(&params2[0], &account_insert_id);
-	query2.Bind(&params2[1], &cipherKeys[0]);
-	query2.Bind(&params2[2], &cipherKeys[1]);
-	query2.Bind(&params2[3], &cipherKeys[2]);
-	query2.Bind(&params2[4], &cipherKeys[3]);
+	query2.Bind(&params2[1], &sequenceNum);
+	query2.Bind(&params2[2], &cipherKeys[0]);
+	query2.Bind(&params2[3], &cipherKeys[1]);
+	query2.Bind(&params2[4], &cipherKeys[2]);
+	query2.Bind(&params2[5], &cipherKeys[3]);
 
 	// execute prepared statement
 	if (!query2.StmtExecute(params2))
@@ -636,6 +637,199 @@ bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar 
 
 	if (!query2.Success())
 		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::UpdateSequenceNumber(const uint accountId, const uint sequenceNum)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	// if sequence number is 0 then it needs to be updated
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT sequencenum FROM %s WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
+
+	// prepared statement binding structures
+	MYSQL_BIND param[1], result[1];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	// query specific variables
+	uint seqnum;
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], &accountId);
+
+	// bind results
+	query.Bind(&result[0], &seqnum);
+
+	// execute prepared statement
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("UpdateSequenceNumber() query failed: accountid(%u)", accountId);
+	}
+	else
+	{
+		query.StmtFetch();
+	}
+
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	if (seqnum == 0)
+	{
+		char SQL2[4096];
+		memset(SQL2, 0, sizeof(SQL2));
+
+		// build sql query using table names defined in settings file
+		sprintf(SQL2, "UPDATE %s SET sequencenum = ? WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
+
+		// prepared statement wrapper object
+		MySQLQuery query2(this->m_Connection, SQL2);
+
+		// prepared statement binding structures
+		MYSQL_BIND params2[2];
+
+		// initialize (zero) bind structures
+		memset(params2, 0, sizeof(params2));
+
+		// bind parameters to prepared statement
+		query2.Bind(&params2[0], &sequenceNum);
+		query2.Bind(&params2[1], &accountId);
+		
+		// execute prepared statement
+		if(!query2.StmtExecute(params2))
+			DatabaseLog("sequence number update fail");
+		else
+			DatabaseLog("sequence number update success");
+
+		if (!query2.Success())
+		{
+			this->RollbackTransaction();
+			return false;
+		}
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::UpdateCipherKeys(const uint accountId, const ulong cipherKeys[])
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	// begin an sql transaction
+	this->BeginTransaction();
+
+	// if sequence number is 0 then it needs to be updated
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT cipherkeys0 FROM %s WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
+
+	// prepared statement binding structures
+	MYSQL_BIND param[1], result[1];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	// query specific variables
+	ulong ciperkey;
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], &accountId);
+
+	// bind results
+	query.Bind(&result[0], &ciperkey);
+
+	// execute prepared statement
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("UpdateCipherKeys() query failed: accountid(%u)", accountId);
+	}
+	else
+	{
+		query.StmtFetch();
+	}
+
+	if (!query.Success())
+	{
+		this->RollbackTransaction();
+		return false;
+	}
+
+	if (ciperkey == 0)
+	{
+		char SQL2[4096];
+		memset(SQL2, 0, sizeof(SQL2));
+
+		// build sql query using table names defined in settings file
+		sprintf(SQL2, "UPDATE %s SET cipherkeys0 = ?, cipherkeys1 = ?, cipherkeys2 = ?, cipherkeys3 = ? WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
+
+		// prepared statement wrapper object
+		MySQLQuery query2(this->m_Connection, SQL2);
+
+		// prepared statement binding structures
+		MYSQL_BIND params2[5];
+
+		// initialize (zero) bind structures
+		memset(params2, 0, sizeof(params2));
+
+		// bind parameters to prepared statement
+		query2.Bind(&params2[0], &cipherKeys[0]);
+		query2.Bind(&params2[1], &cipherKeys[1]);
+		query2.Bind(&params2[2], &cipherKeys[2]);
+		query2.Bind(&params2[3], &cipherKeys[3]);
+		query2.Bind(&params2[4], &accountId);
+		
+		// execute prepared statement
+		if(!query2.StmtExecute(params2))
+			DatabaseLog("cipherkeys update fail");
+		else
+			DatabaseLog("cipherkeys update success");
+
+		if (!query2.Success())
+		{
+			this->RollbackTransaction();
+			return false;
+		}
+	}
+
+	// commit the transaction
+	this->CommitTransaction();
 
 	return true;
 }
@@ -810,7 +1004,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 		memset(SQL3, 0, sizeof(SQL3));
 
 		// build sql query using table names defined in settings file
-		sprintf(SQL3, "UPDATE %s SET activeprofileid = ? WHERE id = ?", TABLENAME[ACCOUNTS_TABLE]);
+		sprintf(SQL3, "UPDATE %s SET activeprofileid = ? WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
 
 		// prepared statement wrapper object
 		MySQLQuery query3(this->m_Connection, SQL3);
@@ -862,7 +1056,7 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 	memset(SQL1, 0, sizeof(SQL1));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL1, "UPDATE %s SET isdeleted = 1 WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL1, "UPDATE %s SET isdeleted = 1 WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query1(this->m_Connection, SQL1);
@@ -950,7 +1144,7 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 	memset(SQL3, 0, sizeof(SQL3));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL3, "UPDATE %s SET activeprofileid = ? WHERE id = ?", TABLENAME[ACCOUNTS_TABLE]);
+	sprintf(SQL3, "UPDATE %s SET activeprofileid = ? WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query3(this->m_Connection, SQL3);
@@ -1183,7 +1377,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 	memset(SQL2, 0, sizeof(SQL2));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL2, "UPDATE %s SET lastlogindate = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL2, "UPDATE %s SET lastlogindate = ? WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query2(this->m_Connection, SQL2);
@@ -1223,7 +1417,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 	memset(SQL3, 0, sizeof(SQL3));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL3, "UPDATE %s SET activeprofileid = ? WHERE id = ?", TABLENAME[ACCOUNTS_TABLE]);
+	sprintf(SQL3, "UPDATE %s SET activeprofileid = ? WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query3(this->m_Connection, SQL3);
@@ -1443,7 +1637,7 @@ bool MySQLDatabase::SaveUserOptions(const uint profileId, const uint options)
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "UPDATE %s SET commoptions = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "UPDATE %s SET commoptions = ? WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -2111,7 +2305,7 @@ bool MySQLDatabase::SaveEditableVariables(const uint profileId, const wchar_t *m
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "UPDATE %s SET motto = ?, homepage = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "UPDATE %s SET motto = ?, homepage = ? WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -2987,7 +3181,7 @@ bool MySQLDatabase::UpdatePlayerClanId(const uint profileId, const uint clanId)
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "UPDATE %s SET clanid = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "UPDATE %s SET clanid = ? WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -3036,7 +3230,7 @@ bool MySQLDatabase::UpdatePlayerClanRank(const uint profileId, const uchar rankI
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "UPDATE %s SET rankinclan = ? WHERE id = ?", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "UPDATE %s SET rankinclan = ? WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -3201,7 +3395,7 @@ bool MySQLDatabase::UpdateClanPlayerOfWeek(const uint clanId, const uint profile
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "UPDATE %s SET playeroftheweekid = ? WHERE id = ?", TABLENAME[CLANS_TABLE]);
+	sprintf(SQL, "UPDATE %s SET playeroftheweekid = ? WHERE id = ? LIMIT 1", TABLENAME[CLANS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -3697,7 +3891,7 @@ bool MySQLDatabase::SaveClanEditableVariables(const uint clanId, const uint prof
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "UPDATE %s SET playeroftheweekid = ?, motto = ?, motd = ?, homepage = ? WHERE id = ?", TABLENAME[CLANS_TABLE]);
+	sprintf(SQL, "UPDATE %s SET playeroftheweekid = ?, motto = ?, motd = ?, homepage = ? WHERE id = ? LIMIT 1", TABLENAME[CLANS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);

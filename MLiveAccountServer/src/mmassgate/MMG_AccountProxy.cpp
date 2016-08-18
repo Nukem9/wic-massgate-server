@@ -61,17 +61,17 @@ bool MMG_AccountProxy::SendPlayerJoinedClan(MMG_Profile *profile)
 	return true;
 }
 
-bool MMG_AccountProxy::AccountInUse(MMG_AuthToken *authtoken)
+bool MMG_AccountProxy::AccountInUse(uint accountId)
 {
 	// TODO
 
-	if (this->m_PlayerList.find(authtoken->m_AccountId) == this->m_PlayerList.end())
+	if (this->m_PlayerList.find(accountId) != this->m_PlayerList.end())
 		return true;
 
 	return false;
 }
 
-bool MMG_AccountProxy::ProfileInUse(MMG_Profile *profile)
+bool MMG_AccountProxy::ProfileInUse(uint profileId)
 {
 	//TODO
 
@@ -80,7 +80,7 @@ bool MMG_AccountProxy::ProfileInUse(MMG_Profile *profile)
 	for (iter = this->m_PlayerList.begin(); iter != this->m_PlayerList.end(); ++iter)
 	{
 		MMG_Profile *p = iter->second->GetProfile();
-		if (p->m_ProfileId == profile->m_ProfileId)
+		if (p->m_ProfileId == profileId)
 			return true;
 	}
 

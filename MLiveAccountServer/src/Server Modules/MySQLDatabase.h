@@ -165,8 +165,12 @@ public:
 	//accounts
 	bool	CheckIfEmailExists	(const char *email, uint *dstId);
 	bool	CheckIfCDKeyExists	(const ulong cipherKeys[], uint *dstId);
-	bool	CreateUserAccount	(const char *email, const char *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const ulong cipherKeys[]);
+	bool	CreateUserAccount	(const char *email, const char *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[]);
 	bool	AuthUserAccount		(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
+
+	//get missing data for accounts/cdkeys
+	bool	UpdateSequenceNumber	(const uint accountId, const uint sequenceNum);
+	bool	UpdateCipherKeys		(const uint accountId, const ulong cipherKeys[]);
 	
 	//profiles (logins)
 	bool	CheckIfProfileExists	(const wchar_t* name, uint *dstId);
