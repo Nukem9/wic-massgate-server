@@ -279,27 +279,24 @@ void SvClientManager::DisconnectClient(SvClient *aClient)
 
 void SvClientManager::EmergencyDisconnectAll()
 {
-	this->m_Mutex.Lock();
-
 	for(uint i = 0; i < this->m_ClientMaxCount; i++)
 		this->DisconnectClient(&this->m_Clients[i]);
-
-	this->m_Mutex.Unlock();
 }
 
 bool SvClientManager::SendDataAll(MN_WriteMessage *aMessage)
 {
 	this->m_Mutex.Lock();
 
-	// i think this is wrong
+	// NOTE: This skips dedicated servers
 	for(uint i = 0; i < this->m_ClientMaxCount; i++)
 	{
-		SvClient *aClient = &this->m_Clients[i];
+		SvClient *client = &this->m_Clients[i];
 
-		if (!aClient->m_Valid || !aClient->m_LoggedIn || !aClient->m_IsPlayer)
+		if (!client->m_Valid || !client->IsLoggedIn() || !client->IsPlayer())
 			continue;
 		
-		if (!aClient->SendData(aMessage))
+		// Send message without clearing data
+		if (!aMessage->SendMe(client->GetSocket(), false))
 			continue;
 	}
 
