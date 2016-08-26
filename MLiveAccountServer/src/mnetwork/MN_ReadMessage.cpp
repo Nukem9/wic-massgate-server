@@ -218,9 +218,7 @@ bool MN_ReadMessage::DeriveMessage()
 
 bool MN_ReadMessage::CheckReadSize(sizeptr_t aSize)
 {
-#ifdef _DEBUG
 	assert((this->m_ReadPos + aSize) <= this->m_DataLen && "Packet read would exceed data length.");
-#endif
 
 	if ((this->m_ReadPos + aSize) > this->m_DataLen)
 		return false;
