@@ -54,7 +54,7 @@ public:
 	uint			GetPort			();
 
 	void			Reset			();
-	bool			CanReadFrom		();
+	bool			CanReadFrom		(bool *ErrorResult = nullptr);
 
 private:
 };
@@ -62,13 +62,15 @@ private:
 CLASS_SINGLE(SvClientManager)
 {
 public:
-	typedef void (__cdecl * pfnDataReceivedCallback)(SvClient *aClient, voidptr_t aData, sizeptr_t aDataLen, bool aError);
+	typedef void (__cdecl * pfnDisconnectCallback)(SvClient *aClient);
+	typedef void (__cdecl * pfnDataReceivedCallback)(SvClient *aClient, voidptr_t aData, sizeptr_t aDataLen);
 
 private:
 	MT_Mutex	m_Mutex;
 
 	HANDLE		m_ThreadHandle;
 
+	pfnDisconnectCallback	m_DisconnectCallback;
 	pfnDataReceivedCallback m_DataReceivedCallback;
 
 	SvClient	*m_Clients;
@@ -80,7 +82,9 @@ public:
 	~SvClientManager();
 
 	bool		Start			();
-	void		SetCallback		(pfnDataReceivedCallback aCallback);
+
+	void		SetDisconnectCallback(pfnDisconnectCallback aCallback);
+	void		SetDataCallback	(pfnDataReceivedCallback aCallback);
 
 	SvClient	*FindClient		(sockaddr_in *aAddr);
 

@@ -1,6 +1,6 @@
 #include "../stdafx.h"
 
-#define LiveAccLog(format, ...) DebugLog(L_INFO, "[LiveAcc]: "format, __VA_ARGS__)
+#define LiveAccLog(format, ...) DebugLog(L_INFO, "[LiveAcc]: " format, __VA_ARGS__)
 
 MN_TcpServer *g_LiveAccountServer = nullptr;
 
@@ -10,10 +10,11 @@ void LiveAccount_Startup()
 		g_LiveAccountServer = MN_TcpServer::Create("127.0.0.1", WIC_LIVEACCOUNT_PORT);
 
 	// Callback for when a client requests a connection
-	g_LiveAccountServer->SetCallback(LiveAccount_ConnectionRecievedCallback);
+	g_LiveAccountServer->SetCallback(LiveAccount_ConnectionReceivedCallback);
 
-	// Callback for when data is received
-	SvClientManager::ourInstance->SetCallback(LiveAccount_DataRecievedCallback);
+	// SvClientManager notifications
+	SvClientManager::ourInstance->SetDisconnectCallback(LiveAccount_DisconnectReceivedCallback);
+	SvClientManager::ourInstance->SetDataCallback(LiveAccount_DataReceivedCallback);
 	
 	if (!g_LiveAccountServer->Start())
 		DebugLog(L_ERROR, "[LiveAcc]: Failed to start server module");
@@ -29,7 +30,7 @@ void LiveAccount_Shutdown()
 	g_LiveAccountServer = nullptr;
 }
 
-void LiveAccount_ConnectionRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr)
+void LiveAccount_ConnectionReceivedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 {
 	// Find client by IP address
 	auto myClient = SvClientManager::ourInstance->FindClient(aAddr);
@@ -44,31 +45,27 @@ void LiveAccount_ConnectionRecievedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 	}
 }
 
-void LiveAccount_DataRecievedCallback(SvClient *aClient, voidptr_t aData, sizeptr_t aDataLen, bool aError)
+void LiveAccount_DisconnectReceivedCallback(SvClient *aClient)
 {
-	// Check if the client should be disconnected
-	if (aError)
+	// Tell MMG_AccountProxy
+	if (aClient->IsLoggedIn() && aClient->IsPlayer())
 	{
-		// Tell MMG_AccountProxy
-		if (aClient->IsLoggedIn() && aClient->IsPlayer())
-		{
-			aClient->GetProfile()->m_OnlineStatus = 0;
-			MMG_AccountProxy::ourInstance->SetClientOffline(aClient);
-			MMG_AccountProxy::ourInstance->UpdateClients(aClient->GetProfile());
-		}
-
-		// Tell MMG_TrackableServer
-		if (aClient->IsServer())
-			MMG_TrackableServer::ourInstance->DisconnectServer(aClient);
-
-		in_addr addr;
-		addr.s_addr = ntohl(aClient->GetIPAddress());
-		LiveAccLog("Disconnecting client on %s...", inet_ntoa(addr));
-
-		SvClientManager::ourInstance->DisconnectClient(aClient);
-		return;
+		aClient->GetProfile()->m_OnlineStatus = 0;
+		MMG_AccountProxy::ourInstance->SetClientOffline(aClient);
+		MMG_AccountProxy::ourInstance->UpdateClients(aClient->GetProfile());
 	}
-	
+
+	// Tell MMG_TrackableServer
+	if (aClient->IsServer())
+		MMG_TrackableServer::ourInstance->DisconnectServer(aClient);
+
+	in_addr addr;
+	addr.s_addr = ntohl(aClient->GetIPAddress());
+	LiveAccLog("Disconnecting client on %s...", inet_ntoa(addr));
+}
+
+void LiveAccount_DataReceivedCallback(SvClient *aClient, voidptr_t aData, sizeptr_t aDataLen)
+{	
 #ifdef USING_MYSQL_DATABASE
 	// check for database
 	if (!MySQLDatabase::ourInstance->HasConnection())

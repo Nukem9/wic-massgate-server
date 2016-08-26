@@ -8,6 +8,7 @@ SvClient::SvClient()
 	this->m_Profile		= nullptr;
 	this->m_AuthToken	= nullptr;
 	this->m_Options		= nullptr;
+	this->m_Socket		= INVALID_SOCKET;
 
 	this->Reset();
 }
@@ -148,7 +149,7 @@ void SvClient::Reset()
 	}
 }
 
-bool SvClient::CanReadFrom()
+bool SvClient::CanReadFrom(bool *ErrorResult)
 {
 	// Timeout time of 10 milliseconds
 	static timeval waitd = {0, 10000};
@@ -163,7 +164,12 @@ bool SvClient::CanReadFrom()
 	int result = select(0, &readFlags, nullptr, nullptr, &waitd);
 
 	if (result < 0)
+	{
+		if (ErrorResult)
+			*ErrorResult = true;
+
 		return false;
+	}
 
 	// Check if the socket can be read from
 	if (!FD_ISSET(this->m_Socket, &readFlags))
@@ -221,7 +227,12 @@ bool SvClientManager::Start()
 	return true;
 }
 
-void SvClientManager::SetCallback(pfnDataReceivedCallback aCallback)
+void SvClientManager::SetDisconnectCallback(pfnDisconnectCallback aCallback)
+{
+	this->m_DisconnectCallback = aCallback;
+}
+
+void SvClientManager::SetDataCallback(pfnDataReceivedCallback aCallback)
 {
 	this->m_DataReceivedCallback = aCallback;
 }
@@ -268,16 +279,12 @@ void SvClientManager::DisconnectClient(SvClient *aClient)
 
 void SvClientManager::EmergencyDisconnectAll()
 {
-	// i think this is wrong
-	for(uint i = 0; i < this->m_ClientMaxCount; i++)
-	{
-		SvClient *aClient = &this->m_Clients[i];
-		
-		if (!aClient->m_Valid)
-			continue;
+	this->m_Mutex.Lock();
 
-		this->DisconnectClient(aClient);
-	}
+	for(uint i = 0; i < this->m_ClientMaxCount; i++)
+		this->DisconnectClient(&this->m_Clients[i]);
+
+	this->m_Mutex.Unlock();
 }
 
 bool SvClientManager::SendDataAll(MN_WriteMessage *aMessage)
@@ -335,7 +342,7 @@ SvClient *SvClientManager::AddClient(uint aIpAddr, uint aPort, SOCKET aSocket)
 		slot->m_IpAddress	= aIpAddr;
 		slot->m_Port		= aPort;
 
-		// Automatically set it to non-blocking
+		// Automatically set socket to non-blocking
 		u_long sockMode = 1;
 		ioctlsocket(aSocket, FIONBIO, &sockMode);
 
@@ -356,6 +363,10 @@ SvClient *SvClientManager::AddClient(uint aIpAddr, uint aPort, SOCKET aSocket)
 void SvClientManager::RemoveClient(SvClient *aClient)
 {
 	this->m_Mutex.Lock();
+
+	// Notify external code
+	if (this->m_DisconnectCallback)
+		this->m_DisconnectCallback(aClient);
 
 	// Decrement the total client count
 	InterlockedDecrement((volatile LONG *)&this->m_ClientCount);
@@ -395,17 +406,29 @@ DWORD WINAPI SvClientManager::MainThread(LPVOID lpArg)
 				continue;
 			}
 
-			if (!client->CanReadFrom())
-				continue;
+			// Set valid status before querying socket data
+			bool socketError = false;
 
-			// Read the buffer
-			int result = recv(client->GetSocket(), recvBuffer, sizeof(recvBuffer), 0);
+			if (client->CanReadFrom(&socketError))
+			{
+				int result = recv(client->GetSocket(), recvBuffer, sizeof(recvBuffer), 0);
 
-			// Check if an error occurred or the client disconnected
-			bool wasError = (result == SOCKET_ERROR || result == 0);
+				// Check if an internal error occurred or the socket disconnected
+				if (result == SOCKET_ERROR || result == 0)
+				{
+					// Drop client asap
+					socketError = true;
+				}
+				else 
+				{
+					if (myManager->m_DataReceivedCallback)
+						myManager->m_DataReceivedCallback(client, recvBuffer, result);
+				}
+			}
 
-			if (myManager->m_DataReceivedCallback)
-				myManager->m_DataReceivedCallback(client, recvBuffer, result, wasError);
+			// Something went wrong and the client needs to be removed
+			if (socketError)
+				myManager->RemoveClient(client);
 		}
 
 		myManager->m_Mutex.Unlock();
