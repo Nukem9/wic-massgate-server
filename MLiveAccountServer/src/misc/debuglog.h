@@ -7,4 +7,4 @@ enum LogLevel
 	L_ERROR,
 };
 
-void DebugLog(LogLevel level, const char *format, ...);
+void DebugLog(LogLevel Level, const char *Format, ...);
