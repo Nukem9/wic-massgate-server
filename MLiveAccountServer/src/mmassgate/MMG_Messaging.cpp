@@ -31,7 +31,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_RETRIEVE_PROFILENAME:");
 
-			MN_WriteMessage	responseMessage(8192);
+			MN_WriteMessage	responseMessage(4096);
 
 			ushort count;
 			if (!aMessage->ReadUShort(count))
@@ -107,6 +107,12 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 				profileList[i].ToStream(&responseMessage);
+
+				if (responseMessage.GetDataLength() + sizeof(MMG_Profile) >= 4096)
+				{
+					if (!aClient->SendData(&responseMessage))
+						break;
+				}
 			}
 
 			delete [] profileList;
@@ -116,7 +122,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			profildIds = NULL;
 
 			// send packet
-			if (!aClient->SendData(&responseMessage))
+			if (responseMessage.GetDataLength() > 0 && !aClient->SendData(&responseMessage))
 				return false;
 #endif
 		}
@@ -207,7 +213,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_IM_CHECK_PENDING_MESSAGES:");
 
-			MN_WriteMessage	responseMessage(8192);
+			MN_WriteMessage	responseMessage(4096);
 
 			uint msgCount = 0;
 			MMG_InstantMessageListener::InstantMessage *myMsgs = NULL;
@@ -231,12 +237,18 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					//DebugLog(L_INFO, "MESSAGING_IM_RECEIVE");
 					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
 					myMsgs[i].ToStream(&responseMessage);
+
+					if (responseMessage.GetDataLength() + sizeof(MMG_InstantMessageListener::InstantMessage) >= 4096)
+					{
+						if (!aClient->SendData(&responseMessage))
+							break;
+					}
 				}
 			
 				delete [] myMsgs;
 				myMsgs = NULL;
 
-				if (!aClient->SendData(&responseMessage))
+				if (responseMessage.GetDataLength() > 0 && !aClient->SendData(&responseMessage))
 					return false;
 			}
 		}
@@ -1056,6 +1068,91 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 
+		case MMG_ProtocolDelimiters::MESSAGING_FIND_PROFILE_REQUEST:
+		{
+			DebugLog(L_INFO, "MESSAGING_FIND_PROFILE_REQUEST:");
+
+			MN_WriteMessage	responseMessage(4096);
+
+			uint maxResults; // hardcoded to 100
+			if (!aMessage->ReadUInt(maxResults))
+				return false;
+
+			wchar_t search[WIC_NAME_MAX_LENGTH];
+			memset(search, 0, sizeof(search));
+			if (!aMessage->ReadString(search, ARRAYSIZE(search)))
+				return false;
+
+			uint padZero;
+			if (!aMessage->ReadUInt(padZero))
+				return false;
+
+			uint resultCount=0;
+			uint profileIds[100];
+			memset(profileIds, 0, sizeof(profileIds));
+
+			MySQLDatabase::ourInstance->SearchProfileName(search, &resultCount, profileIds);
+
+			DebugLog(L_INFO, "MESSAGING_FIND_PROFILE_RESPONSE:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_PROFILE_RESPONSE);
+			responseMessage.WriteUInt(resultCount);
+
+			for(int i = 0; i < resultCount; i++)
+				responseMessage.WriteUInt(profileIds[i]);
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_PROFILE_SEARCH_COMPLETE);
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_FIND_CLAN_REQUEST:
+		{
+			DebugLog(L_INFO, "MESSAGING_FIND_CLAN_REQUEST:");
+
+			MN_WriteMessage	responseMessage(4096);
+
+			uint maxResults; // hardcoded to 100
+			if (!aMessage->ReadUInt(maxResults))
+				return false;
+
+			wchar_t search[WIC_CLANNAME_MAX_LENGTH];
+			memset(search, 0, sizeof(search));
+			if (!aMessage->ReadString(search, ARRAYSIZE(search)))
+				return false;
+
+			uint padZero;
+			if (!aMessage->ReadUInt(padZero))
+				return false;
+
+			uint resultCount=0;
+			MMG_Clan::Description clans[100];
+
+			MySQLDatabase::ourInstance->SearchClanName(search, &resultCount, clans);
+
+			DebugLog(L_INFO, "MESSAGING_FIND_CLAN_RESPONSE:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_CLAN_RESPONSE);
+			responseMessage.WriteUInt(resultCount);
+
+			for (int i = 0; i < resultCount; i++)
+			{
+				clans[i].ToStream(&responseMessage);
+
+				if (responseMessage.GetDataLength() + sizeof(MMG_Clan::Description) >= 4096)
+				{
+					if (!aClient->SendData(&responseMessage))
+						break;
+				}
+			}
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_CLAN_SEARCH_COMPLETE);
+
+			if (responseMessage.GetDataLength() > 0 && !aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
+
 		case MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS:
 		{
 			DebugLog(L_INFO, "MESSAGING_GET_CLIENT_METRICS:");
@@ -1371,7 +1468,36 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			MN_WriteMessage	responseMessage(2048);
 
-			this->SendProfileIgnoreList(aClient, &responseMessage);
+			DebugLog(L_INFO, "MESSAGING_IGNORELIST_GET_RSP:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IGNORELIST_GET_RSP);
+
+#ifndef USING_MYSQL_DATABASE
+			//write uint (num ignored profiles)
+			responseMessage.WriteUInt(0);
+
+			//for each ignored profile
+				//write uint (profile id)
+#else
+			uint ignoredCount = 0;
+			uint *myIgnoreList = NULL;
+
+			bool QueryOK = MySQLDatabase::ourInstance->QueryIgnoredProfiles(aClient->GetProfile()->m_ProfileId, &ignoredCount, &myIgnoreList);
+
+			if (!QueryOK)
+				responseMessage.WriteUInt(0);
+			else
+			{
+				responseMessage.WriteUInt(ignoredCount);
+
+				for (uint i=0; i < ignoredCount; i++)
+					responseMessage.WriteUInt(myIgnoreList[i]);
+			}
+
+			delete [] myIgnoreList;
+			myIgnoreList = NULL;
+#endif
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 		break;
 
@@ -1504,63 +1630,6 @@ bool MMG_Messaging::SendOptionalContent(SvClient *aClient, MN_WriteMessage *aMes
 	MMG_OptionalContentProtocol::ourInstance->ToStream(aMessage);
 
 	return aClient->SendData(aMessage);
-}
-
-bool MMG_Messaging::SendProfileIgnoreList(SvClient *aClient, MN_WriteMessage *aMessage)
-{
-	DebugLog(L_INFO, "MESSAGING_IGNORELIST_GET_RSP:");
-	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IGNORELIST_GET_RSP);
-
-#ifndef USING_MYSQL_DATABASE
-	//write uint (num ignored profiles)
-	aMessage->WriteUInt(0);
-
-	//for each ignored profile
-		//write uint (profile id)
-#else
-	uint ignoredCount = 0;
-	uint *myIgnoreList = NULL;
-	MMG_Profile profiles[64];
-
-	bool QueryOK = MySQLDatabase::ourInstance->QueryIgnoredProfiles(aClient->GetProfile()->m_ProfileId, &ignoredCount, &myIgnoreList);
-
-	if (!QueryOK)
-		aMessage->WriteUInt(0);
-	else
-	{
-		aMessage->WriteUInt(ignoredCount);
-
-		for (uint i=0; i < ignoredCount; i++)
-			aMessage->WriteUInt(myIgnoreList[i]);
-
-		MN_WriteMessage responseMessage(4096);
-		for (uint i=0; i < ignoredCount; i++)
-		{
-			MySQLDatabase::ourInstance->QueryProfileName(myIgnoreList[i], &profiles[i]);
-
-			SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(profiles[i].m_ProfileId);
-
-			if (player)
-				profiles[i].m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
-
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
-			profiles->ToStream(&responseMessage);
-		}
-
-		delete [] myIgnoreList;
-		myIgnoreList = NULL;
-
-		if (!aClient->SendData(aMessage))
-			return false;
-
-		if (ignoredCount > 0)
-		{
-			if (!aClient->SendData(&responseMessage))
-				return false;
-		}
-	}
-#endif
-	return true;
 }
 
 bool MMG_Messaging::SendClanWarsFilterWeights(SvClient *aClient, MN_WriteMessage *aMessage)

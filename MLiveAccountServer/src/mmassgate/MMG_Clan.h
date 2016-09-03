@@ -48,6 +48,8 @@ public:
 
 	public:
 		Description();
+
+		void ToStream	(MN_WriteMessage *aMessage);
 	};
 	
 private:

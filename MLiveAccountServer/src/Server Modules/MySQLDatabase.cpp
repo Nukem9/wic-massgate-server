@@ -2217,6 +2217,152 @@ bool MySQLDatabase::QueryProfileList(const size_t Count, const uint *profileIds,
 	return true;
 }
 
+bool MySQLDatabase::SearchProfileName(const wchar_t* const name, uint *dstCount, uint *profileIds)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT id FROM %s WHERE isdeleted = 0 AND name LIKE CONCAT('%%',?,'%%') ORDER BY id ASC LIMIT 100", TABLENAME[PROFILES_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
+
+	// prepared statement binding structures
+	MYSQL_BIND param[1], result[1];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	// query specific variables
+	uint id;
+	ulong nameLength = wcslen(name);
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], name, &nameLength);
+
+	// bind results
+	query.Bind(&result[0], &id);
+
+	// execute prepared statement
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("SearchProfileName() failed:");
+	}
+	else
+	{
+		ulong count = (ulong)query.StmtNumRows();
+
+		*dstCount = 0;
+
+		if (count > 0)
+		{
+			int i = 0;
+
+			while(query.StmtFetch())
+			{
+				profileIds[i] = id;
+				i++;
+			}
+
+			*dstCount = count;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::SearchClanName(const wchar_t* const name, uint *dstCount, MMG_Clan::Description *clans)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// build sql query using table names defined in settings file
+	sprintf(SQL, "SELECT id, clanname, clantag FROM %s WHERE clanname LIKE CONCAT('%%',?,'%%') OR shortclanname LIKE CONCAT('%%',?,'%%') ORDER BY id ASC LIMIT 100", TABLENAME[CLANS_TABLE]);
+
+	// prepared statement wrapper object
+	MySQLQuery query(this->m_Connection, SQL);
+	
+	// prepared statement binding structures
+	MYSQL_BIND param[2], results[3];
+
+	// initialize (zero) bind structures
+	memset(param, 0, sizeof(param));
+	memset(results, 0, sizeof(results));
+
+	// query specific variables
+	uint id;
+	wchar_t clanname[WIC_CLANNAME_MAX_LENGTH];
+	wchar_t clantag[WIC_CLANTAG_MAX_LENGTH];
+	memset(clanname, 0, sizeof(clanname));
+	memset(clantag, 0, sizeof(clantag));
+
+	ulong clannameLength = ARRAYSIZE(clanname);
+	ulong clantagLength = ARRAYSIZE(clantag);
+
+	ulong nameLength = wcslen(name);
+
+	// bind parameters to prepared statement
+	query.Bind(&param[0], name, &nameLength);
+	query.Bind(&param[1], name, &nameLength);
+	
+	// bind results
+	query.Bind(&results[0], &id);
+	query.Bind(&results[1], clanname, &clannameLength);
+	query.Bind(&results[2], clantag, &clantagLength);
+
+	// execute prepared statement
+	if(!query.StmtExecute(param, results))
+	{
+		DatabaseLog("SearchClanName() failed:");
+	}
+	else
+	{
+		ulong count = (ulong)query.StmtNumRows();
+
+		*dstCount = 0;
+
+		if (count > 0)
+		{
+			int i = 0;
+
+			while(query.StmtFetch())
+			{
+				clans[i].m_ClanId = id;
+				wcsncpy(clans[i].m_FullName, clanname, WIC_CLANNAME_MAX_LENGTH);
+				wcsncpy(clans[i].m_ClanTag, clantag, WIC_CLANTAG_MAX_LENGTH);
+
+				i++;
+			}
+
+			*dstCount = count;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
 bool MySQLDatabase::QueryEditableVariables(const uint profileId, wchar_t *dstMotto, wchar_t *dstHomepage)
 {
 	// test the connection before proceeding, disconnects everyone on fail

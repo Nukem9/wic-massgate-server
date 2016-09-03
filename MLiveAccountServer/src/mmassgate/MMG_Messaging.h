@@ -34,6 +34,5 @@ public:
 	bool SendPingsPerSecond			(SvClient *aClient, MN_WriteMessage *aMessage);
 	bool SendStartupSequenceComplete(SvClient *aClient, MN_WriteMessage *aMessage);
 	bool SendOptionalContent		(SvClient *aClient, MN_WriteMessage *aMessage);
-	bool SendProfileIgnoreList		(SvClient *aClient, MN_WriteMessage *aMessage);
 	bool SendClanWarsFilterWeights	(SvClient *aClient, MN_WriteMessage *aMessage);
 };

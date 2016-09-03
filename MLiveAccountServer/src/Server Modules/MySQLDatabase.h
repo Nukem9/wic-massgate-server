@@ -191,6 +191,8 @@ public:
 	bool	RemoveIgnoredProfile	(const uint profileId, uint ignoredProfileId);
 	bool	QueryProfileName	(const uint profileId, MMG_Profile *profile);
 	bool	QueryProfileList	(const size_t Count, const uint *profileId, MMG_Profile *profiles);
+	bool	SearchProfileName			(const wchar_t* const name, uint *dstCount, uint *profileIds);
+	bool	SearchClanName				(const wchar_t* const name, uint *dstCount, MMG_Clan::Description *clans);
 	bool	QueryEditableVariables	(const uint profileId, wchar_t *dstMotto, wchar_t *dstHomepage);
 	bool	SaveEditableVariables	(const uint profileId, const wchar_t *motto, const wchar_t *homepage);
 	bool	QueryPendingMessages	(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages[]);

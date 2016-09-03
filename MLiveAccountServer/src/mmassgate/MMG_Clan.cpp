@@ -18,3 +18,10 @@ MMG_Clan::Description::Description()
 	memset(this->m_FullName, 0, sizeof(this->m_FullName));
 	memset(this->m_ClanTag, 0, sizeof(this->m_ClanTag));
 }
+
+void MMG_Clan::Description::ToStream(MN_WriteMessage *aMessage)
+{
+	aMessage->WriteString(this->m_FullName);
+	aMessage->WriteString(this->m_ClanTag);
+	aMessage->WriteUInt(this->m_ClanId);
+}
