@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "../stdafx.h"
 
 #define DatabaseLog(format, ...) DebugLog(L_INFO, "[Database]: "format, __VA_ARGS__)

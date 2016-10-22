@@ -1097,7 +1097,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_PROFILE_RESPONSE);
 			responseMessage.WriteUInt(resultCount);
 
-			for(int i = 0; i < resultCount; i++)
+			for(uint i = 0; i < resultCount; i++)
 				responseMessage.WriteUInt(profileIds[i]);
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_PROFILE_SEARCH_COMPLETE);
@@ -1135,7 +1135,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_CLAN_RESPONSE);
 			responseMessage.WriteUInt(resultCount);
 
-			for (int i = 0; i < resultCount; i++)
+			for (uint i = 0; i < resultCount; i++)
 			{
 				clans[i].ToStream(&responseMessage);
 
@@ -1218,7 +1218,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLIENT_RSP_GET_PCC);
 			responseMessage.WriteUInt(requestCount);// Number of responses
 
-			for (int i = 0; i < requestCount; i++)
+			for (uint i = 0; i < requestCount; i++)
 			{
 				uint requestId;
 				uchar requestType;
@@ -1419,8 +1419,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			MMG_ProfileEditableVariablesProtocol::GetRsp myResponse;
 
 #ifndef USING_MYSQL_DATABASE
-			wcscpy(myResponse.motto, L"");
-			wcscpy(myResponse.homepage, L"");
+			wcscpy_s(myResponse.motto, L"");
+			wcscpy_s(myResponse.homepage, L"");
 #else
 			MySQLDatabase::ourInstance->QueryEditableVariables(profileId, myResponse.motto, myResponse.homepage);
 #endif

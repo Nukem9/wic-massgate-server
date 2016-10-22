@@ -1,3 +1,4 @@
+#define _CRT_SECURE_NO_WARNINGS
 #include "../stdafx.h"
 
 void PasswordHash::get_random_bytes(char *dst, int count)
