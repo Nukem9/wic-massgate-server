@@ -134,7 +134,6 @@ public:
 	{
 		if (theNumBits == 1)
 		{
-		writeSingleBit:
 			T bitSetMask = 1 << TypeMask(this->m_Position);
 
 			if (theValue & 1)
@@ -169,7 +168,7 @@ public:
 				theValue >>= firstHalf;
 
 				if (theNumBits == 1)
-					goto writeSingleBit;
+					return this->WriteBits(theValue, 1);
 			}
 
 			this->m_DestBuffer[v8]	= (theValue << TypeMask(v5)) | this->m_DestBuffer[v8] & ~(((1 << theNumBits) - 1) << TypeMask(v5));
