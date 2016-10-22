@@ -40,7 +40,7 @@ MMG_Stats::PlayerStatsRsp::PlayerStatsRsp()
 	this->m_CurrentWinningStreak					= 0;
 	this->m_BestWinningStreak						= 0;
 	this->m_NumberOfMatchesWonByTotalDomination		= 0;
-	this->m_NumberOfPerfectDefensesInAssaultMatch	= 0;
+	this->m_NumberOfPerfectDefendsInAssaultMatch	= 0;
 	this->m_NumberOfPerfectPushesInTugOfWarMatch	= 0;
 	this->m_NumberOfUnitsKilled						= 0;
 	this->m_NumberOfUnitsLost						= 0;
@@ -90,7 +90,7 @@ void MMG_Stats::PlayerStatsRsp::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUInt(this->m_CurrentWinningStreak);
 	aMessage->WriteUInt(this->m_BestWinningStreak);
 	aMessage->WriteUInt(this->m_NumberOfMatchesWonByTotalDomination);
-	aMessage->WriteUInt(this->m_NumberOfPerfectDefensesInAssaultMatch);
+	aMessage->WriteUInt(this->m_NumberOfPerfectDefendsInAssaultMatch);
 	aMessage->WriteUInt(this->m_NumberOfPerfectPushesInTugOfWarMatch);
 	aMessage->WriteUInt(this->m_NumberOfUnitsKilled);
 	aMessage->WriteUInt(this->m_NumberOfUnitsLost);
@@ -98,6 +98,56 @@ void MMG_Stats::PlayerStatsRsp::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUInt(this->m_NumberOfTacticalAidPointsSpent);
 	aMessage->WriteUInt(this->m_NumberOfNukesDeployed);
 	aMessage->WriteUInt(this->m_NumberOfTacticalAidCriticalHits);
+}
+
+bool MMG_Stats::PlayerStatsRsp::FromStream(MN_ReadMessage *aMessage)
+{
+	return aMessage->ReadUInt(this->m_ProfileId)
+		&& aMessage->ReadUInt(this->m_LastMatchPlayed)
+		&& aMessage->ReadUInt(this->m_ScoreTotal)
+		&& aMessage->ReadUInt(this->m_ScoreAsInfantry)
+		&& aMessage->ReadUInt(this->m_HighScoreAsInfantry)
+		&& aMessage->ReadUInt(this->m_ScoreAsSupport)
+		&& aMessage->ReadUInt(this->m_HighScoreAsSupport)
+		&& aMessage->ReadUInt(this->m_ScoreAsArmor)
+		&& aMessage->ReadUInt(this->m_HighScoreAsArmor)
+		&& aMessage->ReadUInt(this->m_ScoreAsAir)
+		&& aMessage->ReadUInt(this->m_HighScoreAsAir)
+		&& aMessage->ReadUInt(this->m_ScoreByDamagingEnemies)
+		&& aMessage->ReadUInt(this->m_ScoreByUsingTacticalAid)
+		&& aMessage->ReadUInt(this->m_ScoreByCapturingCommandPoints)
+		&& aMessage->ReadUInt(this->m_ScoreByRepairing)
+		&& aMessage->ReadUInt(this->m_ScoreByFortifying)
+		&& aMessage->ReadUInt(this->m_HighestScore)
+		&& aMessage->ReadUInt(this->m_CurrentLadderPosition)
+		&& aMessage->ReadUInt(this->m_TimeTotalMatchLength)
+		&& aMessage->ReadUInt(this->m_TimePlayedAsUSA)
+		&& aMessage->ReadUInt(this->m_TimePlayedAsUSSR)
+		&& aMessage->ReadUInt(this->m_TimePlayedAsNATO)
+		&& aMessage->ReadUInt(this->m_TimePlayedAsInfantry)
+		&& aMessage->ReadUInt(this->m_TimePlayedAsSupport)
+		&& aMessage->ReadUInt(this->m_TimePlayedAsArmor)
+		&& aMessage->ReadUInt(this->m_TimePlayedAsAir)
+		&& aMessage->ReadUInt(this->m_NumberOfMatches)
+		&& aMessage->ReadUInt(this->m_NumberOfMatchesWon)
+		&& aMessage->ReadUInt(this->m_NumberOfMatchesLost)
+		&& aMessage->ReadUInt(this->m_NumberOfAssaultMatches)
+		&& aMessage->ReadUInt(this->m_NumberOfAssaultMatchesWon)
+		&& aMessage->ReadUInt(this->m_NumberOfDominationMatches)
+		&& aMessage->ReadUInt(this->m_NumberOfDominationMatchesWon)
+		&& aMessage->ReadUInt(this->m_NumberOfTugOfWarMatches)
+		&& aMessage->ReadUInt(this->m_NumberOfTugOfWarMatchesWon)
+		&& aMessage->ReadUInt(this->m_CurrentWinningStreak)
+		&& aMessage->ReadUInt(this->m_BestWinningStreak)
+		&& aMessage->ReadUInt(this->m_NumberOfMatchesWonByTotalDomination)
+		&& aMessage->ReadUInt(this->m_NumberOfPerfectDefendsInAssaultMatch)
+		&& aMessage->ReadUInt(this->m_NumberOfPerfectPushesInTugOfWarMatch)
+		&& aMessage->ReadUInt(this->m_NumberOfUnitsKilled)
+		&& aMessage->ReadUInt(this->m_NumberOfUnitsLost)
+		&& aMessage->ReadUInt(this->m_NumberOfReinforcementPointsSpent)
+		&& aMessage->ReadUInt(this->m_NumberOfTacticalAidPointsSpent)
+		&& aMessage->ReadUInt(this->m_NumberOfNukesDeployed)
+		&& aMessage->ReadUInt(this->m_NumberOfTacticalAidCriticalHits);
 }
 
 MMG_Stats::ClanStatsRsp::ClanStatsRsp()
@@ -184,6 +234,49 @@ void MMG_Stats::ClanStatsRsp::ToStream(MN_WriteMessage *aMessage)
 	aMessage->WriteUInt(this->m_HighScoreAsSupport);
 	aMessage->WriteUInt(this->m_HighScoreAsAir);
 	aMessage->WriteUInt(this->m_HighScoreAsArmor);
+}
+
+bool MMG_Stats::ClanStatsRsp::FromStream(MN_ReadMessage *aMessage)
+{
+	return aMessage->ReadUInt(this->m_ClanId)
+		&& aMessage->ReadUInt(this->m_LastMatchPlayed)
+		&& aMessage->ReadUInt(this->m_MatchesPlayed)
+		&& aMessage->ReadUInt(this->m_MatchesWon)
+		&& aMessage->ReadUInt(this->m_BestWinningStreak)
+		&& aMessage->ReadUInt(this->m_CurrentWinningStreak)
+		&& aMessage->ReadUInt(this->m_CurrentLadderPosition)
+		&& aMessage->ReadUInt(this->m_TournamentsPlayed)
+		&& aMessage->ReadUInt(this->m_TournamentsWon)
+		&& aMessage->ReadUInt(this->m_DominationMatchesPlayed)
+		&& aMessage->ReadUInt(this->m_DominationMatchesWon)
+		&& aMessage->ReadUInt(this->m_DominationMatchesWonByTotalDomination)
+		&& aMessage->ReadUInt(this->m_AssaultMatchesPlayed)
+		&& aMessage->ReadUInt(this->m_AssaultMatchesWon)
+		&& aMessage->ReadUInt(this->m_AssaultMatchesPerfectDefense)
+		&& aMessage->ReadUInt(this->m_TowMatchesPlayed)
+		&& aMessage->ReadUInt(this->m_TowMatchesMatchesWon)
+		&& aMessage->ReadUInt(this->m_TowMatchesMatchesPerfectPushes)
+		&& aMessage->ReadUInt(this->m_NumberOfUnitsKilled)
+		&& aMessage->ReadUInt(this->m_NumberOfUnitsLost)
+		&& aMessage->ReadUInt(this->m_NumberOfNukesDeployed)
+		&& aMessage->ReadUInt(this->m_NumberOfTACriticalHits)
+		&& aMessage->ReadUInt(this->m_TimeAsUSA)
+		&& aMessage->ReadUInt(this->m_TimeAsUSSR)
+		&& aMessage->ReadUInt(this->m_TimeAsNATO)
+		&& aMessage->ReadUInt(this->m_TotalScore)
+		&& aMessage->ReadUInt(this->m_HighestScoreInAMatch)
+		&& aMessage->ReadUInt(this->m_ScoreByDamagingEnemies)
+		&& aMessage->ReadUInt(this->m_ScoreByRepairing)
+		&& aMessage->ReadUInt(this->m_ScoreByTacticalAid)
+		&& aMessage->ReadUInt(this->m_ScoreByFortifying)
+		&& aMessage->ReadUInt(this->m_ScoreAsInfantry)
+		&& aMessage->ReadUInt(this->m_ScoreAsSupport)
+		&& aMessage->ReadUInt(this->m_ScoreAsAir)
+		&& aMessage->ReadUInt(this->m_ScoreAsArmor)
+		&& aMessage->ReadUInt(this->m_HighScoreAsInfantry)
+		&& aMessage->ReadUInt(this->m_HighScoreAsSupport)
+		&& aMessage->ReadUInt(this->m_HighScoreAsAir)
+		&& aMessage->ReadUInt(this->m_HighScoreAsArmor);
 }
 
 MMG_Stats::MMG_Stats()

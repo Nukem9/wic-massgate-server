@@ -3,7 +3,7 @@
 class MMG_Stats
 {
 public:
-	class PlayerStatsRsp
+	class PlayerStatsRsp : public MMG_IStreamable
 	{
 	public:
 		uint m_ProfileId;
@@ -44,7 +44,7 @@ public:
 		uint m_CurrentWinningStreak;
 		uint m_BestWinningStreak;
 		uint m_NumberOfMatchesWonByTotalDomination;
-		uint m_NumberOfPerfectDefensesInAssaultMatch;
+		uint m_NumberOfPerfectDefendsInAssaultMatch;
 		uint m_NumberOfPerfectPushesInTugOfWarMatch;
 		uint m_NumberOfUnitsKilled;
 		uint m_NumberOfUnitsLost;
@@ -52,15 +52,17 @@ public:
 		uint m_NumberOfTacticalAidPointsSpent;
 		uint m_NumberOfNukesDeployed;
 		uint m_NumberOfTacticalAidCriticalHits;
+
 	private:
 
 	public:
 		PlayerStatsRsp();
 
 		void ToStream	(MN_WriteMessage *aMessage);
+		bool FromStream	(MN_ReadMessage *aMessage);
 	};
 
-	class ClanStatsRsp
+	class ClanStatsRsp : public MMG_IStreamable
 	{
 	public:
 		uint m_ClanId;
@@ -102,12 +104,14 @@ public:
 		uint m_HighScoreAsSupport;
 		uint m_HighScoreAsAir;
 		uint m_HighScoreAsArmor;
+
 	private:
 
 	public:
 		ClanStatsRsp();
 
 		void ToStream	(MN_WriteMessage *aMessage);
+		bool FromStream	(MN_ReadMessage *aMessage);
 	};
 	
 private:
