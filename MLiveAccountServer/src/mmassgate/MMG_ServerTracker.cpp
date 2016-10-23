@@ -207,7 +207,7 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			responseMessage.WriteUInt(0);			//ladder total size
 			responseMessage.WriteUInt(0);			//ladder page size
 
-			for (int i = 0; i < foundItems; i++)
+			for (uint i = 0; i < foundItems; i++)
 				responseMessage.WriteUInt(myResponse.ladderItems[i].score);
 
 			//write case 2
@@ -216,7 +216,7 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 
 			responseMessage.WriteUInt(foundItems);	//ladder page size
 
-			for (int i = 0; i < foundItems; i++)
+			for (uint i = 0; i < foundItems; i++)
 				myResponse.ladderItems[i].profile.ToStream(&responseMessage);
 
 			//write case 3

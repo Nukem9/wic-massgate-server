@@ -433,10 +433,7 @@ bool MMG_TrackableServer::UpdateServer(MMG_TrackableServer::Server *aServer, MMG
 	// Compare connection cookies
 	if (aServer->m_Cookie.hash != aHeartbeat->m_Cookie.hash ||
 		aServer->m_Cookie.trackid != aHeartbeat->m_Cookie.trackid)
-	{
-		assert(false);
 		return false;
-	}
 
 	// Copy heartbeat variables over to the startup info structure
 	aServer->m_Info.m_CurrentMapHash	= aHeartbeat->m_CurrentMapHash;
