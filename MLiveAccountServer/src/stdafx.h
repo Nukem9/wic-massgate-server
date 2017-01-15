@@ -12,6 +12,7 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <set>
 #include <algorithm>
 
 #pragma comment(lib, "ws2_32.lib")

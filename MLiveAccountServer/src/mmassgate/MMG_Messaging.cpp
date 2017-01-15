@@ -716,7 +716,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			responseMessage.WriteUInt(memberCount);
 
-			for (int i = 0; i < memberCount; i++)
+			for (uint i = 0; i < memberCount; i++)
 				responseMessage.WriteUInt(clanFullInfo.m_ClanMembers[i]);
 
 			responseMessage.WriteUInt(clanFullInfo.m_ClanId);
@@ -880,7 +880,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_CLAN_GUESTBOOK_GET_REQ:");
 			
-			MN_WriteMessage	responseMessage(8192);
+			MN_WriteMessage	responseMessage(4096);
 
 			uint requestId, clanId;
 			if (!aMessage->ReadUInt(requestId) || !aMessage->ReadUInt(clanId))
@@ -891,26 +891,34 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			
 			MySQLDatabase::ourInstance->QueryClanGuestbook(clanId, &entryCount, &myResponse);
 
-			MMG_Profile poster[32];	// todo
-			MN_WriteMessage profileMsg(2048);
+			uint profileIds[32];
+			memset(profileIds, 0, sizeof(profileIds));
 
 			for (uint i = 0; i < entryCount; i++)
+				profileIds[i] = myResponse.m_Entries[i].m_ProfileId;
+
+			std::qsort(profileIds, 32, sizeof(uint), [](const void *a, const void *b) {
+				if (*(uint*)a < *(uint*)b) return -1;
+				if (*(uint*)a > *(uint*)b) return 1;
+				return 0;
+			});
+
+			std::set<uint> uniqueIds(profileIds, profileIds+32);
+			for (auto iter = uniqueIds.begin(); iter != uniqueIds.end(); ++iter)
 			{
-				MySQLDatabase::ourInstance->QueryProfileName(myResponse.m_Entries[i].m_ProfileId, &poster[i]);
+				if (*iter > 0 && *iter != aClient->GetProfile()->m_ProfileId)
+				{
+					MMG_Profile poster;
+					MySQLDatabase::ourInstance->QueryProfileName(*iter, &poster);
 
-				SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(poster[i].m_ProfileId);
+					SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(poster.m_ProfileId);
 
-				if (player)
-					poster[i].m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
+					if (player)
+						poster.m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
 
-				profileMsg.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
-				poster[i].ToStream(&profileMsg);
-			}
-
-			if (entryCount > 0)
-			{
-				if (!aClient->SendData(&profileMsg))
-					return false;
+					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+					poster.ToStream(&responseMessage);
+				}
 			}
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_GUESTBOOK_GET_RSP);
@@ -1065,6 +1073,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		}
 		break;
 
+#ifdef USING_MYSQL_DATABASE
+
 		case MMG_ProtocolDelimiters::MESSAGING_FIND_PROFILE_REQUEST:
 		{
 			DebugLog(L_INFO, "MESSAGING_FIND_PROFILE_REQUEST:");
@@ -1149,6 +1159,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 		}
 		break;
+
+#endif
 
 		case MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS:
 		{
@@ -1321,7 +1333,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_PROFILE_GUESTBOOK_GET_REQ:");
 			
-			MN_WriteMessage	responseMessage(8192);
+			MN_WriteMessage	responseMessage(4096);
 
 			uint requestId, profileId;
 			if (!aMessage->ReadUInt(requestId) || !aMessage->ReadUInt(profileId))
@@ -1332,26 +1344,34 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			
 			MySQLDatabase::ourInstance->QueryProfileGuestbook(profileId, &entryCount, &myResponse);
 
-			MMG_Profile poster[32];	// todo
-			MN_WriteMessage profileMsg(2048);
+			uint profileIds[32];
+			memset(profileIds, 0, sizeof(profileIds));
 
 			for (uint i = 0; i < entryCount; i++)
+				profileIds[i] = myResponse.m_Entries[i].m_ProfileId;
+
+			std::qsort(profileIds, 32, sizeof(uint), [](const void *a, const void *b) {
+				if (*(uint*)a < *(uint*)b) return -1;
+				if (*(uint*)a > *(uint*)b) return 1;
+				return 0;
+			});
+
+			std::set<uint> uniqueIds(profileIds, profileIds+32);
+			for (auto iter = uniqueIds.begin(); iter != uniqueIds.end(); ++iter)
 			{
-				MySQLDatabase::ourInstance->QueryProfileName(myResponse.m_Entries[i].m_ProfileId, &poster[i]);
+				if (*iter > 0 && *iter != aClient->GetProfile()->m_ProfileId)
+				{
+					MMG_Profile poster;
+					MySQLDatabase::ourInstance->QueryProfileName(*iter, &poster);
 
-				SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(poster[i].m_ProfileId);
+					SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(poster.m_ProfileId);
 
-				if (player)
-					poster[i].m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
+					if (player)
+						poster.m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
 
-				profileMsg.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
-				poster[i].ToStream(&profileMsg);
-			}
-
-			if (entryCount > 0)
-			{
-				if (!aClient->SendData(&profileMsg))
-					return false;
+					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+					poster.ToStream(&responseMessage);
+				}
 			}
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
