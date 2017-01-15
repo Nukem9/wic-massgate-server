@@ -616,7 +616,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				myProfile->ToStream(&cryptMessage);
 #else
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
-				MMG_Profile *myProfiles = NULL;
+				MMG_Profile myProfiles[5];
 
 				PasswordHash hasher(8, true);
 
@@ -673,7 +673,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 						MySQLDatabase::ourInstance->UpdateSequenceNumber(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber);
 					}
 
-					bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myAuthToken->m_AccountId, &myProfileCount, &myProfiles);
+					bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myAuthToken->m_AccountId, &myProfileCount, myProfiles);
 
 					if(RetrieveProfilesQueryOK)
 					{
@@ -699,12 +699,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				//write profile/s to stream
 				for(uint i=0; i < myProfileCount; i++)
-				{
 					myProfiles[i].ToStream(&cryptMessage);
-				}
-
-				delete [] myProfiles;
-				myProfiles = NULL;
 #endif
 			}
 			break;
@@ -717,7 +712,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_RETRIEVE_PROFILES_RSP;
 
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
-				MMG_Profile *myProfiles = NULL;
+				MMG_Profile myProfiles[5];
 
 				uchar isBanned = 0;
 				ulong myProfileCount = 0;
@@ -798,7 +793,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				
 				// retrieve and send profile list
-				bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myAuthToken->m_AccountId, &myProfileCount, &myProfiles);
+				bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myAuthToken->m_AccountId, &myProfileCount, myProfiles);
 
 				if (RetrieveProfilesQueryOK && mySuccessFlag)
 				{
@@ -820,12 +815,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				//write profile/s to stream
 				for(uint i=0; i < myProfileCount; i++)
-				{
 					myProfiles[i].ToStream(&cryptMessage);
-				}
-
-				delete [] myProfiles;
-				myProfiles = NULL;
 #endif
 			}
 			break;

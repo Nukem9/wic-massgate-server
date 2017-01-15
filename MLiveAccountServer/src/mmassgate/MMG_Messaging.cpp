@@ -216,15 +216,15 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			MN_WriteMessage	responseMessage(4096);
 
 			uint msgCount = 0;
-			MMG_InstantMessageListener::InstantMessage *myMsgs = NULL;
+			MMG_InstantMessageListener::InstantMessage myMsgs[20];
 
 #ifdef USING_MYSQL_DATABASE
-			MySQLDatabase::ourInstance->QueryPendingMessages(aClient->GetProfile()->m_ProfileId, &msgCount, &myMsgs);
+			MySQLDatabase::ourInstance->QueryPendingMessages(aClient->GetProfile()->m_ProfileId, &msgCount, myMsgs);
 #endif
 
 			// if there are messages, send them
 			// pending messages will be removed once they have been acknowledged.
-			if (myMsgs)
+			if (msgCount > 0)
 			{
 				for (uint i = 0; i < msgCount; i++)
 				{
@@ -244,9 +244,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 							break;
 					}
 				}
-			
-				delete [] myMsgs;
-				myMsgs = NULL;
 
 				if (responseMessage.GetDataLength() > 0 && !aClient->SendData(&responseMessage))
 					return false;
@@ -1479,9 +1476,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				//write uint (profile id)
 #else
 			uint ignoredCount = 0;
-			uint *myIgnoreList = NULL;
+			uint myIgnoreList[64];
 
-			bool QueryOK = MySQLDatabase::ourInstance->QueryIgnoredProfiles(aClient->GetProfile()->m_ProfileId, &ignoredCount, &myIgnoreList);
+			bool QueryOK = MySQLDatabase::ourInstance->QueryIgnoredProfiles(aClient->GetProfile()->m_ProfileId, &ignoredCount, myIgnoreList);
 
 			if (!QueryOK)
 				responseMessage.WriteUInt(0);
@@ -1492,9 +1489,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				for (uint i=0; i < ignoredCount; i++)
 					responseMessage.WriteUInt(myIgnoreList[i]);
 			}
-
-			delete [] myIgnoreList;
-			myIgnoreList = NULL;
 #endif
 			if (!aClient->SendData(&responseMessage))
 				return false;
@@ -1543,9 +1537,9 @@ bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 		//write uint (profile id)
 #else
 	uint friendCount = 0;
-	uint *myFriends = NULL;
+	uint myFriends[100];
 
-	bool QueryOK = MySQLDatabase::ourInstance->QueryFriends(aClient->GetProfile()->m_ProfileId, &friendCount, &myFriends);
+	bool QueryOK = MySQLDatabase::ourInstance->QueryFriends(aClient->GetProfile()->m_ProfileId, &friendCount, myFriends);
 
 	if (!QueryOK)
 		aMessage->WriteUInt(0);
@@ -1556,9 +1550,6 @@ bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
 		for (uint i=0; i < friendCount; i++)
 			aMessage->WriteUInt(myFriends[i]);
 	}
-
-	delete [] myFriends;
-	myFriends = NULL;
 #endif
 
 	return aClient->SendData(aMessage);

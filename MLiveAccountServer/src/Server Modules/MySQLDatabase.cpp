@@ -1451,7 +1451,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 	return true;
 }
 
-bool MySQLDatabase::RetrieveUserProfiles(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles[])
+bool MySQLDatabase::RetrieveUserProfiles(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -1498,60 +1498,34 @@ bool MySQLDatabase::RetrieveUserProfiles(const uint accountId, ulong *dstProfile
 	if(!query.StmtExecute(param, results))
 	{
 		DatabaseLog("RetrieveUserProfiles() failed: accountId(%u)", accountId);
-
-		MMG_Profile *tmp = new MMG_Profile[1];
-
-		tmp[0].m_ProfileId = 0;
-		wcsncpy(tmp[0].m_Name, L"", WIC_NAME_MAX_LENGTH);
-		tmp[0].m_Rank = 0;
-		tmp[0].m_ClanId = 0;
-		tmp[0].m_RankInClan = 0;
-		tmp[0].m_OnlineStatus = 0;
-
-		*profiles = tmp;
 		*dstProfileCount = 0;
 	}
 	else
 	{
 		ulong profileCount = (ulong)query.StmtNumRows();
 		DatabaseLog("accountid(%u): %u profiles found", accountId, profileCount);
+		*dstProfileCount = 0;
 
-		if (profileCount < 1)
+		if (profileCount > 0)
 		{
-			MMG_Profile *tmp = new MMG_Profile[1];
-
-			tmp[0].m_ProfileId = 0;
-			wcsncpy(tmp[0].m_Name, L"", WIC_NAME_MAX_LENGTH);
-			tmp[0].m_Rank = 0;
-			tmp[0].m_ClanId = 0;
-			tmp[0].m_RankInClan = 0;
-			tmp[0].m_OnlineStatus = 0;
-
-			*profiles = tmp;
-			*dstProfileCount = 0;
-		}
-		else
-		{
-			MMG_Profile *tmp = new MMG_Profile[profileCount];
 			int i = 0;
 
 			while(query.StmtFetch())
 			{
-				tmp[i].m_ProfileId = id;
-				wcsncpy(tmp[i].m_Name, name, WIC_NAME_MAX_LENGTH);
-				tmp[i].m_Rank = rank;
-				tmp[i].m_ClanId = clanid;
-				tmp[i].m_RankInClan = rankinclan;
-				tmp[i].m_OnlineStatus = 0;
+				profiles[i].m_ProfileId = id;
+				wcsncpy(profiles[i].m_Name, name, WIC_NAME_MAX_LENGTH);
+				profiles[i].m_Rank = rank;
+				profiles[i].m_ClanId = clanid;
+				profiles[i].m_RankInClan = rankinclan;
+				profiles[i].m_OnlineStatus = 0;
 
 				if (clanid > 0)
-					AppendClanTag(&tmp[i]);
+					AppendClanTag(&profiles[i]);
 
 				memset(name, 0, sizeof(name));
 				i++;
 			}
 
-			*profiles = tmp;
 			*dstProfileCount = profileCount;
 		}
 	}
@@ -1671,7 +1645,7 @@ bool MySQLDatabase::SaveUserOptions(const uint profileId, const uint options)
 	return true;
 }
 
-bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, uint *friendIds[])
+bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, uint *friendIds)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -1709,40 +1683,24 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 	if(!query.StmtExecute(param, result))
 	{
 		DatabaseLog("QueryFriends() failed: profileid(%u)", profileId);
-
-		uint *tmp = new uint[1];
-
-		tmp[0] = 0;
-
-		*friendIds = tmp;
 		*dstProfileCount = 0;
 	}
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
 		DatabaseLog("profile id(%u), %u friends found", profileId, count);
+		*dstProfileCount = 0;
 
-		if (count < 1)
+		if (count > 0)
 		{
-			uint *tmp = new uint[1];
-
-			tmp[0] = 0;
-
-			*friendIds = tmp;
-			*dstProfileCount = 0;
-		}
-		else
-		{
-			uint *tmp = new uint[count];
 			int i = 0;
 
 			while(query.StmtFetch())
 			{
-				tmp[i] = id;
+				friendIds[i] = id;
 				i++;
 			}
 
-			*friendIds = tmp;
 			*dstProfileCount = count;
 		}
 	}
@@ -1937,7 +1895,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 	return true;
 }
 
-bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileCount, uint *ignoredIds[])
+bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileCount, uint *ignoredIds)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -1975,40 +1933,24 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 	if(!query.StmtExecute(param, result))
 	{
 		DatabaseLog("QueryIgnoredProfiles() failed: profileid(%u)", profileId);
-
-		uint *tmp = new uint[1];
-
-		tmp[0] = 0;
-
-		*ignoredIds = tmp;
 		*dstProfileCount = 0;
 	}
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
 		DatabaseLog("profile id(%u), %u ignored profiles found", profileId, count);
+		*dstProfileCount = 0;
 
-		if (count < 1)
+		if (count > 0)
 		{
-			uint *tmp = new uint[1];
-
-			tmp[0] = 0;
-
-			*ignoredIds = tmp;
-			*dstProfileCount = 0;
-		}
-		else
-		{
-			uint *tmp = new uint[count];
 			int i = 0;
 
 			while(query.StmtFetch())
 			{
-				tmp[i] = id;
+				ignoredIds[i] = id;
 				i++;
 			}
 
-			*ignoredIds = tmp;
 			*dstProfileCount = count;
 		}
 	}
@@ -2499,7 +2441,7 @@ bool MySQLDatabase::SaveEditableVariables(const uint profileId, const wchar_t *m
 	return true;
 }
 
-bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages[])
+bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -2548,35 +2490,30 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 	if(!query.StmtExecute(param, results))
 	{
 		DatabaseLog("QueryPendingMessages() failed: profileid(%u)", profileId);
-
-		//messages = NULL;
 		*dstMessageCount = 0;
 	}
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
 		DatabaseLog("found %u pending messages for profile id(%u)", count, profileId);
-
 		*dstMessageCount = 0;
 
 		if (count > 0)
 		{
-			MMG_InstantMessageListener::InstantMessage *tmp = new MMG_InstantMessageListener::InstantMessage[count];
 			int i = 0;
 
 			while(query.StmtFetch())
 			{
-				tmp[i].m_MessageId = id;
-				tmp[i].m_WrittenAt = writtenat;
-				this->QueryProfileName(senderid, &tmp[i].m_SenderProfile);
-				tmp[i].m_RecipientProfile = recipientid;
-				wcsncpy(tmp[i].m_Message, message, WIC_INSTANTMSG_MAX_LENGTH);
+				messages[i].m_MessageId = id;
+				messages[i].m_WrittenAt = writtenat;
+				this->QueryProfileName(senderid, &messages[i].m_SenderProfile);
+				messages[i].m_RecipientProfile = recipientid;
+				wcsncpy(messages[i].m_Message, message, WIC_INSTANTMSG_MAX_LENGTH);
 
 				memset(message, 0, sizeof(message));
 				i++;
 			}
 
-			*messages = tmp;
 			*dstMessageCount = count;
 		}
 	}

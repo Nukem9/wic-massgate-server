@@ -177,16 +177,16 @@ public:
 	bool	CreateUserProfile	(const uint accountId, const wchar_t* name, const char* email);
 	bool	DeleteUserProfile	(const uint accountId, const uint profileId, const char* email);
 	bool	QueryUserProfile	(const uint accountId, const uint profileId, MMG_Profile *profile);
-	bool	RetrieveUserProfiles	(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles[]);
+	bool	RetrieveUserProfiles		(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles);
 
 	//messaging
 	bool	QueryUserOptions	(const uint profileId, uint *options);
 	bool	SaveUserOptions		(const uint profileId, const uint options);
-	bool	QueryFriends		(const uint profileId, uint *dstProfileCount, uint *friendIds[]);
+	bool	QueryFriends				(const uint profileId, uint *dstProfileCount, uint *friendIds);
 	bool	AddFriend			(const uint profileId, uint friendProfileId);
 	bool	RemoveFriend		(const uint profileId, uint friendProfileId);
 	bool	QueryAcquaintances	(const uint profileId, uint *dstProfileCount, uint *acquaintanceIds[]);
-	bool	QueryIgnoredProfiles	(const uint profileId, uint *dstProfileCount, uint *ignoredIds[]);
+	bool	QueryIgnoredProfiles		(const uint profileId, uint *dstProfileCount, uint *ignoredIds);
 	bool	AddIgnoredProfile		(const uint profileId, uint ignoredProfileId);
 	bool	RemoveIgnoredProfile	(const uint profileId, uint ignoredProfileId);
 	bool	QueryProfileName	(const uint profileId, MMG_Profile *profile);
@@ -195,7 +195,7 @@ public:
 	bool	SearchClanName				(const wchar_t* const name, uint *dstCount, MMG_Clan::Description *clans);
 	bool	QueryEditableVariables	(const uint profileId, wchar_t *dstMotto, wchar_t *dstHomepage);
 	bool	SaveEditableVariables	(const uint profileId, const wchar_t *motto, const wchar_t *homepage);
-	bool	QueryPendingMessages	(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages[]);
+	bool	QueryPendingMessages		(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages);
 	bool	AddInstantMessage		(const uint profileId, MMG_InstantMessageListener::InstantMessage *message);
 	bool	RemoveInstantMessage	(const uint profileId, const uint messageId);
 	bool	AddAbuseReport				(const uint profileId, const MMG_Profile senderProfile, const uint flaggedProfileId, const wchar_t *report);
