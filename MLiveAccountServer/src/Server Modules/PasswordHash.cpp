@@ -104,7 +104,7 @@ void PasswordHash::crypt_private(char *dst, wchar_t *password, char *setting)
 	if (strlen(salt) < 8)
 		return;
 
-	length = wcslen(password);
+	length = wcslen(password) << 1;
 
 	MD5_Init(&ctx);
 	MD5_Update(&ctx, salt, 8);
