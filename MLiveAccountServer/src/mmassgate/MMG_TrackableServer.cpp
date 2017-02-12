@@ -72,7 +72,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				if (!aMessage->ReadString(key, ARRAYSIZE(key)))
 					return false;
 
-				if (!aMessage->ReadString(value, ARRAYSIZE(key)))
+				if (!aMessage->ReadString(value, ARRAYSIZE(value)))
 					return false;
 
 				DebugLog(L_INFO, "Metric [%u]: %s -- %s", (uint)metricContext, key, value);
