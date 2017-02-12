@@ -1,5 +1,7 @@
 #include "../stdafx.h"
 
+#define XXTEA_ROUND (((z >> 5 ^ y << 2) + (y >> 3 ^ z << 4)) ^ ((z ^ *((T *)this->m_Keys + (e ^ (p & keyPartSize)))) + (sum ^ y)))
+
 MMG_BlockTEA::MMG_BlockTEA()
 {
 	this->m_Indentifier = CIPHER_BLOCKTEA;
@@ -52,11 +54,11 @@ void MMG_BlockTEA::Encrypter(T *aData, sizeptr_t aDataLength)
 			for (p = 0; p < aDataLength - 1; p++)
 			{
 				y = aData[p + 1]; 
-				z = aData[p] += (((z >> 5 ^ y << 2) + (y >> 3 ^ z << 4)) ^ ((z ^ *((T *)this->m_Keys + (e ^ (p & keyPartSize)))) + (sum ^ y)));
+				z = aData[p] += XXTEA_ROUND;
 			}
 
 			y = aData[0];
-			z = aData[aDataLength - 1] += (((z >> 5 ^ y << 2) + (y >> 3 ^ z << 4)) ^ ((z ^ *((T *)this->m_Keys + (e ^ (p & keyPartSize)))) + (sum ^ y)));
+			z = aData[aDataLength - 1] += XXTEA_ROUND;
 		}
 	}
 }
@@ -86,11 +88,11 @@ void MMG_BlockTEA::Decrypter(T *aData, sizeptr_t aDataLength)
 			for (p = aDataLength - 1; p > 0; p--)
 			{
 				z = aData[p - 1];
-				y = aData[p] -= (((z >> 5 ^ y << 2) + (y >> 3 ^ z << 4)) ^ ((z ^ *((T *)this->m_Keys + (e ^ (p & keyPartSize)))) + (sum ^ y)));
+				y = aData[p] -= XXTEA_ROUND;
 			}
 
 			z = aData[aDataLength - 1];
-			y = aData[0] -= (((z >> 5 ^ y << 2) + (y >> 3 ^ z << 4)) ^ ((z ^ *((T *)this->m_Keys + (e ^ (p & keyPartSize)))) + (sum ^ y)));
+			y = aData[0] -= XXTEA_ROUND;
 		} while ((sum -= delta) != 0);
 	}
 }
