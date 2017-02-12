@@ -54,11 +54,38 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		}
 		break;
 
+		case MMG_ProtocolDelimiters::MESSAGING_DS_SET_METRICS:
+		{
+			DebugLog(L_INFO, "MESSAGING_DS_SET_METRICS:");
+
+			uchar metricContext;
+			uint metricCount;
+
+			if (!aMessage->ReadUChar(metricContext) || !aMessage->ReadUInt(metricCount))
+				return false;
+
+			for (uint i = 0; i < metricCount; i++)
+			{
+				char key[256];
+				char value[256];
+
+				if (!aMessage->ReadString(key, ARRAYSIZE(key)))
+					return false;
+
+				if (!aMessage->ReadString(value, ARRAYSIZE(key)))
+					return false;
+
+				DebugLog(L_INFO, "Metric [%u]: %s -- %s", (uint)metricContext, key, value);
+			}
+		}
+		break;
+
 		case MMG_ProtocolDelimiters::MESSAGING_DS_INFORM_PLAYER_JOINED:
 		{
 			DebugLog(L_INFO, "MESSAGING_DS_INFORM_PLAYER_JOINED:");
 
-			uint profileId, antiSpoofToken;
+			uint profileId;
+			uint antiSpoofToken;
 
 			if (!aMessage->ReadUInt(profileId) || !aMessage->ReadUInt(antiSpoofToken))
 				return false;
@@ -100,8 +127,6 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		case MMG_ProtocolDelimiters::MESSAGING_DS_GET_BANNED_WORDS_REQ:
 		{
 			DebugLog(L_INFO, "MESSAGING_DS_GET_BANNED_WORDS_REQ:");
-
-			// See MMG_BannedWordsProtocol::GetRsp::FromStream
 		}
 		break;
 
@@ -154,6 +179,26 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			uint quizAnswer;
 			if (!aMessage->ReadUInt(quizAnswer))
 				return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_REPORT_PLAYER_STATS:
+		{
+			DebugLog(L_INFO, "SERVERTRACKER_SERVER_REPORT_PLAYER_STATS:");
+
+			uint statCount;
+			uint64 mapHash;
+
+			if (!aMessage->ReadUInt(statCount) || !aMessage->ReadUInt64(mapHash))
+				return false;
+
+			for (uint i = 0; i < statCount; i++)
+			{
+				MMG_Stats::PlayerMatchStats playerStats;
+
+				if (!playerStats.FromStream(aMessage))
+					return false;
+			}
 		}
 		break;
 
