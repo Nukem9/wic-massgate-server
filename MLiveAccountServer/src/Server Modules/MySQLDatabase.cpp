@@ -100,7 +100,7 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 	strncpy(this->pass,	settings[2], sizeof(this->pass));
 	strncpy(this->db,	settings[3], sizeof(this->db));
 
-	strncpy(this->TABLENAME[UTILS_TABLE],			strstr(settings[4], "=") + 1, sizeof(this->TABLENAME[UTILS_TABLE]));
+	strncpy(this->TABLENAME[SERVERKEYS_TABLE],		strstr(settings[4], "=") + 1, sizeof(this->TABLENAME[SERVERKEYS_TABLE]));
 	strncpy(this->TABLENAME[ACCOUNTS_TABLE],		strstr(settings[5], "=") + 1, sizeof(this->TABLENAME[ACCOUNTS_TABLE]));
 	strncpy(this->TABLENAME[CDKEYS_TABLE],			strstr(settings[6], "=") + 1, sizeof(this->TABLENAME[CDKEYS_TABLE]));
 	strncpy(this->TABLENAME[PROFILES_TABLE],		strstr(settings[7], "=") + 1, sizeof(this->TABLENAME[PROFILES_TABLE]));
@@ -196,14 +196,8 @@ bool MySQLDatabase::TestDatabase()
 
 	if (!error_flag)
 	{
-		char SQL[4096];
-		memset(SQL, 0, sizeof(SQL));
-
-		// build sql query using table names defined in settings file
-		sprintf(SQL, "SELECT poll FROM %s LIMIT 1", TABLENAME[UTILS_TABLE]);
-
 		// execute a standard query on the database
-		if (mysql_real_query(this->m_Connection, SQL, strlen(SQL)))
+		if (mysql_real_query(this->m_Connection, "SELECT 1", 8))
 			error_flag = true;
 
 		// must call mysql_store_result after calling mysql_real_query
@@ -4363,6 +4357,50 @@ bool MySQLDatabase::DeleteClanGuestbookEntry(const uint clanId, const uint messa
 
 	// commit the transaction
 	this->CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::VerifyServerKey(const uint sequenceNum, uint *dstId)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT id FROM %s WHERE sequencenum = ? LIMIT 1", TABLENAME[SERVERKEYS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], result[1];
+
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	uint id;
+
+	query.Bind(&param[0], &sequenceNum);
+	query.Bind(&result[0], &id);
+
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("VerifyServerKey() query failed:");
+		*dstId = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+			*dstId = 0;
+		else
+			*dstId = id;
+	}
+
+	if (!query.Success())
+		return false;
 
 	return true;
 }

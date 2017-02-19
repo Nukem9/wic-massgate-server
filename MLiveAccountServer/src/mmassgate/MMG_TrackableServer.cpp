@@ -398,6 +398,12 @@ bool MMG_TrackableServer::AuthServer(SvClient *aClient, uint aKeySequence, ushor
 		if (aKeySequence != 0)
 		{
 			// TODO: Query database
+			uint id = 0;
+			MySQLDatabase::ourInstance->VerifyServerKey(aKeySequence, &id);
+
+			if (id > 0)
+				masterEntry.m_KeyAuthenticated = true;
+
 			// TODO: Generate quiz answer
 			masterEntry.m_KeySequence	= aKeySequence;
 			masterEntry.m_QuizAnswer	= 0;
@@ -594,10 +600,10 @@ bool MMG_TrackableServer::FilterCheck(MMG_ServerFilter *filters, Server *aServer
 
 	if (filters->HasFlag(MOD_FLAG))
 	{
-		if (filters->noMod && (aServer->m_Info.m_ModId == 0))				// no mods
+		if (filters->noMod && (aServer->m_Info.m_ModId > 0))				// no mods
 			return false;
 
-		if (!filters->noMod && (aServer->m_Info.m_ModId > 0))				// only mods
+		if (!filters->noMod && (aServer->m_Info.m_ModId == 0))				// only mods
 			return false;
 	}
 

@@ -73,7 +73,7 @@ private:
 
 	enum
 	{
-		UTILS_TABLE,
+		SERVERKEYS_TABLE,
 		ACCOUNTS_TABLE,
 		CDKEYS_TABLE,
 		PROFILES_TABLE,
@@ -223,4 +223,7 @@ public:
 	bool	QueryClanGuestbook			(const uint clanId, uint *dstEntryCount, MMG_ClanGuestbookProtocol::GetRsp *guestbook);
 	bool	AddClanGuestbookEntry		(const uint clanId, const uint requestId, MMG_ClanGuestbookProtocol::GetRsp::GuestbookEntry *entry);
 	bool	DeleteClanGuestbookEntry	(const uint clanId, const uint messageId, const uchar deleteAllByProfile);
+
+	// MMG_TrackableServer
+	bool	VerifyServerKey				(const uint sequenceNum, uint *dstId);
 };
