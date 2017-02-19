@@ -908,13 +908,13 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	memset(SQL1, 0, sizeof(SQL1));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL1, "INSERT INTO %s (accountid, name, rank, clanid, rankinclan, isdeleted, commoptions, lastlogindate, motto, homepage) VALUES (?, ?, 0, 0, 0, 0, 992, 0, NULL, NULL)", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL1, "INSERT INTO %s (accountid, name, rank, clanid, rankinclan, isdeleted, commoptions, membersince, lastlogindate, motto, homepage, lastmatchplayed, scoretotal, scoreasinfantry, highscoreasinfantry, scoreassupport, highscoreassupport, scoreasarmor, highscoreasarmor, scoreasair, highscoreasair, scorebydamagingenemies, scorebyusingtacticalaid, scorebycapturingcommandpoints, scorebyrepairing, scorebyfortifying, scorelostbykillingfriendly, highestscore, timetotalmatchlength, timeplayedasusa, timeplayedasussr, timeplayedasnato, timeplayedasinfantry, timeplayedassupport, timeplayedasarmor, timeplayedasair, numberofmatcheswon, numberofmatcheslost, numberofassaultmatches, numberofassaultmatcheswon, numberofdominationmatches, numberofdominationmatcheswon, numberoftugofwarmatches, numberoftugofwarmatcheswon, currentwinningstreak, bestwinningstreak, numberofmatcheswonbytotaldomination, numberofperfectdefendsinassaultmatch, numberofperfectpushesintugofwarmatch, numberofunitskilled, numberofunitslost, numberofreinforcementpointsspent, numberoftacticalaidpointsspent, numberofnukesdeployed, numberoftacticalaidcriticalhits) VALUES (?, ?, 0, 0, 0, 0, 992, ?, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query1(this->m_Connection, SQL1);
 	
 	// prepared statement binding structures
-	MYSQL_BIND params1[2];
+	MYSQL_BIND params1[3];
 
 	// initialize (zero) bind structures
 	memset(params1, 0, sizeof(params1));
@@ -922,10 +922,13 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	// query specific variables
 	ulong nameLength = wcslen(name);
 	uint profile_insert_id;
+	time_t local_timestamp = time(NULL);
+	uint membersince = local_timestamp;
 
 	// bind parameters to prepared statement
 	query1.Bind(&params1[0], &accountId);
 	query1.Bind(&params1[1], name, &nameLength);
+	query1.Bind(&params1[2], &membersince);
 
 	// execute prepared statement
 	if (!query1.StmtExecute(params1))
@@ -4361,6 +4364,94 @@ bool MySQLDatabase::DeleteClanGuestbookEntry(const uint clanId, const uint messa
 	return true;
 }
 
+bool MySQLDatabase::QueryProfileStats(const uint profileId, MMG_Stats::PlayerStatsRsp *playerstats)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT lastmatchplayed, scoretotal, scoreasinfantry, highscoreasinfantry, scoreassupport, highscoreassupport, scoreasarmor, highscoreasarmor, scoreasair, highscoreasair, scorebydamagingenemies, scorebyusingtacticalaid, scorebycapturingcommandpoints, scorebyrepairing, scorebyfortifying, scorelostbykillingfriendly, highestscore, timetotalmatchlength, timeplayedasusa, timeplayedasussr, timeplayedasnato, timeplayedasinfantry, timeplayedassupport, timeplayedasarmor, timeplayedasair, numberofmatcheswon, numberofmatcheslost, numberofassaultmatches, numberofassaultmatcheswon, numberofdominationmatches, numberofdominationmatcheswon, numberoftugofwarmatches, numberoftugofwarmatcheswon, currentwinningstreak, bestwinningstreak, numberofmatcheswonbytotaldomination, numberofperfectdefendsinassaultmatch, numberofperfectpushesintugofwarmatch, numberofunitskilled, numberofunitslost, numberofreinforcementpointsspent, numberoftacticalaidpointsspent, numberofnukesdeployed, numberoftacticalaidcriticalhits FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], results[44];
+
+	memset(param, 0, sizeof(param));
+	memset(results, 0, sizeof(results));
+
+	uint scoreTotal=0, scoreLost=0;
+
+	query.Bind(&param[0], &profileId);
+
+	query.Bind(&results[0], &playerstats->m_LastMatchPlayed);
+	query.Bind(&results[1], &scoreTotal);
+	query.Bind(&results[2], &playerstats->m_ScoreAsInfantry);
+	query.Bind(&results[3], &playerstats->m_HighScoreAsInfantry);
+	query.Bind(&results[4], &playerstats->m_ScoreAsSupport);
+	query.Bind(&results[5], &playerstats->m_HighScoreAsSupport);
+	query.Bind(&results[6], &playerstats->m_ScoreAsArmor);
+	query.Bind(&results[7], &playerstats->m_HighScoreAsArmor);
+	query.Bind(&results[8], &playerstats->m_ScoreAsAir);
+	query.Bind(&results[9], &playerstats->m_HighScoreAsAir);
+	query.Bind(&results[10], &playerstats->m_ScoreByDamagingEnemies);
+	query.Bind(&results[11], &playerstats->m_ScoreByUsingTacticalAid);
+	query.Bind(&results[12], &playerstats->m_ScoreByCapturingCommandPoints);
+	query.Bind(&results[13], &playerstats->m_ScoreByRepairing);
+	query.Bind(&results[14], &playerstats->m_ScoreByFortifying);
+	query.Bind(&results[15], &scoreLost);
+	query.Bind(&results[16], &playerstats->m_HighestScore);
+	query.Bind(&results[17], &playerstats->m_TimeTotalMatchLength);
+	query.Bind(&results[18], &playerstats->m_TimePlayedAsUSA);
+	query.Bind(&results[19], &playerstats->m_TimePlayedAsUSSR);
+	query.Bind(&results[20], &playerstats->m_TimePlayedAsNATO);
+	query.Bind(&results[21], &playerstats->m_TimePlayedAsInfantry);
+	query.Bind(&results[22], &playerstats->m_TimePlayedAsSupport);
+	query.Bind(&results[23], &playerstats->m_TimePlayedAsArmor);
+	query.Bind(&results[24], &playerstats->m_TimePlayedAsAir);
+	query.Bind(&results[25], &playerstats->m_NumberOfMatchesWon);
+	query.Bind(&results[26], &playerstats->m_NumberOfMatchesLost);
+	query.Bind(&results[27], &playerstats->m_NumberOfAssaultMatches);
+	query.Bind(&results[28], &playerstats->m_NumberOfAssaultMatchesWon);
+	query.Bind(&results[29], &playerstats->m_NumberOfDominationMatches);
+	query.Bind(&results[30], &playerstats->m_NumberOfDominationMatchesWon);
+	query.Bind(&results[31], &playerstats->m_NumberOfTugOfWarMatches);
+	query.Bind(&results[32], &playerstats->m_NumberOfTugOfWarMatchesWon);
+	query.Bind(&results[33], &playerstats->m_CurrentWinningStreak);
+	query.Bind(&results[34], &playerstats->m_BestWinningStreak);
+	query.Bind(&results[35], &playerstats->m_NumberOfMatchesWonByTotalDomination);
+	query.Bind(&results[36], &playerstats->m_NumberOfPerfectDefendsInAssaultMatch);
+	query.Bind(&results[37], &playerstats->m_NumberOfPerfectPushesInTugOfWarMatch);
+	query.Bind(&results[38], &playerstats->m_NumberOfUnitsKilled);
+	query.Bind(&results[39], &playerstats->m_NumberOfUnitsLost);
+	query.Bind(&results[40], &playerstats->m_NumberOfReinforcementPointsSpent);
+	query.Bind(&results[41], &playerstats->m_NumberOfTacticalAidPointsSpent);
+	query.Bind(&results[42], &playerstats->m_NumberOfNukesDeployed);
+	query.Bind(&results[43], &playerstats->m_NumberOfTacticalAidCriticalHits);
+
+	if(!query.StmtExecute(param, results))
+	{
+		DatabaseLog("QueryProfileStats() query failed:");
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			DatabaseLog("stats not found");
+		}
+		else
+		{
+			//DatabaseLog("stats found");
+
+			playerstats->m_ProfileId = profileId;
+			playerstats->m_ScoreTotal = scoreTotal - scoreLost;
+			playerstats->m_NumberOfMatches = playerstats->m_NumberOfMatchesWon + playerstats->m_NumberOfMatchesLost;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
 bool MySQLDatabase::VerifyServerKey(const uint sequenceNum, uint *dstId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
@@ -4401,6 +4492,233 @@ bool MySQLDatabase::VerifyServerKey(const uint sequenceNum, uint *dstId)
 
 	if (!query.Success())
 		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats)
+{
+	// test the connection before proceeding, disconnects everyone on fail
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "UPDATE %s SET "
+				 "lastmatchplayed = ?, "
+				 "scoretotal = scoretotal + ?, "
+				 "scoreasinfantry = scoreasinfantry + ?, "
+				 "highscoreasinfantry = IF ( ? > highscoreasinfantry, ?, highscoreasinfantry ), "
+				 "scoreassupport = scoreassupport + ?, "
+				 "highscoreassupport = IF ( ? > highscoreassupport, ?, highscoreassupport ), "
+				 "scoreasarmor = scoreasarmor + ?, "
+				 "highscoreasarmor = IF ( ? > highscoreasarmor, ?, highscoreasarmor ), "
+				 "scoreasair = scoreasair + ?, "
+				 "highscoreasair = IF ( ? > highscoreasair, ?, highscoreasair ), "
+				 "scorebydamagingenemies = scorebydamagingenemies + ?, "
+				 "scorebyusingtacticalaid = scorebyusingtacticalaid + ?, "
+				 "scorebycapturingcommandpoints = scorebycapturingcommandpoints + ?, "
+				 "scorebyrepairing = scorebyrepairing + ?, "
+				 "scorebyfortifying = scorebyfortifying + ?, "
+				 "scorelostbykillingfriendly = scorelostbykillingfriendly + ?, "
+				 "highestscore = IF ( ? > highestscore, ?, highestscore ), "
+				 "timetotalmatchlength = timetotalmatchlength + ?, "
+				 "timeplayedasusa = timeplayedasusa + ?, "
+				 "timeplayedasussr = timeplayedasussr + ?, "
+				 "timeplayedasnato = timeplayedasnato + ?, "
+				 "timeplayedasinfantry = timeplayedasinfantry + ?, "
+				 "timeplayedassupport = timeplayedassupport + ?, "
+				 "timeplayedasarmor = timeplayedasarmor + ?, "
+				 "timeplayedasair = timeplayedasair + ?, "
+				 "numberofmatcheswon = numberofmatcheswon + ?, "
+				 "numberofmatcheslost = numberofmatcheslost + ?, "
+				 "numberofassaultmatches = IF ( ? = 1, numberofassaultmatches + 1, numberofassaultmatches ), "
+				 "numberofassaultmatcheswon = IF ( ? = 1 AND ? > 0, numberofassaultmatcheswon + 1, numberofassaultmatcheswon), "
+				 "numberofdominationmatches = IF ( ? = 0, numberofdominationmatches + 1, numberofdominationmatches ), "
+				 "numberofdominationmatcheswon = IF ( ? = 0 AND ? > 0, numberofdominationmatcheswon + 1, numberofdominationmatcheswon), "
+				 "numberoftugofwarmatches = IF ( ? = 2, numberoftugofwarmatches + 1, numberoftugofwarmatches ), "
+				 "numberoftugofwarmatcheswon = IF ( ? = 2 AND ? > 0, numberoftugofwarmatcheswon + 1, numberoftugofwarmatcheswon), "
+				 "currentwinningstreak = IF ( ? > 0, currentwinningstreak + 1, 0 ), "
+				 "bestwinningstreak = IF ( currentwinningstreak > bestwinningstreak, currentwinningstreak, bestwinningstreak ), "
+				 "numberofmatcheswonbytotaldomination = IF ( ? = 0 AND ? > 0, numberofmatcheswonbytotaldomination + 1, numberofmatcheswonbytotaldomination), "
+				 "numberofperfectdefendsinassaultmatch = IF ( ? = 1 AND ? > 0, numberofperfectdefendsinassaultmatch + 1, numberofperfectdefendsinassaultmatch), "
+				 "numberofperfectpushesintugofwarmatch = IF ( ? = 2 AND ? > 0, numberofperfectpushesintugofwarmatch + 1, numberofperfectpushesintugofwarmatch), "
+				 "numberofunitskilled = numberofunitskilled + ?, "
+				 "numberofunitslost = numberofunitslost + ?, "
+				 "numberofreinforcementpointsspent = numberofreinforcementpointsspent + ?, "
+				 "numberoftacticalaidpointsspent = numberoftacticalaidpointsspent + ?, "
+				 "numberofnukesdeployed = numberofnukesdeployed + ?, "
+				 "numberoftacticalaidcriticalhits = numberoftacticalaidcriticalhits + ? "
+				 "WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+
+	MYSQL_BIND params[55];
+	memset(params, 0, sizeof(params));
+
+	uint i = 0;
+
+	// NOTE: saving buffer_type short to column type INT
+
+	// lastmatchplayed
+	query.Bind(&params[i++], &datematchplayed);
+
+	// scoretotal
+	query.Bind(&params[i++], &playerstats->m_ScoreTotal);
+
+	// scoreasinfantry
+	query.Bind(&params[i++], &playerstats->m_ScoreAsInfantry);
+
+	// highscoreasinfantry
+	query.Bind(&params[i++], &playerstats->m_ScoreAsInfantry);
+	query.Bind(&params[i++], &playerstats->m_ScoreAsInfantry);
+
+	// scoreassupport
+	query.Bind(&params[i++], &playerstats->m_ScoreAsSupport);
+
+	// highscoreassupport
+	query.Bind(&params[i++], &playerstats->m_ScoreAsSupport);
+	query.Bind(&params[i++], &playerstats->m_ScoreAsSupport);
+
+	// scoreasarmor
+	query.Bind(&params[i++], &playerstats->m_ScoreAsArmor);
+
+	// highscoreasarmor
+	query.Bind(&params[i++], &playerstats->m_ScoreAsArmor);
+	query.Bind(&params[i++], &playerstats->m_ScoreAsArmor);
+
+	// scoreasair
+	query.Bind(&params[i++], &playerstats->m_ScoreAsAir);
+
+	// highscoreasair
+	query.Bind(&params[i++], &playerstats->m_ScoreAsAir);
+	query.Bind(&params[i++], &playerstats->m_ScoreAsAir);
+
+	// scorebydamagingenemies
+	query.Bind(&params[i++], &playerstats->m_ScoreByDamagingEnemies);
+
+	// scorebyusingtacticalaid
+	query.Bind(&params[i++], &playerstats->m_ScoreByUsingTacticalAids);
+
+	// scorebycapturingcommandpoints
+	query.Bind(&params[i++], &playerstats->m_ScoreByCommandPointCaptures);
+
+	// scorebyrepairing
+	query.Bind(&params[i++], &playerstats->m_ScoreByRepairing);
+
+	// scorebyfortifying
+	query.Bind(&params[i++], &playerstats->m_ScoreByFortifying);
+
+	// scorelostbykillingfriendly
+	query.Bind(&params[i++], &playerstats->m_ScoreLostByKillingFriendly);
+
+	// highestscore
+	query.Bind(&params[i++], &playerstats->m_ScoreTotal);
+	query.Bind(&params[i++], &playerstats->m_ScoreTotal);
+
+	// timetotalmatchlength
+	query.Bind(&params[i++], &playerstats->m_TimeTotalMatchLength);
+
+	// timeplayedasusa
+	query.Bind(&params[i++], &playerstats->m_TimePlayedAsUSA);
+
+	// timeplayedasussr
+	query.Bind(&params[i++], &playerstats->m_TimePlayedAsUSSR);
+
+	// timeplayedasnato
+	query.Bind(&params[i++], &playerstats->m_TimePlayedAsNATO);
+
+	// timeplayedasinfantry
+	query.Bind(&params[i++], &playerstats->m_TimePlayedAsInfantry);
+
+	// timeplayedassupport
+	query.Bind(&params[i++], &playerstats->m_TimePlayedAsSupport);
+
+	// timeplayedasarmor
+	query.Bind(&params[i++], &playerstats->m_TimePlayedAsArmor);
+
+	// timeplayedasair
+	query.Bind(&params[i++], &playerstats->m_TimePlayedAsAir);
+
+	// numberofmatcheswon
+	query.Bind(&params[i++], &playerstats->m_MatchWon);
+
+	// numberofmatcheslost
+	query.Bind(&params[i++], &playerstats->m_MatchLost);
+
+	// numberofassaultmatches
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+
+	// numberofassaultmatcheswon
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWon);
+
+	// numberofdominationmatches
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+
+	// numberofdominationmatcheswon
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWon);
+
+	// numberoftugofwarmatches
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+
+	// numberoftugofwarmatcheswon
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWon);
+
+	// currentwinningstreak
+	query.Bind(&params[i++], &playerstats->m_MatchWon);
+
+	// numberofmatcheswonbytotaldomination
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWasFlawlessVictory);
+
+	// numberofperfectdefendsinassaultmatch
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWasFlawlessVictory);
+
+	// numberofperfectpushesintugofwarmatch
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWasFlawlessVictory);
+
+	// numberofunitskilled
+	query.Bind(&params[i++], &playerstats->m_NumberOfUnitsKilled);
+
+	// numberofunitslost
+	query.Bind(&params[i++], &playerstats->m_NumberOfUnitsLost);
+
+	// numberofreinforcementpointsspent
+	query.Bind(&params[i++], &playerstats->m_NumberOfReinforcementPointsSpent);
+
+	// numberoftacticalaidpointsspent
+	query.Bind(&params[i++], &playerstats->m_NumberOfTacticalAidPointsSpent);
+
+	// numberofnukesdeployed
+	query.Bind(&params[i++], &playerstats->m_NumberOfNukesDeployed);
+
+	// numberoftacticalaidcriticalhits
+	query.Bind(&params[i++], &playerstats->m_NumberOfTacticalAidCriticalHits);
+
+	// id = profileId
+	query.Bind(&params[i++], &playerstats->m_ProfileId);
+
+	if (!query.StmtExecute(params))
+		DatabaseLog("SavePlayerMatchStats() query failed:");
+
+	if (!query.Success())
+	{
+		RollbackTransaction();
+		return false;
+	}
+
+	CommitTransaction();
 
 	return true;
 }

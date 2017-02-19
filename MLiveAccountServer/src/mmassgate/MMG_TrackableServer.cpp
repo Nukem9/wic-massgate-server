@@ -188,6 +188,8 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 			uint statCount;
 			uint64 mapHash;
+			time_t local_timestamp = time(NULL);
+			uint datematchplayed = local_timestamp;
 
 			if (!aMessage->ReadUInt(statCount) || !aMessage->ReadUInt64(mapHash))
 				return false;
@@ -198,6 +200,8 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				if (!playerStats.FromStream(aMessage))
 					return false;
+
+				MySQLDatabase::ourInstance->SavePlayerMatchStats(datematchplayed, &playerStats);
 			}
 		}
 		break;

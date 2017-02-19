@@ -237,7 +237,8 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 				return false;
 			
 			MMG_Stats::PlayerStatsRsp playerStats;
-			playerStats.m_ProfileId = profileId;
+			MySQLDatabase::ourInstance->QueryProfileStats(profileId, &playerStats);
+			// TODO: playerStats.m_CurrentLadderPosition
 
 			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_STATS_RSP:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_STATS_RSP);

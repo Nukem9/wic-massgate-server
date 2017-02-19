@@ -162,24 +162,22 @@ public:
 	void	Unload				();
 	bool	HasConnection		();
 	
-	//accounts
+	// MMG_AccountProtocol
 	bool	CheckIfEmailExists	(const char *email, uint *dstId);
 	bool	CheckIfCDKeyExists	(const ulong cipherKeys[], uint *dstId);
 	bool	CreateUserAccount	(const char *email, const char *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[]);
 	bool	AuthUserAccount		(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
 
-	//get missing data for accounts/cdkeys
 	bool	UpdateSequenceNumber	(const uint accountId, const uint sequenceNum);
 	bool	UpdateCipherKeys		(const uint accountId, const ulong cipherKeys[]);
-	
-	//profiles (logins)
+
 	bool	CheckIfProfileExists	(const wchar_t* name, uint *dstId);
 	bool	CreateUserProfile	(const uint accountId, const wchar_t* name, const char* email);
 	bool	DeleteUserProfile	(const uint accountId, const uint profileId, const char* email);
 	bool	QueryUserProfile	(const uint accountId, const uint profileId, MMG_Profile *profile);
 	bool	RetrieveUserProfiles		(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles);
 
-	//messaging
+	// MMG_Messaging
 	bool	QueryUserOptions	(const uint profileId, uint *options);
 	bool	SaveUserOptions		(const uint profileId, const uint options);
 	bool	QueryFriends				(const uint profileId, uint *dstProfileCount, uint *friendIds);
@@ -204,7 +202,7 @@ public:
 	bool	AddProfileGuestbookEntry	(const uint profileId, const uint requestId, MMG_ProfileGuestBookProtocol::GetRsp::GuestbookEntry *entry);
 	bool	DeleteProfileGuestbookEntry	(const uint profileId, const uint messageId, const uchar deleteAllByProfile);
 
-	//clans & clan related
+	// MMG_Messaging: clans & clan related
 	bool	CheckIfClanNameExists		(const wchar_t* clanname, uint *dstId);
 	bool	CheckIfClanTagExists		(const wchar_t* clantag, uint *dstId);
 	bool	CreateClan					(const uint profileId, const wchar_t* clanname, const wchar_t* clantag, const char* displayTag, uint *dstId);
@@ -224,6 +222,10 @@ public:
 	bool	AddClanGuestbookEntry		(const uint clanId, const uint requestId, MMG_ClanGuestbookProtocol::GetRsp::GuestbookEntry *entry);
 	bool	DeleteClanGuestbookEntry	(const uint clanId, const uint messageId, const uchar deleteAllByProfile);
 
+	// MMG_ServerTracker
+	bool	QueryProfileStats			(const uint profileId, MMG_Stats::PlayerStatsRsp *playerstats);
+
 	// MMG_TrackableServer
 	bool	VerifyServerKey				(const uint sequenceNum, uint *dstId);
+	bool	SavePlayerMatchStats		(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats);
 };
