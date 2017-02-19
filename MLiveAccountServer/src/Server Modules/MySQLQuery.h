@@ -50,6 +50,7 @@ public:
 		param->buffer_type = MYSQL_TYPE_TINY;
 		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
+		param->is_unsigned = (my_bool)1;
 		param->length = 0;
 	}
 
@@ -59,6 +60,7 @@ public:
 		param->buffer_type = MYSQL_TYPE_SHORT;
 		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
+		param->is_unsigned = (my_bool)1;
 		param->length = 0;
 	}
 
@@ -68,6 +70,7 @@ public:
 		param->buffer_type = MYSQL_TYPE_LONG;
 		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
+		param->is_unsigned = (my_bool)0;
 		param->length = 0;
 	}
 
@@ -77,6 +80,7 @@ public:
 		param->buffer_type = MYSQL_TYPE_LONG;
 		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
+		param->is_unsigned = (my_bool)1;
 		param->length = 0;
 	}
 
@@ -86,6 +90,7 @@ public:
 		param->buffer_type = MYSQL_TYPE_LONG;
 		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
+		//param->is_unsigned = (my_bool)1;
 		param->length = 0;
 	}
 
@@ -95,6 +100,7 @@ public:
 		param->buffer_type = MYSQL_TYPE_LONGLONG;
 		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
+		param->is_unsigned = (my_bool)0;
 		param->length = 0;
 	}
 
@@ -104,6 +110,7 @@ public:
 		param->buffer_type = MYSQL_TYPE_LONGLONG;
 		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
+		param->is_unsigned = (my_bool)1;
 		param->length = 0;
 	}
 
@@ -132,7 +139,7 @@ public:
 		param->buffer = (void *)Value;
 		param->buffer_length = *Length;
 		param->is_null = (my_bool *)0;
-		param->length = &param->buffer_length;		// param->length = Length;
+		param->length = &param->buffer_length;
 	}
 
 	//VARCHAR (unicode)
@@ -140,9 +147,9 @@ public:
 	{
 		param->buffer_type = MYSQL_TYPE_VAR_STRING;
 		param->buffer = (void *)Value;
-		param->buffer_length = (*Length) << 1;		// multiply by 2, to save widechar properly.
+		param->buffer_length = (*Length) << 1;		// multiply by 2, to handle widechar properly.
 		param->is_null = (my_bool *)0;
-		param->length = &param->buffer_length;		// param->length = Length;
+		param->length = &param->buffer_length;
 	}
 
 	//TIME - MYSQL_TYPE_TIME
