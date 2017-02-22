@@ -908,7 +908,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	memset(SQL1, 0, sizeof(SQL1));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL1, "INSERT INTO %s (accountid, name, rank, clanid, rankinclan, isdeleted, commoptions, membersince, lastlogindate, motto, homepage, lastmatchplayed, scoretotal, scoreasinfantry, highscoreasinfantry, scoreassupport, highscoreassupport, scoreasarmor, highscoreasarmor, scoreasair, highscoreasair, scorebydamagingenemies, scorebyusingtacticalaid, scorebycapturingcommandpoints, scorebyrepairing, scorebyfortifying, scorelostbykillingfriendly, highestscore, timetotalmatchlength, timeplayedasusa, timeplayedasussr, timeplayedasnato, timeplayedasinfantry, timeplayedassupport, timeplayedasarmor, timeplayedasair, numberofmatcheswon, numberofmatcheslost, numberofassaultmatches, numberofassaultmatcheswon, numberofdominationmatches, numberofdominationmatcheswon, numberoftugofwarmatches, numberoftugofwarmatcheswon, currentwinningstreak, bestwinningstreak, numberofmatcheswonbytotaldomination, numberofperfectdefendsinassaultmatch, numberofperfectpushesintugofwarmatch, numberofunitskilled, numberofunitslost, numberofreinforcementpointsspent, numberoftacticalaidpointsspent, numberofnukesdeployed, numberoftacticalaidcriticalhits) VALUES (?, ?, 0, 0, 0, 0, 992, ?, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL1, "INSERT INTO %s (accountid, name, rank, clanid, rankinclan, isdeleted, commoptions, membersince, lastlogindate, motto, homepage, lastmatchplayed, scoretotal, scoreasinfantry, highscoreasinfantry, scoreassupport, highscoreassupport, scoreasarmor, highscoreasarmor, scoreasair, highscoreasair, scorebydamagingenemies, scorebyusingtacticalaid, scorebycapturingcommandpoints, scorebyrepairing, scorebyfortifying, scorelostbykillingfriendly, highestscore, timetotalmatchlength, timeplayedasusa, timeplayedasussr, timeplayedasnato, timeplayedasinfantry, timeplayedassupport, timeplayedasarmor, timeplayedasair, numberofmatches, numberofmatcheswon, numberofmatcheslost, numberofassaultmatches, numberofassaultmatcheswon, currentassaultwinstreak, numberofdominationmatches, numberofdominationmatcheswon, currentdominationwinstreak, numberoftugofwarmatches, numberoftugofwarmatcheswon, currenttugofwarwinstreak, currentwinningstreak, bestwinningstreak, numberofmatcheswonbytotaldomination, currentdominationperfectstreak, numberofperfectdefendsinassaultmatch, currentassaultperfectstreak, numberofperfectpushesintugofwarmatch, currenttugofwarperfectstreak, numberofunitskilled, numberofunitslost, numberofcommandpointcaptures, numberofreinforcementpointsspent, numberoftacticalaidpointsspent, numberofnukesdeployed, currentnukesdeployedstreak, numberoftacticalaidcriticalhits, numberoftimesbestplayer, currentbestplayerstreak, numberoftimesbestinfantry, currentbestinfantrystreak, numberoftimesbestsupport, currentbestsupportstreak, numberoftimesbestair, currentbestairstreak, numberoftimesbestarmor, currentbestarmorstreak) VALUES (?, ?, 0, 0, 0, 0, 992, ?, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query1(this->m_Connection, SQL1);
@@ -4369,10 +4369,10 @@ bool MySQLDatabase::QueryProfileStats(const uint profileId, MMG_Stats::PlayerSta
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	sprintf(SQL, "SELECT lastmatchplayed, scoretotal, scoreasinfantry, highscoreasinfantry, scoreassupport, highscoreassupport, scoreasarmor, highscoreasarmor, scoreasair, highscoreasair, scorebydamagingenemies, scorebyusingtacticalaid, scorebycapturingcommandpoints, scorebyrepairing, scorebyfortifying, scorelostbykillingfriendly, highestscore, timetotalmatchlength, timeplayedasusa, timeplayedasussr, timeplayedasnato, timeplayedasinfantry, timeplayedassupport, timeplayedasarmor, timeplayedasair, numberofmatcheswon, numberofmatcheslost, numberofassaultmatches, numberofassaultmatcheswon, numberofdominationmatches, numberofdominationmatcheswon, numberoftugofwarmatches, numberoftugofwarmatcheswon, currentwinningstreak, bestwinningstreak, numberofmatcheswonbytotaldomination, numberofperfectdefendsinassaultmatch, numberofperfectpushesintugofwarmatch, numberofunitskilled, numberofunitslost, numberofreinforcementpointsspent, numberoftacticalaidpointsspent, numberofnukesdeployed, numberoftacticalaidcriticalhits FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "SELECT lastmatchplayed, scoretotal, scoreasinfantry, highscoreasinfantry, scoreassupport, highscoreassupport, scoreasarmor, highscoreasarmor, scoreasair, highscoreasair, scorebydamagingenemies, scorebyusingtacticalaid, scorebycapturingcommandpoints, scorebyrepairing, scorebyfortifying, scorelostbykillingfriendly, highestscore, timetotalmatchlength, timeplayedasusa, timeplayedasussr, timeplayedasnato, timeplayedasinfantry, timeplayedassupport, timeplayedasarmor, timeplayedasair, numberofmatches, numberofmatcheswon, numberofmatcheslost, numberofassaultmatches, numberofassaultmatcheswon, numberofdominationmatches, numberofdominationmatcheswon, numberoftugofwarmatches, numberoftugofwarmatcheswon, currentwinningstreak, bestwinningstreak, numberofmatcheswonbytotaldomination, numberofperfectdefendsinassaultmatch, numberofperfectpushesintugofwarmatch, numberofunitskilled, numberofunitslost, numberofreinforcementpointsspent, numberoftacticalaidpointsspent, numberofnukesdeployed, numberoftacticalaidcriticalhits FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
-	MYSQL_BIND param[1], results[44];
+	MYSQL_BIND param[1], results[45];
 
 	memset(param, 0, sizeof(param));
 	memset(results, 0, sizeof(results));
@@ -4406,25 +4406,26 @@ bool MySQLDatabase::QueryProfileStats(const uint profileId, MMG_Stats::PlayerSta
 	query.Bind(&results[22], &playerstats->m_TimePlayedAsSupport);
 	query.Bind(&results[23], &playerstats->m_TimePlayedAsArmor);
 	query.Bind(&results[24], &playerstats->m_TimePlayedAsAir);
-	query.Bind(&results[25], &playerstats->m_NumberOfMatchesWon);
-	query.Bind(&results[26], &playerstats->m_NumberOfMatchesLost);
-	query.Bind(&results[27], &playerstats->m_NumberOfAssaultMatches);
-	query.Bind(&results[28], &playerstats->m_NumberOfAssaultMatchesWon);
-	query.Bind(&results[29], &playerstats->m_NumberOfDominationMatches);
-	query.Bind(&results[30], &playerstats->m_NumberOfDominationMatchesWon);
-	query.Bind(&results[31], &playerstats->m_NumberOfTugOfWarMatches);
-	query.Bind(&results[32], &playerstats->m_NumberOfTugOfWarMatchesWon);
-	query.Bind(&results[33], &playerstats->m_CurrentWinningStreak);
-	query.Bind(&results[34], &playerstats->m_BestWinningStreak);
-	query.Bind(&results[35], &playerstats->m_NumberOfMatchesWonByTotalDomination);
-	query.Bind(&results[36], &playerstats->m_NumberOfPerfectDefendsInAssaultMatch);
-	query.Bind(&results[37], &playerstats->m_NumberOfPerfectPushesInTugOfWarMatch);
-	query.Bind(&results[38], &playerstats->m_NumberOfUnitsKilled);
-	query.Bind(&results[39], &playerstats->m_NumberOfUnitsLost);
-	query.Bind(&results[40], &playerstats->m_NumberOfReinforcementPointsSpent);
-	query.Bind(&results[41], &playerstats->m_NumberOfTacticalAidPointsSpent);
-	query.Bind(&results[42], &playerstats->m_NumberOfNukesDeployed);
-	query.Bind(&results[43], &playerstats->m_NumberOfTacticalAidCriticalHits);
+	query.Bind(&results[25], &playerstats->m_NumberOfMatches);
+	query.Bind(&results[26], &playerstats->m_NumberOfMatchesWon);
+	query.Bind(&results[27], &playerstats->m_NumberOfMatchesLost);
+	query.Bind(&results[28], &playerstats->m_NumberOfAssaultMatches);
+	query.Bind(&results[29], &playerstats->m_NumberOfAssaultMatchesWon);
+	query.Bind(&results[30], &playerstats->m_NumberOfDominationMatches);
+	query.Bind(&results[31], &playerstats->m_NumberOfDominationMatchesWon);
+	query.Bind(&results[32], &playerstats->m_NumberOfTugOfWarMatches);
+	query.Bind(&results[33], &playerstats->m_NumberOfTugOfWarMatchesWon);
+	query.Bind(&results[34], &playerstats->m_CurrentWinningStreak);
+	query.Bind(&results[35], &playerstats->m_BestWinningStreak);
+	query.Bind(&results[36], &playerstats->m_NumberOfMatchesWonByTotalDomination);
+	query.Bind(&results[37], &playerstats->m_NumberOfPerfectDefendsInAssaultMatch);
+	query.Bind(&results[38], &playerstats->m_NumberOfPerfectPushesInTugOfWarMatch);
+	query.Bind(&results[39], &playerstats->m_NumberOfUnitsKilled);
+	query.Bind(&results[40], &playerstats->m_NumberOfUnitsLost);
+	query.Bind(&results[41], &playerstats->m_NumberOfReinforcementPointsSpent);
+	query.Bind(&results[42], &playerstats->m_NumberOfTacticalAidPointsSpent);
+	query.Bind(&results[43], &playerstats->m_NumberOfNukesDeployed);
+	query.Bind(&results[44], &playerstats->m_NumberOfTacticalAidCriticalHits);
 
 	if(!query.StmtExecute(param, results))
 	{
@@ -4442,7 +4443,6 @@ bool MySQLDatabase::QueryProfileStats(const uint profileId, MMG_Stats::PlayerSta
 
 			playerstats->m_ProfileId = profileId;
 			playerstats->m_ScoreTotal = scoreTotal - scoreLost;
-			playerstats->m_NumberOfMatches = playerstats->m_NumberOfMatchesWon + playerstats->m_NumberOfMatchesLost;
 		}
 	}
 
@@ -4507,27 +4507,27 @@ bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::
 
 	BeginTransaction();
 
-	char SQL[4096];
+	char SQL[8192];
 	memset(SQL, 0, sizeof(SQL));
 
 	sprintf(SQL, "UPDATE %s SET "
 				 "lastmatchplayed = ?, "
 				 "scoretotal = scoretotal + ?, "
 				 "scoreasinfantry = scoreasinfantry + ?, "
-				 "highscoreasinfantry = IF ( ? > highscoreasinfantry, ?, highscoreasinfantry ), "
+				 "highscoreasinfantry = IF (? > highscoreasinfantry, ?, highscoreasinfantry), "
 				 "scoreassupport = scoreassupport + ?, "
-				 "highscoreassupport = IF ( ? > highscoreassupport, ?, highscoreassupport ), "
+				 "highscoreassupport = IF (? > highscoreassupport, ?, highscoreassupport), "
 				 "scoreasarmor = scoreasarmor + ?, "
-				 "highscoreasarmor = IF ( ? > highscoreasarmor, ?, highscoreasarmor ), "
+				 "highscoreasarmor = IF (? > highscoreasarmor, ?, highscoreasarmor), "
 				 "scoreasair = scoreasair + ?, "
-				 "highscoreasair = IF ( ? > highscoreasair, ?, highscoreasair ), "
+				 "highscoreasair = IF (? > highscoreasair, ?, highscoreasair), "
 				 "scorebydamagingenemies = scorebydamagingenemies + ?, "
 				 "scorebyusingtacticalaid = scorebyusingtacticalaid + ?, "
 				 "scorebycapturingcommandpoints = scorebycapturingcommandpoints + ?, "
 				 "scorebyrepairing = scorebyrepairing + ?, "
 				 "scorebyfortifying = scorebyfortifying + ?, "
 				 "scorelostbykillingfriendly = scorelostbykillingfriendly + ?, "
-				 "highestscore = IF ( ? > highestscore, ?, highestscore ), "
+				 "highestscore = IF (? > highestscore, ?, highestscore), "
 				 "timetotalmatchlength = timetotalmatchlength + ?, "
 				 "timeplayedasusa = timeplayedasusa + ?, "
 				 "timeplayedasussr = timeplayedasussr + ?, "
@@ -4536,33 +4536,72 @@ bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::
 				 "timeplayedassupport = timeplayedassupport + ?, "
 				 "timeplayedasarmor = timeplayedasarmor + ?, "
 				 "timeplayedasair = timeplayedasair + ?, "
+				 "numberofmatches = numberofmatches + 1, "
 				 "numberofmatcheswon = numberofmatcheswon + ?, "
 				 "numberofmatcheslost = numberofmatcheslost + ?, "
-				 "numberofassaultmatches = IF ( ? = 1, numberofassaultmatches + 1, numberofassaultmatches ), "
-				 "numberofassaultmatcheswon = IF ( ? = 1 AND ? > 0, numberofassaultmatcheswon + 1, numberofassaultmatcheswon), "
-				 "numberofdominationmatches = IF ( ? = 0, numberofdominationmatches + 1, numberofdominationmatches ), "
-				 "numberofdominationmatcheswon = IF ( ? = 0 AND ? > 0, numberofdominationmatcheswon + 1, numberofdominationmatcheswon), "
-				 "numberoftugofwarmatches = IF ( ? = 2, numberoftugofwarmatches + 1, numberoftugofwarmatches ), "
-				 "numberoftugofwarmatcheswon = IF ( ? = 2 AND ? > 0, numberoftugofwarmatcheswon + 1, numberoftugofwarmatcheswon), "
-				 "currentwinningstreak = IF ( ? > 0, currentwinningstreak + 1, 0 ), "
-				 "bestwinningstreak = IF ( currentwinningstreak > bestwinningstreak, currentwinningstreak, bestwinningstreak ), "
-				 "numberofmatcheswonbytotaldomination = IF ( ? = 0 AND ? > 0, numberofmatcheswonbytotaldomination + 1, numberofmatcheswonbytotaldomination), "
-				 "numberofperfectdefendsinassaultmatch = IF ( ? = 1 AND ? > 0, numberofperfectdefendsinassaultmatch + 1, numberofperfectdefendsinassaultmatch), "
-				 "numberofperfectpushesintugofwarmatch = IF ( ? = 2 AND ? > 0, numberofperfectpushesintugofwarmatch + 1, numberofperfectpushesintugofwarmatch), "
+				 "numberofassaultmatches = IF (? = 1, numberofassaultmatches + 1, numberofassaultmatches), "
+				 "numberofassaultmatcheswon = IF (? = 1 AND ? > 0, numberofassaultmatcheswon + 1, numberofassaultmatcheswon), "
+				 "currentassaultwinstreak = IF (? = 1 AND ? > 0, currentassaultwinstreak + 1, 0), "
+				 "numberofdominationmatches = IF (? = 0, numberofdominationmatches + 1, numberofdominationmatches), "
+				 "numberofdominationmatcheswon = IF (? = 0 AND ? > 0, numberofdominationmatcheswon + 1, numberofdominationmatcheswon), "
+				 "currentdominationwinstreak = IF (? = 0 AND ? > 0, currentdominationwinstreak + 1, 0), "
+				 "numberoftugofwarmatches = IF (? = 2, numberoftugofwarmatches + 1, numberoftugofwarmatches), "
+				 "numberoftugofwarmatcheswon = IF (? = 2 AND ? > 0, numberoftugofwarmatcheswon + 1, numberoftugofwarmatcheswon), "
+				 "currenttugofwarwinstreak = IF (? = 2 AND ? > 0, currenttugofwarwinstreak + 1, 0), "
+				 "currentwinningstreak = IF (? > 0, currentwinningstreak + 1, 0), "
+				 "bestwinningstreak = IF (currentwinningstreak > bestwinningstreak, currentwinningstreak, bestwinningstreak), "
+				 "numberofmatcheswonbytotaldomination = IF (? = 0 AND ? > 0, numberofmatcheswonbytotaldomination + 1, numberofmatcheswonbytotaldomination), "
+				 "currentdominationperfectstreak = IF (? = 0 AND ? > 0, currentdominationperfectstreak + 1, 0), "
+				 "numberofperfectdefendsinassaultmatch = IF (? = 1 AND ? > 0, numberofperfectdefendsinassaultmatch + 1, numberofperfectdefendsinassaultmatch), "
+				 "currentassaultperfectstreak = IF (? = 1 AND ? > 0, currentassaultperfectstreak + 1, 0), "
+				 "numberofperfectpushesintugofwarmatch = IF (? = 2 AND ? > 0, numberofperfectpushesintugofwarmatch + 1, numberofperfectpushesintugofwarmatch), "
+				 "currenttugofwarperfectstreak = IF (? = 2 AND ? > 0, currenttugofwarperfectstreak + 1, 0), "
 				 "numberofunitskilled = numberofunitskilled + ?, "
 				 "numberofunitslost = numberofunitslost + ?, "
+				 "numberofcommandpointcaptures = numberofcommandpointcaptures + ?, "
 				 "numberofreinforcementpointsspent = numberofreinforcementpointsspent + ?, "
 				 "numberoftacticalaidpointsspent = numberoftacticalaidpointsspent + ?, "
 				 "numberofnukesdeployed = numberofnukesdeployed + ?, "
-				 "numberoftacticalaidcriticalhits = numberoftacticalaidcriticalhits + ? "
+				 "currentnukesdeployedstreak = IF (? > 0, currentnukesdeployedstreak + 1, 0), "
+				 "numberoftacticalaidcriticalhits = numberoftacticalaidcriticalhits + ?, "
+				 "numberoftimesbestplayer = IF (? > 0, numberoftimesbestplayer + 1, numberoftimesbestplayer), "
+				 "currentbestplayerstreak = IF (? > 0, currentbestplayerstreak + 1, 0), "
+				 "numberoftimesbestinfantry = IF (? > 0, numberoftimesbestinfantry + 1, numberoftimesbestinfantry), "
+				 "currentbestinfantrystreak = IF (? > 0, currentbestinfantrystreak + 1, 0), "
+				 "numberoftimesbestsupport = IF (? > 0, numberoftimesbestsupport + 1, numberoftimesbestsupport), "
+				 "currentbestsupportstreak = IF (? > 0, currentbestsupportstreak + 1, 0), "
+				 "numberoftimesbestair = IF (? > 0, numberoftimesbestair + 1, numberoftimesbestair), "
+				 "currentbestairstreak = IF (? > 0, currentbestairstreak + 1, 0), "
+				 "numberoftimesbestarmor  = IF (? > 0, numberoftimesbestarmor + 1, numberoftimesbestarmor), "
+				 "currentbestarmorstreak = IF (? > 0, currentbestarmorstreak + 1, 0) "
 				 "WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
 
-	MYSQL_BIND params[55];
+	MYSQL_BIND params[79];
 	memset(params, 0, sizeof(params));
 
 	uint i = 0;
+	uchar bestplayer = 0;
+	uchar bestinfantry = 0;
+	uchar bestsupport = 0;
+	uchar bestair = 0;
+	uchar bestarmor = 0;
+
+	if (playerstats->m_BestData & 0x01)
+		bestplayer = 1;
+
+	if (playerstats->m_BestData & 0x02)
+		bestinfantry = 1;
+
+	if (playerstats->m_BestData & 0x04)
+		bestsupport = 1;
+
+	if (playerstats->m_BestData & 0x08)
+		bestair = 1;
+
+	if (playerstats->m_BestData & 0x10)
+		bestarmor = 1;
 
 	// NOTE: saving buffer_type short to column type INT
 
@@ -4659,10 +4698,18 @@ bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::
 	query.Bind(&params[i++], &playerstats->m_MatchType);
 	query.Bind(&params[i++], &playerstats->m_MatchWon);
 
+	// currentassaultwinstreak
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWon);
+
 	// numberofdominationmatches
 	query.Bind(&params[i++], &playerstats->m_MatchType);
 
 	// numberofdominationmatcheswon
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWon);
+
+	// currentdominationwinstreak
 	query.Bind(&params[i++], &playerstats->m_MatchType);
 	query.Bind(&params[i++], &playerstats->m_MatchWon);
 
@@ -4673,6 +4720,10 @@ bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::
 	query.Bind(&params[i++], &playerstats->m_MatchType);
 	query.Bind(&params[i++], &playerstats->m_MatchWon);
 
+	// currenttugofwarwinstreak
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWon);
+
 	// currentwinningstreak
 	query.Bind(&params[i++], &playerstats->m_MatchWon);
 
@@ -4680,11 +4731,23 @@ bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::
 	query.Bind(&params[i++], &playerstats->m_MatchType);
 	query.Bind(&params[i++], &playerstats->m_MatchWasFlawlessVictory);
 
+	// currentdominationperfectstreak
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWasFlawlessVictory);
+
 	// numberofperfectdefendsinassaultmatch
 	query.Bind(&params[i++], &playerstats->m_MatchType);
 	query.Bind(&params[i++], &playerstats->m_MatchWasFlawlessVictory);
 
+	// currentassaultperfectstreak
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWasFlawlessVictory);
+
 	// numberofperfectpushesintugofwarmatch
+	query.Bind(&params[i++], &playerstats->m_MatchType);
+	query.Bind(&params[i++], &playerstats->m_MatchWasFlawlessVictory);
+
+	// currenttugofwarperfectstreak
 	query.Bind(&params[i++], &playerstats->m_MatchType);
 	query.Bind(&params[i++], &playerstats->m_MatchWasFlawlessVictory);
 
@@ -4693,6 +4756,9 @@ bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::
 
 	// numberofunitslost
 	query.Bind(&params[i++], &playerstats->m_NumberOfUnitsLost);
+
+	// numberofcommandpointcaptures
+	query.Bind(&params[i++], &playerstats->m_NumberOfCommandPointCaptures);
 
 	// numberofreinforcementpointsspent
 	query.Bind(&params[i++], &playerstats->m_NumberOfReinforcementPointsSpent);
@@ -4703,8 +4769,41 @@ bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::
 	// numberofnukesdeployed
 	query.Bind(&params[i++], &playerstats->m_NumberOfNukesDeployed);
 
+	// currentnukesdeployedstreak
+	query.Bind(&params[i++], &playerstats->m_NumberOfNukesDeployed);
+
 	// numberoftacticalaidcriticalhits
 	query.Bind(&params[i++], &playerstats->m_NumberOfTacticalAidCriticalHits);
+
+	// numberoftimesbestplayer
+	query.Bind(&params[i++], &bestplayer);
+
+	// currentbestplayerstreak
+	query.Bind(&params[i++], &bestplayer);
+
+	// numberoftimesbestinfantry
+	query.Bind(&params[i++], &bestinfantry);
+
+	// currentbestinfantrystreak
+	query.Bind(&params[i++], &bestinfantry);
+
+	// numberoftimesbestsupport
+	query.Bind(&params[i++], &bestsupport);
+
+	// currentbestsupportstreak
+	query.Bind(&params[i++], &bestsupport);
+
+	// numberoftimesbestair
+	query.Bind(&params[i++], &bestair);
+
+	// currentbestairstreak
+	query.Bind(&params[i++], &bestair);
+
+	// numberoftimesbestarmor
+	query.Bind(&params[i++], &bestarmor);
+
+	// currentbestarmorstreak
+	query.Bind(&params[i++], &bestarmor);
 
 	// id = profileId
 	query.Bind(&params[i++], &playerstats->m_ProfileId);
