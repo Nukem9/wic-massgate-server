@@ -90,7 +90,7 @@ public:
 		param->buffer_type = MYSQL_TYPE_LONG;
 		param->buffer = (void *)Value;
 		param->is_null = (my_bool *)0;
-		//param->is_unsigned = (my_bool)1;
+		param->is_unsigned = (my_bool)1;
 		param->length = 0;
 	}
 

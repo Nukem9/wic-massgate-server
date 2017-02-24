@@ -330,7 +330,7 @@ bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 	return true;
 }
 
-bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
+bool MySQLDatabase::CheckIfCDKeyExists(const uint sequenceNum, uint *dstId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -343,13 +343,13 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT id FROM %s WHERE cipherkeys0 = ? AND cipherkeys1 = ? AND cipherkeys2 = ? AND cipherkeys3 = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
+	sprintf(SQL, "SELECT id FROM %s WHERE sequencenum = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
-	MYSQL_BIND params[4], result[1];
+	MYSQL_BIND params[1], result[1];
 
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
@@ -359,10 +359,7 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	uint id;
 
 	// bind parameters to prepared statement
-	query.Bind(&params[0], &cipherKeys[0]);
-	query.Bind(&params[1], &cipherKeys[1]);
-	query.Bind(&params[2], &cipherKeys[2]);
-	query.Bind(&params[3], &cipherKeys[3]);
+	query.Bind(&params[0], &sequenceNum);
 
 	// bind results
 	query.Bind(&result[0], &id);
@@ -370,19 +367,19 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	// execute prepared statement
 	if(!query.StmtExecute(params, result))
 	{
-		DatabaseLog("CheckIfCDKeyExists() query failed:");
+		DatabaseLog("CheckIfCDKeyExists() failed:");
 		*dstId = 0;
 	}
 	else
 	{
 		if (!query.StmtFetch())
 		{
-			DatabaseLog("cipherkeys not found");
+			DatabaseLog("sequence number not found");
 			*dstId = 0;
 		}
 		else
 		{
-			DatabaseLog("cipherkeys found");
+			DatabaseLog("sequence number found");
 			*dstId = id;
 		}
 	}
@@ -393,159 +390,138 @@ bool MySQLDatabase::CheckIfCDKeyExists(const ulong cipherKeys[], uint *dstId)
 	return true;
 }
 
-bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[])
+bool MySQLDatabase::InsertUserAccount(const char *email, const char *password, const char *country, const char *realcountry, const uchar *emailgamerelated, const uchar *acceptsemail, uint *accountInsertId)
 {
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
 
-	// begin an sql transaction
-	this->BeginTransaction();
+	sprintf(SQL, "INSERT INTO %s (email, password, country, realcountry, emailgamerelated, acceptsemail, membersince, ispreorder, numfriendsrecruited, activeprofileid, isbanned) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0)", TABLENAME[ACCOUNTS_TABLE]);
 
-	// *Step 1: insert account* //
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[7];
+	memset(params, 0, sizeof(params));
 
-	char SQL1[4096];
-	memset(SQL1, 0, sizeof(SQL1));
-
-	// build sql query using table names defined in settings file
-	sprintf(SQL1, "INSERT INTO %s (email, password, country, emailgamerelated, acceptsemail, activeprofileid, isbanned) VALUES (?, ?, ?, ?, ?, 0, 0)", TABLENAME[ACCOUNTS_TABLE]);
-
-	// prepared statement wrapper object
-	MySQLQuery query1(this->m_Connection, SQL1);
-
-	// prepared statement binding structures
-	MYSQL_BIND params1[5];
-
-	// initialize (zero) bind structures
-	memset(params1, 0, sizeof(params1));
-
-	// query specific variables
 	ulong emailLength = strlen(email);
 	ulong passLength = strlen(password);
 	ulong countryLength = strlen(country);
-	uint account_insert_id;
+	ulong realCountryLength = strlen(realcountry);
+	time_t local_timestamp = time(NULL);
+	uint membersince = local_timestamp;
 
-	// bind parameters to prepared statement
-	query1.Bind(&params1[0], email, &emailLength);
-	query1.Bind(&params1[1], password, &passLength);
-	query1.Bind(&params1[2], country, &countryLength);
-	query1.Bind(&params1[3], emailgamerelated);
-	query1.Bind(&params1[4], acceptsemail);
+	query.Bind(&params[0], email, &emailLength);
+	query.Bind(&params[1], password, &passLength);
+	query.Bind(&params[2], country, &countryLength);
+	query.Bind(&params[3], realcountry, &realCountryLength);
+	query.Bind(&params[4], emailgamerelated);
+	query.Bind(&params[5], acceptsemail);
+	query.Bind(&params[6], &membersince);
 
-	// execute prepared statement
-	if (!query1.StmtExecute(params1))
+	if (!query.StmtExecute(params))
 	{
-		DatabaseLog("CreateUserAccount() query1 failed: %s", email);
-		account_insert_id = 0;
+		DatabaseLog("InsertUserAccount() failed: %s", email);
+		*accountInsertId = 0;
 	}
 	else
 	{
-		account_insert_id = (uint)query1.StmtInsertId();
-		DatabaseLog("%s created an account id(%u)", email, account_insert_id);
+		*accountInsertId = (uint)query.StmtInsertId();
+		DatabaseLog("%s created an account id(%u)", email, *accountInsertId);
 	}
 
-	if (!query1.Success())
-	{
-		this->RollbackTransaction();
+	if (!query.Success())
 		return false;
-	}
-
-	// *Step 2: insert cdkeys* //
-
-	char SQL2[4096];
-	memset(SQL2, 0, sizeof(SQL2));
-
-	// build sql query using table names defined in settings file
-	sprintf(SQL2, "INSERT INTO %s (accountid, sequencenum, cipherkeys0, cipherkeys1, cipherkeys2, cipherkeys3) VALUES (?, ?, ?, ?, ?, ?)", TABLENAME[CDKEYS_TABLE]);
-
-	// prepared statement wrapper object
-	MySQLQuery query2(this->m_Connection, SQL2);
-
-	// prepared statement binding structures
-	MYSQL_BIND params2[6];
-
-	// initialize (zero) bind structures
-	memset(params2, 0, sizeof(params2));
-
-	// bind parameters to prepared statement
-	query2.Bind(&params2[0], &account_insert_id);
-	query2.Bind(&params2[1], &sequenceNum);
-	query2.Bind(&params2[2], &cipherKeys[0]);
-	query2.Bind(&params2[3], &cipherKeys[1]);
-	query2.Bind(&params2[4], &cipherKeys[2]);
-	query2.Bind(&params2[5], &cipherKeys[3]);
-
-	// execute prepared statement
-	if (!query2.StmtExecute(params2))
-		DatabaseLog("CreateUserAccount() query2 failed: %s", email);
-	else
-		DatabaseLog("inserted cipherkeys for %s", email);
-
-	if (!query2.Success())
-	{
-		this->RollbackTransaction();
-		return false;
-	}
-
-	// commit the transaction
-	this->CommitTransaction();
 
 	return true;
 }
 
-bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken)
+bool MySQLDatabase::InsertUserCDKeyInfo(const uint accountId, const uint sequenceNum, const ulong cipherKeys[])
 {
-	// test the connection before proceeding, disconnects everyone on fail
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "INSERT INTO %s (accountid, sequencenum, cipherkeys0, cipherkeys1, cipherkeys2, cipherkeys3) VALUES (?, ?, ?, ?, ?, ?)", TABLENAME[CDKEYS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[6];
+	memset(params, 0, sizeof(params));
+
+	query.Bind(&params[0], &accountId);
+	query.Bind(&params[1], &sequenceNum);
+	query.Bind(&params[2], &cipherKeys[0]);
+	query.Bind(&params[3], &cipherKeys[1]);
+	query.Bind(&params[4], &cipherKeys[2]);
+	query.Bind(&params[5], &cipherKeys[3]);
+
+	if (!query.StmtExecute(params))
+		DatabaseLog("InsertUserCDKeyInfo() failed:");
+	else
+		DatabaseLog("account id(%u) inserted cipherkeys", accountId);
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, const char *country, const char *realcountry, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[])
+{
 	if (!this->TestDatabase())
 	{
 		this->EmergencyMassgateDisconnect();
 		return false;
 	}
 
-	// *Step 1: retrieve account details* //
+	BeginTransaction();
 
-	char SQL1[4096];
-	memset(SQL1, 0, sizeof(SQL1));
+	uint accountInsertId = 0;
 
-	// build sql query using table names defined in settings file // AND password = ?
-	sprintf(SQL1, "SELECT id, password, activeprofileid, isbanned FROM %s WHERE email = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+	if (!InsertUserAccount(email, password, country, realcountry, emailgamerelated, acceptsemail, &accountInsertId))
+	{
+		RollbackTransaction();
+		return false;
+	}
 
-	// prepared statement wrapper object
-	MySQLQuery query1(this->m_Connection, SQL1);
+	if (!InsertUserCDKeyInfo(accountInsertId, sequenceNum, cipherKeys))
+	{
+		RollbackTransaction();
+		return false;
+	}
 
-	// prepared statement binding structures
-	MYSQL_BIND param1[1], results1[4];
+	CommitTransaction();
 
-	// initialize (zero) bind structures
-	memset(param1, 0, sizeof(param1));
-	memset(results1, 0, sizeof(results1));
+	return true;
+}
 
-	// query specific variables
-	ulong emailLength = strlen(email);
-	
+bool MySQLDatabase::QueryUserAccount(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// WHERE email = ? AND password = ?
+	sprintf(SQL, "SELECT id, password, activeprofileid, isbanned FROM %s WHERE email = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], results[4];
+	memset(param, 0, sizeof(param));
+	memset(results, 0, sizeof(results));
+
 	char password[WIC_PASSWORDHASH_MAX_LENGTH];
 	memset(password, 0, sizeof(password));
-	ulong passLength = ARRAYSIZE(password);
 
+	ulong emailLength = strlen(email);
+	ulong passLength = ARRAYSIZE(password);
 	uint id, activeprofileid;
 	uchar isbanned;
 
-	// bind parameters to prepared statement
-	query1.Bind(&param1[0], email, &emailLength);
+	query.Bind(&param[0], email, &emailLength);
 
-	// bind results
-	query1.Bind(&results1[0], &id);
-	query1.Bind(&results1[1], password, &passLength);
-	query1.Bind(&results1[2], &activeprofileid);
-	query1.Bind(&results1[3], &isbanned);
+	query.Bind(&results[0], &id);
+	query.Bind(&results[1], password, &passLength);
+	query.Bind(&results[2], &activeprofileid);
+	query.Bind(&results[3], &isbanned);
 
-	// execute prepared statement
-	if(!query1.StmtExecute(param1, results1))
+	if(!query.StmtExecute(param, results))
 	{
-		DatabaseLog("AuthUserAccount() query failed: %s", email);
+		DatabaseLog("QueryUserAccount() failed: %s", email);
 
 		authToken->m_AccountId = 0;
 		authToken->m_ProfileId = 0;
@@ -556,7 +532,7 @@ bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar 
 	}
 	else
 	{
-		if (!query1.StmtFetch())
+		if (!query.StmtFetch())
 		{
 			DatabaseLog("account %s not found", email);
 
@@ -574,257 +550,162 @@ bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar 
 			authToken->m_AccountId = id;
 			authToken->m_ProfileId = activeprofileid;
 			//authToken->m_TokenId = 0;	// TODO
-			authToken->m_CDkeyId = 0;	// fetched below in step 2
+			authToken->m_CDkeyId = 0;
 			strncpy(dstPassword, password, WIC_PASSWORDHASH_MAX_LENGTH);
 			*dstIsBanned = isbanned;
 		}
 	}
 
-	if (!query1.Success())
+	if (!query.Success())
 		return false;
 
-	// *Step 2: retrieve account cdkeyid* //
+	return true;
+}
 
-	char SQL2[4096];
-	memset(SQL2, 0, sizeof(SQL2));
+bool MySQLDatabase::QueryUserCDKeyId(const uint accountId, MMG_AuthToken *authToken)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
 
-	// build sql query using table names defined in settings file
-	sprintf(SQL2, "SELECT id FROM %s WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
+	sprintf(SQL, "SELECT id FROM %s WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
 
-	// prepared statement wrapper object
-	MySQLQuery query2(this->m_Connection, SQL2);
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], result[1];
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
 
-	// prepared statement binding structures
-	MYSQL_BIND param2[1], result2[1];
-
-	// initialize (zero) bind structures
-	memset(param2, 0, sizeof(param2));
-	memset(result2, 0, sizeof(result2));
-
-	// query specific variables
 	uint cdkeyid;
 
-	// bind parameters to prepared statement
-	query2.Bind(&param2[0], &id);
+	query.Bind(&param[0], &accountId);
 
-	// bind results
-	query2.Bind(&result2[0], &cdkeyid);
+	query.Bind(&result[0], &cdkeyid);
 
-	// execute prepared statement
-	if(!query2.StmtExecute(param2, result2))
+	if(!query.StmtExecute(param, result))
 	{
-		DatabaseLog("AuthUserAccount() query2 failed: %s", email);
+		DatabaseLog("QueryUserCDKeyId() failed:");
 		authToken->m_CDkeyId = 0;
 	}
 	else
 	{
-		if (!query2.StmtFetch())
+		if (!query.StmtFetch())
 		{
-			DatabaseLog("cdkeyid %s not found", email);
+			DatabaseLog("cdkeyid not found");
 			authToken->m_CDkeyId = 0;
 		}
 		else
 		{
-			DatabaseLog("cdkeyid(%u) %s found", id, email);
+			DatabaseLog("cdkeyid(%u) found", cdkeyid);
 			authToken->m_CDkeyId = cdkeyid;
 		}
 	}
 
-	if (!query2.Success())
+	if (!query.Success())
 		return false;
 
 	return true;
 }
 
-bool MySQLDatabase::UpdateSequenceNumber(const uint accountId, const uint sequenceNum)
+bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken)
 {
-	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
 	{
 		this->EmergencyMassgateDisconnect();
 		return false;
 	}
 
-	// begin an sql transaction
-	this->BeginTransaction();
-
-	// if sequence number is 0 then it needs to be updated
-
-	char SQL[4096];
-	memset(SQL, 0, sizeof(SQL));
-
-	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT sequencenum FROM %s WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
-
-	// prepared statement wrapper object
-	MySQLQuery query(this->m_Connection, SQL);
-
-	// prepared statement binding structures
-	MYSQL_BIND param[1], result[1];
-
-	// initialize (zero) bind structures
-	memset(param, 0, sizeof(param));
-	memset(result, 0, sizeof(result));
-
-	// query specific variables
-	uint seqnum;
-
-	// bind parameters to prepared statement
-	query.Bind(&param[0], &accountId);
-
-	// bind results
-	query.Bind(&result[0], &seqnum);
-
-	// execute prepared statement
-	if(!query.StmtExecute(param, result))
-	{
-		DatabaseLog("UpdateSequenceNumber() query failed: accountid(%u)", accountId);
-	}
-	else
-	{
-		query.StmtFetch();
-	}
-
-	if (!query.Success())
-	{
-		this->RollbackTransaction();
+	if (!QueryUserAccount(email, dstPassword, dstIsBanned, authToken))
 		return false;
-	}
 
-	if (seqnum == 0)
-	{
-		char SQL2[4096];
-		memset(SQL2, 0, sizeof(SQL2));
-
-		// build sql query using table names defined in settings file
-		sprintf(SQL2, "UPDATE %s SET sequencenum = ? WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
-
-		// prepared statement wrapper object
-		MySQLQuery query2(this->m_Connection, SQL2);
-
-		// prepared statement binding structures
-		MYSQL_BIND params2[2];
-
-		// initialize (zero) bind structures
-		memset(params2, 0, sizeof(params2));
-
-		// bind parameters to prepared statement
-		query2.Bind(&params2[0], &sequenceNum);
-		query2.Bind(&params2[1], &accountId);
-		
-		// execute prepared statement
-		if(!query2.StmtExecute(params2))
-			DatabaseLog("sequence number update fail");
-		else
-			DatabaseLog("sequence number update success");
-
-		if (!query2.Success())
-		{
-			this->RollbackTransaction();
-			return false;
-		}
-	}
-
-	// commit the transaction
-	this->CommitTransaction();
+	if (!QueryUserCDKeyId(authToken->m_AccountId, authToken))
+		return false;
 
 	return true;
 }
 
-bool MySQLDatabase::UpdateCipherKeys(const uint accountId, const ulong cipherKeys[])
+bool MySQLDatabase::UpdateRealCountry(const uint accountId, const char *realcountry)
 {
-	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
 	{
 		this->EmergencyMassgateDisconnect();
 		return false;
 	}
 
-	// begin an sql transaction
-	this->BeginTransaction();
-
-	// if sequence number is 0 then it needs to be updated
+	BeginTransaction();
 
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT cipherkeys0 FROM %s WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
+	sprintf(SQL, "UPDATE %s SET realcountry = IF (realcountry = '', ?, realcountry) WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
 
-	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
-
-	// prepared statement binding structures
-	MYSQL_BIND param[1], result[1];
-
-	// initialize (zero) bind structures
+	MYSQL_BIND param[2];
 	memset(param, 0, sizeof(param));
-	memset(result, 0, sizeof(result));
 
-	// query specific variables
-	ulong ciperkey;
+	ulong countryLength = strlen(realcountry);
 
-	// bind parameters to prepared statement
-	query.Bind(&param[0], &accountId);
+	query.Bind(&param[0], realcountry, &countryLength);
+	query.Bind(&param[1], &accountId);
 
-	// bind results
-	query.Bind(&result[0], &ciperkey);
-
-	// execute prepared statement
-	if(!query.StmtExecute(param, result))
-	{
-		DatabaseLog("UpdateCipherKeys() query failed: accountid(%u)", accountId);
-	}
-	else
-	{
-		query.StmtFetch();
-	}
+	if(!query.StmtExecute(param))
+		DatabaseLog("UpdateRealCountry() failed:");
 
 	if (!query.Success())
 	{
-		this->RollbackTransaction();
+		RollbackTransaction();
 		return false;
 	}
 
-	if (ciperkey == 0)
+	CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::UpdateCDKeyInfo(const uint accountId, const uint sequenceNum, const ulong cipherKeys[])
+{
+	if (!this->TestDatabase())
 	{
-		char SQL2[4096];
-		memset(SQL2, 0, sizeof(SQL2));
-
-		// build sql query using table names defined in settings file
-		sprintf(SQL2, "UPDATE %s SET cipherkeys0 = ?, cipherkeys1 = ?, cipherkeys2 = ?, cipherkeys3 = ? WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
-
-		// prepared statement wrapper object
-		MySQLQuery query2(this->m_Connection, SQL2);
-
-		// prepared statement binding structures
-		MYSQL_BIND params2[5];
-
-		// initialize (zero) bind structures
-		memset(params2, 0, sizeof(params2));
-
-		// bind parameters to prepared statement
-		query2.Bind(&params2[0], &cipherKeys[0]);
-		query2.Bind(&params2[1], &cipherKeys[1]);
-		query2.Bind(&params2[2], &cipherKeys[2]);
-		query2.Bind(&params2[3], &cipherKeys[3]);
-		query2.Bind(&params2[4], &accountId);
-		
-		// execute prepared statement
-		if(!query2.StmtExecute(params2))
-			DatabaseLog("cipherkeys update fail");
-		else
-			DatabaseLog("cipherkeys update success");
-
-		if (!query2.Success())
-		{
-			this->RollbackTransaction();
-			return false;
-		}
+		this->EmergencyMassgateDisconnect();
+		return false;
 	}
 
-	// commit the transaction
-	this->CommitTransaction();
+	BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "UPDATE %s SET "
+				 "sequencenum = IF (sequencenum = 0, ?, sequencenum), "
+				 "cipherkeys0 = IF (? = sequencenum AND cipherkeys0 = 0, ?, cipherkeys0), "
+				 "cipherkeys1 = IF (? = sequencenum AND cipherkeys1 = 0, ?, cipherkeys1), "
+				 "cipherkeys2 = IF (? = sequencenum AND cipherkeys2 = 0, ?, cipherkeys2), "
+				 "cipherkeys3 = IF (? = sequencenum AND cipherkeys3 = 0, ?, cipherkeys3) "
+				 "WHERE accountid = ? LIMIT 1", TABLENAME[CDKEYS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[10];
+	memset(params, 0, sizeof(params));
+
+	query.Bind(&params[0], &sequenceNum);
+	query.Bind(&params[1], &sequenceNum);
+	query.Bind(&params[2], &cipherKeys[0]);
+	query.Bind(&params[3], &sequenceNum);
+	query.Bind(&params[4], &cipherKeys[1]);
+	query.Bind(&params[5], &sequenceNum);
+	query.Bind(&params[6], &cipherKeys[2]);
+	query.Bind(&params[7], &sequenceNum);
+	query.Bind(&params[8], &cipherKeys[3]);
+	query.Bind(&params[9], &accountId);
+
+	if(!query.StmtExecute(params))
+		DatabaseLog("UpdateCDKeyInfo() failed:");
+
+	if (!query.Success())
+	{
+		RollbackTransaction();
+		return false;
+	}
+
+	CommitTransaction();
 
 	return true;
 }

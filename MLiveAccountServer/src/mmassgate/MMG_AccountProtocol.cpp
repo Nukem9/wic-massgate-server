@@ -401,13 +401,14 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					if (myAuthToken->m_AccountId > 0)
 					{
 						// update geoip info
-						// update profile ip usage
+						char country[WIC_COUNTRY_MAX_LENGTH];
+						memset(country, 0, sizeof(country));
 
-						// update missing cipherkeys for handmade accounts
-						MySQLDatabase::ourInstance->UpdateCipherKeys(myAuthToken->m_AccountId, myQuery.m_CipherKeys);
+						strcpy_s(country, GeoIP::ClientLocateIP(aClient->GetIPAddress()));
+						MySQLDatabase::ourInstance->UpdateRealCountry(myAuthToken->m_AccountId, country);
 
-						// update missing sequence number
-						MySQLDatabase::ourInstance->UpdateSequenceNumber(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber);
+						// update missing sequence number & cipherkeys for handmade accounts
+						MySQLDatabase::ourInstance->UpdateCDKeyInfo(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
 					}
 
 					bool ProfileQueryOK;
@@ -508,7 +509,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				uint mySuccessFlag = 0;
 
 				bool CheckEmailQueryOK = MySQLDatabase::ourInstance->CheckIfEmailExists(myQuery.m_Create.m_Email, &myAccountId);
-				bool CheckCDKeyQueryOK = MySQLDatabase::ourInstance->CheckIfCDKeyExists(myQuery.m_CipherKeys, &myCdkeyId);
+				bool CheckCDKeyQueryOK = MySQLDatabase::ourInstance->CheckIfCDKeyExists(myQuery.m_EncryptionKeySequenceNumber, &myCdkeyId);
 
 				if (myAccountId > 0 && CheckEmailQueryOK)			//account exists with that email
 				{
@@ -527,6 +528,10 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				}
 				else							//should be ok to create account
 				{
+					char realcountry[WIC_COUNTRY_MAX_LENGTH];
+					memset(realcountry, 0, sizeof(realcountry));
+
+					strcpy_s(realcountry, GeoIP::ClientLocateIP(aClient->GetIPAddress()));
 
 					PasswordHash hasher(8, true);
 
@@ -536,7 +541,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					hasher.HashPassword(myPasswordHash, myQuery.m_Create.m_Password);
 
 					bool CreateQueryOK = MySQLDatabase::ourInstance->CreateUserAccount(myQuery.m_Create.m_Email, myPasswordHash, 
-						myQuery.m_Create.m_Country, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
+						myQuery.m_Create.m_Country, realcountry, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
 
 					if(CreateQueryOK)			//create user account succeeded
 					{
@@ -664,13 +669,14 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					if (myAuthToken->m_AccountId > 0)
 					{
 						// update geoip info
-						// update profile ip usage
+						char country[WIC_COUNTRY_MAX_LENGTH];
+						memset(country, 0, sizeof(country));
 
-						// update missing cipherkeys for handmade accounts
-						MySQLDatabase::ourInstance->UpdateCipherKeys(myAuthToken->m_AccountId, myQuery.m_CipherKeys);
+						strcpy_s(country, GeoIP::ClientLocateIP(aClient->GetIPAddress()));
+						MySQLDatabase::ourInstance->UpdateRealCountry(myAuthToken->m_AccountId, country);
 
-						// update missing sequence number
-						MySQLDatabase::ourInstance->UpdateSequenceNumber(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber);
+						// update missing sequence number & cipherkeys for handmade accounts
+						MySQLDatabase::ourInstance->UpdateCDKeyInfo(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
 					}
 
 					bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myAuthToken->m_AccountId, &myProfileCount, myProfiles);

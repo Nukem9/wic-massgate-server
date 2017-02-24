@@ -51,14 +51,11 @@
 
 	TODO:
 	- reduce to one query per function:
-		- CreateUserAccount
-		- AuthUserAccount
 		- CreateUserProfile
 		- DeleteUserProfile
 		- QueryUserProfile
 	- create a global 'logged in' player list/map
 		MMG_AccountProtocol is messy, move account database queries to Query::FromStream
-	- change cdkeys from cipherkeys to sequencenumber?
 	- better error message output
 
 */
@@ -164,13 +161,15 @@ public:
 	
 	// MMG_AccountProtocol
 	bool	CheckIfEmailExists	(const char *email, uint *dstId);
-	bool	CheckIfCDKeyExists	(const ulong cipherKeys[], uint *dstId);
-	bool	CreateUserAccount	(const char *email, const char *password, const char *country, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[]);
-	bool	AuthUserAccount		(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
-
-	bool	UpdateSequenceNumber	(const uint accountId, const uint sequenceNum);
-	bool	UpdateCipherKeys		(const uint accountId, const ulong cipherKeys[]);
-
+	bool	CheckIfCDKeyExists			(const uint sequenceNum, uint *dstId);
+	bool	InsertUserAccount			(const char *email, const char *password, const char *country, const char *realcountry, const uchar *emailgamerelated, const uchar *acceptsemail, uint *accountInsertId);
+	bool	InsertUserCDKeyInfo			(const uint accountId, const uint sequenceNum, const ulong cipherKeys[]);
+	bool	CreateUserAccount			(const char *email, const char *password, const char *country, const char *realcountry, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[]);
+	bool	QueryUserAccount			(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
+	bool	QueryUserCDKeyId			(const uint accountId, MMG_AuthToken *authToken);
+	bool	AuthUserAccount				(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
+	bool	UpdateRealCountry			(const uint accountId, const char *realcountry);
+	bool	UpdateCDKeyInfo				(const uint accountId, const uint sequenceNum, const ulong cipherKeys[]);
 	bool	CheckIfProfileExists	(const wchar_t* name, uint *dstId);
 	bool	CreateUserProfile	(const uint accountId, const wchar_t* name, const char* email);
 	bool	DeleteUserProfile	(const uint accountId, const uint profileId, const char* email);
