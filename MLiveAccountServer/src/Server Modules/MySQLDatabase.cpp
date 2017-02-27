@@ -789,13 +789,13 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	memset(SQL1, 0, sizeof(SQL1));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL1, "INSERT INTO %s (accountid, name, rank, clanid, rankinclan, isdeleted, commoptions, membersince, lastlogindate, motto, homepage, lastmatchplayed, scoretotal, scoreasinfantry, highscoreasinfantry, scoreassupport, highscoreassupport, scoreasarmor, highscoreasarmor, scoreasair, highscoreasair, scorebydamagingenemies, scorebyusingtacticalaid, scorebycapturingcommandpoints, scorebyrepairing, scorebyfortifying, scorelostbykillingfriendly, highestscore, timetotalmatchlength, timeplayedasusa, timeplayedasussr, timeplayedasnato, timeplayedasinfantry, timeplayedassupport, timeplayedasarmor, timeplayedasair, numberofmatches, numberofmatcheswon, numberofmatcheslost, numberofassaultmatches, numberofassaultmatcheswon, currentassaultwinstreak, numberofdominationmatches, numberofdominationmatcheswon, currentdominationwinstreak, numberoftugofwarmatches, numberoftugofwarmatcheswon, currenttugofwarwinstreak, currentwinningstreak, bestwinningstreak, numberofmatcheswonbytotaldomination, currentdominationperfectstreak, numberofperfectdefendsinassaultmatch, currentassaultperfectstreak, numberofperfectpushesintugofwarmatch, currenttugofwarperfectstreak, numberofunitskilled, numberofunitslost, numberofcommandpointcaptures, numberofreinforcementpointsspent, numberoftacticalaidpointsspent, numberofnukesdeployed, currentnukesdeployedstreak, numberoftacticalaidcriticalhits, numberoftimesbestplayer, currentbestplayerstreak, numberoftimesbestinfantry, currentbestinfantrystreak, numberoftimesbestsupport, currentbestsupportstreak, numberoftimesbestair, currentbestairstreak, numberoftimesbestarmor, currentbestarmorstreak) VALUES (?, ?, 0, 0, 0, 0, 992, ?, 0, NULL, NULL, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL1, "INSERT INTO %s (accountid, name, rank, clanid, rankinclan, isdeleted, commoptions, membersince, lastlogindate, motto, homepage, medaldata, badgedata, lastmatchplayed, scoretotal, scoreasinfantry, highscoreasinfantry, scoreassupport, highscoreassupport, scoreasarmor, highscoreasarmor, scoreasair, highscoreasair, scorebydamagingenemies, scorebyusingtacticalaid, scorebycapturingcommandpoints, scorebyrepairing, scorebyfortifying, scorelostbykillingfriendly, highestscore, timetotalmatchlength, timeplayedasusa, timeplayedasussr, timeplayedasnato, timeplayedasinfantry, timeplayedassupport, timeplayedasarmor, timeplayedasair, numberofmatches, numberofmatcheswon, numberofmatcheslost, numberofassaultmatches, numberofassaultmatcheswon, currentassaultwinstreak, numberofdominationmatches, numberofdominationmatcheswon, currentdominationwinstreak, numberoftugofwarmatches, numberoftugofwarmatcheswon, currenttugofwarwinstreak, currentwinningstreak, bestwinningstreak, numberofmatcheswonbytotaldomination, currentdominationperfectstreak, numberofperfectdefendsinassaultmatch, currentassaultperfectstreak, numberofperfectpushesintugofwarmatch, currenttugofwarperfectstreak, numberofunitskilled, numberofunitslost, numberofcommandpointcaptures, numberofreinforcementpointsspent, numberoftacticalaidpointsspent, numberofnukesdeployed, currentnukesdeployedstreak, numberoftacticalaidcriticalhits, numberoftimesbestplayer, currentbestplayerstreak, numberoftimesbestinfantry, currentbestinfantrystreak, numberoftimesbestsupport, currentbestsupportstreak, numberoftimesbestair, currentbestairstreak, numberoftimesbestarmor, currentbestarmorstreak) VALUES (?, ?, 0, 0, 0, 0, 992, ?, 0, NULL, NULL, ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query1(this->m_Connection, SQL1);
 	
 	// prepared statement binding structures
-	MYSQL_BIND params1[3];
+	MYSQL_BIND params1[5];
 
 	// initialize (zero) bind structures
 	memset(params1, 0, sizeof(params1));
@@ -805,11 +805,50 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	uint profile_insert_id;
 	time_t local_timestamp = time(NULL);
 	uint membersince = local_timestamp;
+	uint medalbuffer[256], badgebuffer[256];
+	memset(medalbuffer, 0, sizeof(medalbuffer));
+	memset(badgebuffer, 0, sizeof(badgebuffer));
+
+	{
+		MMG_Stats::Badge preorderBadge, recruitBadge;
+		uchar isPreorder = 0;
+		uint numFriendsRecruited = 0;
+
+		if (!QueryPreorderNumRecruited(accountId, &isPreorder, &numFriendsRecruited))
+		{
+			RollbackTransaction();
+			return false;
+		}
+
+		preorderBadge.level = isPreorder > 0 ? 1 : 0;
+		preorderBadge.stars = 0;
+
+		recruitBadge.level = numFriendsRecruited > 0 ? 1 : recruitBadge.level;
+		recruitBadge.level = numFriendsRecruited > 4 ? 2 : recruitBadge.level;
+		recruitBadge.level = numFriendsRecruited > 9 ? 3 : recruitBadge.level;
+		recruitBadge.stars = 0;
+
+		MMG_BitWriter<unsigned int> writer(badgebuffer, sizeof(badgebuffer) * 8);
+
+		for (int i = 0; i < 12; i++)
+		{
+			writer.WriteBits(0, 2);
+			writer.WriteBits(0, 2);
+		}
+
+		writer.WriteBits(preorderBadge.level, 2);
+		writer.WriteBits(preorderBadge.stars, 2);
+
+		writer.WriteBits(recruitBadge.level, 2);
+		writer.WriteBits(recruitBadge.stars, 2);
+	}
 
 	// bind parameters to prepared statement
 	query1.Bind(&params1[0], &accountId);
 	query1.Bind(&params1[1], name, &nameLength);
 	query1.Bind(&params1[2], &membersince);
+	query1.BindBlob(&params1[3], medalbuffer, sizeof(medalbuffer));
+	query1.BindBlob(&params1[4], badgebuffer, sizeof(badgebuffer));
 
 	// execute prepared statement
 	if (!query1.StmtExecute(params1))
@@ -1155,6 +1194,83 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 	return true;
 }
 
+bool MySQLDatabase::QueryPreorderNumRecruited(const uint accountId, uchar *isPreorder, uint *numFriendsRecruited)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT ispreorder, numfriendsrecruited FROM %s WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], results[2];
+	memset(param, 0, sizeof(param));
+	memset(results, 0, sizeof(results));
+
+	query.Bind(&param[0], &accountId);
+
+	query.Bind(&results[0], isPreorder);
+	query.Bind(&results[1], numFriendsRecruited);
+
+	if(!query.StmtExecute(param, results))
+	{
+		DatabaseLog("QueryPreorderNumRecruited() failed:");
+		*isPreorder = 0;
+		*numFriendsRecruited = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			DatabaseLog("QueryPreorderNumRecruited() account not found");
+			*isPreorder = 0;
+			*numFriendsRecruited = 0;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::UpdatePreorderRecruitBadges(const uint accountId, const uint profileId)
+{
+	MMG_Stats::Badge badges[14];
+	uchar isPreorder = 0;
+	uint numFriendsRecruited = 0;
+	bool changed = false;
+
+	if (!QueryProfileBadges(profileId, 14, badges))
+		return false;
+
+	if (!QueryPreorderNumRecruited(accountId, &isPreorder, &numFriendsRecruited))
+		return false;
+
+	if (badges[12].level < 1)
+	{
+		badges[12].level = isPreorder > 0 ? 1 : 0;
+		badges[12].stars = 0;
+		changed = true;
+	}
+
+	if (badges[13].level < 3)
+	{
+		badges[13].level = numFriendsRecruited > 0 ? 1 : badges[13].level;
+		badges[13].level = numFriendsRecruited > 4 ? 2 : badges[13].level;
+		badges[13].level = numFriendsRecruited > 9 ? 3 : badges[13].level;
+		badges[13].stars = 0;
+		changed = true;
+	}
+
+	if (changed)
+	{
+		if (!UpdateProfileBadges(profileId, 14, badges))
+			return false;
+	}
+
+	return true;
+}
+
 bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId, MMG_Profile *profile)
 {
 	// test the connection before proceeding, disconnects everyone on fail
@@ -1247,6 +1363,12 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 	if (!query1.Success())
 	{
 		this->RollbackTransaction();
+		return false;
+	}
+
+	if (!UpdatePreorderRecruitBadges(accountId, profileId))
+	{
+		RollbackTransaction();
 		return false;
 	}
 
@@ -4245,6 +4367,110 @@ bool MySQLDatabase::DeleteClanGuestbookEntry(const uint clanId, const uint messa
 	return true;
 }
 
+bool MySQLDatabase::QueryProfileMedals(const uint profileId, const size_t Count, MMG_Stats::Medal medals[])
+{
+	uint buffer[256];
+	memset(buffer, 0, sizeof(buffer));
+
+	if (!QueryProfileMedalsRawData(profileId, buffer, sizeof(buffer)))
+		return false;
+
+	MMG_BitReader<unsigned int> reader(buffer, sizeof(buffer) * 8);
+
+	for (uint i = 0; i < Count; i++)
+	{
+		medals[i].level = reader.ReadBits(2);
+		medals[i].stars = reader.ReadBits(2);
+	}
+
+	return true;
+}
+
+bool MySQLDatabase::QueryProfileBadges(const uint profileId, const size_t Count, MMG_Stats::Badge badges[])
+{
+	uint buffer[256];
+	memset(buffer, 0, sizeof(buffer));
+
+	if (!QueryProfileBadgesRawData(profileId, buffer, sizeof(buffer)))
+		return false;
+
+	MMG_BitReader<unsigned int> reader(buffer, sizeof(buffer) * 8);
+
+	for (uint i = 0; i < Count; i++)
+	{
+		badges[i].level = reader.ReadBits(2);
+		badges[i].stars = reader.ReadBits(2);
+	}
+
+	return true;
+}
+
+bool MySQLDatabase::QueryProfileMedalsRawData(const uint profileId, voidptr_t Data, ulong Length)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT medaldata FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], result[1];
+
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	query.Bind(&param[0], &profileId);
+
+	query.BindBlob(&result[0], Data, Length);
+
+	if (!query.StmtExecute(param, result))
+	{
+		DatabaseLog("QueryMedalsRawData() failed:");
+	}
+	else
+	{
+		if (!query.StmtFetch())
+			DatabaseLog("medal data not found");
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::QueryProfileBadgesRawData(const uint profileId, voidptr_t Data, ulong Length)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT badgedata FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], result[1];
+
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	query.Bind(&param[0], &profileId);
+
+	query.BindBlob(&result[0], Data, Length);
+
+	if (!query.StmtExecute(param, result))
+	{
+		DatabaseLog("QueryBadgesRawData() failed:");
+	}
+	else
+	{
+		if (!query.StmtFetch())
+			DatabaseLog("badge data not found");
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
 bool MySQLDatabase::QueryProfileStats(const uint profileId, MMG_Stats::PlayerStatsRsp *playerstats)
 {
 	char SQL[4096];
@@ -4370,6 +4596,90 @@ bool MySQLDatabase::VerifyServerKey(const uint sequenceNum, uint *dstId)
 		else
 			*dstId = id;
 	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::UpdateProfileMedals(const uint profileId, const size_t Count, MMG_Stats::Medal medals[])
+{
+	uint buffer[256];
+	memset(buffer, 0, sizeof(buffer));
+
+	MMG_BitWriter<unsigned int> writer(buffer, sizeof(buffer) * 8);
+
+	for (uint i = 0; i < Count; i++)
+	{
+		writer.WriteBits(medals[i].level, 2);
+		writer.WriteBits(medals[i].stars, 2);
+	}
+
+	if (!UpdateProfileMedalsRawData(profileId, buffer, sizeof(buffer)))
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::UpdateProfileBadges(const uint profileId, const size_t Count, MMG_Stats::Badge badges[])
+{
+	uint buffer[256];
+	memset(buffer, 0, sizeof(buffer));
+
+	MMG_BitWriter<unsigned int> writer(buffer, sizeof(buffer) * 8);
+
+	for (uint i = 0; i < Count; i++)
+	{
+		writer.WriteBits(badges[i].level, 2);
+		writer.WriteBits(badges[i].stars, 2);
+	}
+
+	if (!UpdateProfileBadgesRawData(profileId, buffer, sizeof(buffer)))
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::UpdateProfileMedalsRawData(const uint profileId, voidptr_t Data, ulong Length)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "UPDATE %s SET medaldata = ? WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[2];
+	memset(params, 0, sizeof(params));
+
+	query.BindBlob(&params[0], Data, Length);
+	query.Bind(&params[1], &profileId);
+
+	if(!query.StmtExecute(params))
+		DatabaseLog("UpdateProfileMedalsRawData() failed:");
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::UpdateProfileBadgesRawData(const uint profileId, voidptr_t Data, ulong Length)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "UPDATE %s SET badgedata = ? WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[2];
+	memset(params, 0, sizeof(params));
+
+	query.BindBlob(&params[0], Data, Length);
+	query.Bind(&params[1], &profileId);
+
+	if(!query.StmtExecute(params))
+		DatabaseLog("UpdateProfileBadgesRawData() failed:");
 
 	if (!query.Success())
 		return false;

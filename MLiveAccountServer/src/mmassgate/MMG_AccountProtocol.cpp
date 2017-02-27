@@ -766,11 +766,12 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					DebugLog(L_INFO, "ACCOUNT_MODIFY_PROFILE_RSP: delete profile %d for %s", myQuery.m_ModifyProfile.m_ProfileId, myQuery.m_ModifyProfile.m_Email);
 
 					MMG_Profile myProfile;
-					bool ProfileQueryOK = MySQLDatabase::ourInstance->QueryUserProfile(myAuthToken->m_AccountId, myQuery.m_ModifyProfile.m_ProfileId, &myProfile);
+					bool ProfileQueryOK = MySQLDatabase::ourInstance->QueryProfileName(myQuery.m_ModifyProfile.m_ProfileId, &myProfile);
 					
 					if (!ProfileQueryOK)
 					{
-						return false;
+						myStatusCode = ModifyFailed_General;
+						mySuccessFlag = 0;
 					}
 					else if (ProfileQueryOK && myProfile.m_ClanId > 0)
 					{

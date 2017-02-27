@@ -249,44 +249,53 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		}
 		break;
 
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_MEDALS_REQ: //sub_791650
+		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_MEDALS_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_MEDALS_REQ:");
 
-			uint ProfileId = 0;
-			aMessage->ReadUInt(ProfileId);
-			
-			//responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_MEDALS_RSP);
-			
-			//if (!aClient->SendData(&responseMessage))
-			//	return false;
+			uint profileId = 0;
+			if (!aMessage->ReadUInt(profileId))
+				return false;
+
+			uint buffer[256];
+			memset(buffer, 0, sizeof(buffer));
+
+			MySQLDatabase::ourInstance->QueryProfileMedalsRawData(profileId, buffer, sizeof(buffer));
+
+			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_MEDALS_RSP:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_MEDALS_RSP);
+			responseMessage.WriteUInt(profileId);
+			responseMessage.WriteUInt(19);
+			responseMessage.WriteRawData(buffer, sizeof(buffer));
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 		break;
-		*/
 
-		/*case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_BADGES_REQ: //sub_7915F0
+		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_BADGES_REQ:
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_BADGES_REQ:");
 
-			// this case currently disconnects the client
+			uint profileId = 0;
+			if (!aMessage->ReadUInt(profileId))
+				return false;
 
-			uint ProfileId = 0, BadgesStreamLength = 1;
-			aMessage->ReadUInt(ProfileId);
-			
-			//responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_BADGES_RSP);
-			//responseMessage.WriteUInt(ProfileId);
-			//responseMessage.WriteUInt(0);
-			//responseMessage.WriteRawData(dataStream, dataLength);
-			
-			//MN_WriteMessage bufferMessage(1024);
-			//sizeptr_t dataLength = bufferMessage.GetDataLength();
-			//voidptr_t dataStream = bufferMessage.GetDataStream();
+			uint buffer[256];
+			memset(buffer, 0, sizeof(buffer));
 
-			//if (!aClient->SendData(&responseMessage))
-			//	return false;
+			MySQLDatabase::ourInstance->QueryProfileBadgesRawData(profileId, buffer, sizeof(buffer));
+
+			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_BADGES_RSP:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_BADGES_RSP);
+			responseMessage.WriteUInt(profileId);
+			responseMessage.WriteUInt(14);
+			responseMessage.WriteRawData(buffer, sizeof(buffer));
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 		break;
-		*/
 		
 		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_CLAN_STATS_REQ:
 		{

@@ -3,6 +3,26 @@
 class MMG_Stats
 {
 public:
+
+	// MMG_DecorationProtocol
+	class Medal
+	{
+	public:
+		uint level;
+		uint stars;
+
+		Medal() : level(0), stars(0){}
+	};
+
+	class Badge
+	{
+	public:
+		uint level;
+		uint stars;
+
+		Badge() : level(0), stars(0){}
+	};
+
 	class PlayerStatsRsp : public MMG_IStreamable
 	{
 	public:

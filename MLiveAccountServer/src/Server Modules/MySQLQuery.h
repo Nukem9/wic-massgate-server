@@ -189,13 +189,13 @@ public:
 	}
 
 	//BLOB
-	void BindBlob(MYSQL_BIND *param, voidptr_t Data, ulong *Length)
+	void BindBlob(MYSQL_BIND *param, voidptr_t Data, ulong Length)
 	{
 		//mysql_stmt_send_long_data(stmt, 2, (const char*)Data, Length)
 
 		param->buffer_type = MYSQL_TYPE_BLOB;
 		param->buffer = (void *)Data;
-		param->buffer_length = *Length;
+		param->buffer_length = Length;
 		param->is_null = (my_bool *)0;
 		param->length = 0;
 	}
