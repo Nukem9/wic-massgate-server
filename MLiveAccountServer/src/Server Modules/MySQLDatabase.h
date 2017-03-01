@@ -173,8 +173,9 @@ public:
 	bool	CheckIfProfileExists	(const wchar_t* name, uint *dstId);
 	bool	CreateUserProfile	(const uint accountId, const wchar_t* name, const char* email);
 	bool	DeleteUserProfile	(const uint accountId, const uint profileId, const char* email);
+	bool	QueryProfileCreationDate	(const uint profileId, uint *membersince);
 	bool	QueryPreorderNumRecruited	(const uint accountId, uchar *isPreorder, uint *numFriendsRecruited);
-	bool	UpdatePreorderRecruitBadges	(const uint accountId, const uint profileId);
+	bool	UpdateMembershipBadges		(const uint accountId, const uint profileId);
 	bool	QueryUserProfile	(const uint accountId, const uint profileId, MMG_Profile *profile);
 	bool	RetrieveUserProfiles		(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles);
 

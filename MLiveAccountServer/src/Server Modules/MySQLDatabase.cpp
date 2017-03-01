@@ -821,11 +821,13 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 		}
 
 		preorderBadge.level = isPreorder > 0 ? 1 : 0;
-		preorderBadge.stars = 0;
+		preorderBadge.stars = isPreorder > 1 ? 1 : 0;
+		preorderBadge.stars = isPreorder > 2 ? 2 : preorderBadge.stars;
+		preorderBadge.stars = isPreorder > 3 ? 3 : preorderBadge.stars;
 
-		recruitBadge.level = numFriendsRecruited > 0 ? 1 : recruitBadge.level;
-		recruitBadge.level = numFriendsRecruited > 4 ? 2 : recruitBadge.level;
-		recruitBadge.level = numFriendsRecruited > 9 ? 3 : recruitBadge.level;
+		recruitBadge.level = numFriendsRecruited > 0 ? 1 : 0;
+		recruitBadge.level = numFriendsRecruited > 5 ? 2 : recruitBadge.level;
+		recruitBadge.level = numFriendsRecruited > 15 ? 3 : recruitBadge.level;
 		recruitBadge.stars = 0;
 
 		MMG_BitWriter<unsigned int> writer(badgebuffer, sizeof(badgebuffer) * 8);
@@ -1194,6 +1196,42 @@ bool MySQLDatabase::DeleteUserProfile(const uint accountId, const uint profileId
 	return true;
 }
 
+bool MySQLDatabase::QueryProfileCreationDate(const uint profileId, uint *membersince)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT membersince FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], result[1];
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	query.Bind(&param[0], &profileId);
+
+	query.Bind(&result[0], membersince);
+
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("QueryProfileCreationDate() failed:");
+		*membersince = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			DatabaseLog("QueryProfileCreationDate() account not found");
+			*membersince = 0;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
 bool MySQLDatabase::QueryPreorderNumRecruited(const uint accountId, uchar *isPreorder, uint *numFriendsRecruited)
 {
 	char SQL[4096];
@@ -1233,38 +1271,79 @@ bool MySQLDatabase::QueryPreorderNumRecruited(const uint accountId, uchar *isPre
 	return true;
 }
 
-bool MySQLDatabase::UpdatePreorderRecruitBadges(const uint accountId, const uint profileId)
+bool MySQLDatabase::UpdateMembershipBadges(const uint accountId, const uint profileId)
 {
 	MMG_Stats::Badge badges[14];
+	uint membersince = 0;
 	uchar isPreorder = 0;
 	uint numFriendsRecruited = 0;
-	bool changed = false;
+	uint readbuffer[256];
+	memset(readbuffer, 0, sizeof(readbuffer));
 
-	if (!QueryProfileBadges(profileId, 14, badges))
+	if (!QueryProfileBadgesRawData(profileId, readbuffer, sizeof(readbuffer)))
+		return false;
+
+	if (!QueryProfileCreationDate(profileId, &membersince))
 		return false;
 
 	if (!QueryPreorderNumRecruited(accountId, &isPreorder, &numFriendsRecruited))
 		return false;
 
-	if (badges[12].level < 1)
+	MMG_BitReader<unsigned int> reader(readbuffer, sizeof(readbuffer) * 8);
+
+	for (uint i = 0; i < 14; i++)
+	{
+		badges[i].level = reader.ReadBits(2);
+		badges[i].stars = reader.ReadBits(2);
+	}
+
+	double days = difftime(time(NULL), membersince) / 86400;
+
+	if (badges[7].level < 3)
+	{
+		badges[7].level = days >= 30 ? 1 : 0;
+		badges[7].stars = days >= 60 ? 1 : 0;
+		badges[7].stars = days >= 90 ? 0 : badges[7].stars;
+
+		badges[7].level = days >= 90 ? 2 : badges[7].level;
+		badges[7].stars = days >= 180 ? 1 : badges[7].stars;
+		badges[7].stars = days >= 270 ? 2 : badges[7].stars;
+		badges[7].stars = days >= 360 ? 3 : badges[7].stars;
+
+		badges[7].level = days >= 365 ? 3 : badges[7].level;
+		badges[7].stars = days >= 365 ? 0 : badges[7].stars;
+	}
+
+	if (badges[12].level < 1 || badges[12].stars < 3)
 	{
 		badges[12].level = isPreorder > 0 ? 1 : 0;
-		badges[12].stars = 0;
-		changed = true;
+		badges[12].stars = isPreorder > 1 ? 1 : 0;
+		badges[12].stars = isPreorder > 2 ? 2 : badges[12].stars;
+		badges[12].stars = isPreorder > 3 ? 3 : badges[12].stars;
 	}
 
 	if (badges[13].level < 3)
 	{
-		badges[13].level = numFriendsRecruited > 0 ? 1 : badges[13].level;
-		badges[13].level = numFriendsRecruited > 4 ? 2 : badges[13].level;
-		badges[13].level = numFriendsRecruited > 9 ? 3 : badges[13].level;
+		badges[13].level = numFriendsRecruited > 0 ? 1 : 0;
+		badges[13].level = numFriendsRecruited > 5 ? 2 : badges[13].level;
+		badges[13].level = numFriendsRecruited > 15 ? 3 : badges[13].level;
 		badges[13].stars = 0;
-		changed = true;
 	}
 
-	if (changed)
+	uint writebuffer[256];
+	memset(writebuffer, 0, sizeof(writebuffer));
+
+	MMG_BitWriter<unsigned int> writer(writebuffer, sizeof(writebuffer) * 8);
+
+	for (uint i = 0; i < 14; i++)
 	{
-		if (!UpdateProfileBadges(profileId, 14, badges))
+		writer.WriteBits(badges[i].level, 2);
+		writer.WriteBits(badges[i].stars, 2);
+	}
+
+	if (memcmp(readbuffer, writebuffer, sizeof(writebuffer)))
+	{
+		if (!UpdateProfileBadgesRawData(profileId, writebuffer, sizeof(writebuffer)))
 			return false;
 	}
 
@@ -1366,7 +1445,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 		return false;
 	}
 
-	if (!UpdatePreorderRecruitBadges(accountId, profileId))
+	if (!UpdateMembershipBadges(accountId, profileId))
 	{
 		RollbackTransaction();
 		return false;
