@@ -23,6 +23,53 @@ public:
 		Badge() : level(0), stars(0){}
 	};
 
+	// not in IDA
+	class ExtraPlayerStats
+	{
+	public:
+		uint m_CurrentAssaultWinStreak;
+		uint m_CurrentDominationWinStreak;
+		uint m_CurrentTugOfWarWinStreak;
+		uint m_CurrentDominationPerfectStreak;
+		uint m_CurrentAssaultPerfectStreak;
+		uint m_CurrentTugOfWarPerfectStreak;
+		uint m_CurrentNukesDeployedStreak;
+		uint m_NumberOfTimesBestPlayer;
+		uint m_CurrentBestPlayerStreak;
+		uint m_NumberOfTimesBestInfantry;
+		uint m_CurrentBestInfantryStreak;
+		uint m_NumberOfTimesBestSupport;
+		uint m_CurrentBestSupportStreak;
+		uint m_NumberOfTimesBestAir;
+		uint m_CurrentBestAirStreak;
+		uint m_NumberOfTimesBestArmor;
+		uint m_CurrentBestArmorStreak;
+
+	private:
+
+	public:
+		ExtraPlayerStats()
+		{
+			this->m_CurrentAssaultWinStreak				= 0;
+			this->m_CurrentDominationWinStreak			= 0;
+			this->m_CurrentTugOfWarWinStreak			= 0;
+			this->m_CurrentDominationPerfectStreak		= 0;
+			this->m_CurrentAssaultPerfectStreak			= 0;
+			this->m_CurrentTugOfWarPerfectStreak		= 0;
+			this->m_CurrentNukesDeployedStreak			= 0;
+			this->m_NumberOfTimesBestPlayer				= 0;
+			this->m_CurrentBestPlayerStreak				= 0;
+			this->m_NumberOfTimesBestInfantry			= 0;
+			this->m_CurrentBestInfantryStreak			= 0;
+			this->m_NumberOfTimesBestSupport			= 0;
+			this->m_CurrentBestSupportStreak			= 0;
+			this->m_NumberOfTimesBestAir				= 0;
+			this->m_CurrentBestAirStreak				= 0;
+			this->m_NumberOfTimesBestArmor				= 0;
+			this->m_CurrentBestArmorStreak				= 0;
+		}
+	};
+
 	class PlayerStatsRsp : public MMG_IStreamable
 	{
 	public:

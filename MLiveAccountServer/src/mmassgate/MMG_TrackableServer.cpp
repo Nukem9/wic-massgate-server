@@ -188,21 +188,19 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 			uint statCount;
 			uint64 mapHash;
-			time_t local_timestamp = time(NULL);
-			uint datematchplayed = local_timestamp;
+			MMG_Stats::PlayerMatchStats playerStats[100];
 
 			if (!aMessage->ReadUInt(statCount) || !aMessage->ReadUInt64(mapHash))
 				return false;
 
 			for (uint i = 0; i < statCount; i++)
 			{
-				MMG_Stats::PlayerMatchStats playerStats;
-
-				if (!playerStats.FromStream(aMessage))
+				if (!playerStats[i].FromStream(aMessage))
 					return false;
-
-				MySQLDatabase::ourInstance->SavePlayerMatchStats(datematchplayed, &playerStats);
 			}
+
+			if (!MySQLDatabase::ourInstance->ProcessMatchStatistics(statCount, playerStats))
+				return false;
 		}
 		break;
 
@@ -246,6 +244,20 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		}
 		break;
 
+		// Server heartbeat sent every X seconds
+		case MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_STATUS:
+		{
+			DebugLog(L_INFO, "SERVERTRACKER_SERVER_STATUS:");
+
+			MMG_TrackableServerHeartbeat heartbeat;
+			if (!heartbeat.FromStream(aMessage))
+				return false;
+
+			if (!UpdateServer(server, &heartbeat))
+				return false;
+		}
+		break;
+
 		// Map rotation cycle info
 		case MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_MAP_LIST:
 		{
@@ -264,20 +276,6 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 				DebugLog(L_INFO, "%llX - %ws", mapHash, mapName);
 			}
-		}
-		break;
-
-		// Server heartbeat sent every X seconds
-		case MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_STATUS:
-		{
-			DebugLog(L_INFO, "SERVERTRACKER_SERVER_STATUS:");
-
-			MMG_TrackableServerHeartbeat heartbeat;
-			if (!heartbeat.FromStream(aMessage))
-				return false;
-
-			if (!UpdateServer(server, &heartbeat))
-				return false;
 		}
 		break;
 

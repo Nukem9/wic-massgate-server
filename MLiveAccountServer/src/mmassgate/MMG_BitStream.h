@@ -62,7 +62,7 @@ public:
 		if (theNumBits == 1)
 		{
 			// Read a single bit
-			T value		= this->myReadBuffer[this->m_Position / TypeSizeInBits];
+			T value		= this->m_ReadBuffer[this->m_Position / TypeSizeInBits];
 			uint mask	= TypeMask(this->m_Position);
 			
 			this->m_Position += 1;
@@ -79,7 +79,7 @@ public:
 			if ((this->m_Position / TypeSizeInBits) == ((this->m_Position + theNumBits - 1) / TypeSizeInBits))
 			{
 				// Read X bits now as they fit into a single array index
-				T value		= this->myReadBuffer[this->m_Position / TypeSizeInBits];
+				T value		= this->m_ReadBuffer[this->m_Position / TypeSizeInBits];
 				uint mask	= TypeMask(this->m_Position);
 
 				this->m_Position += theNumBits;
@@ -87,7 +87,7 @@ public:
 				if (this->m_Position == this->m_MaxLength)
 					this->m_Status = StreamStatus::EndOfStream;
 
-				return ((((1 << theNumBits) - 1) << mask) & value) >> TypeMask(this->m_Position);
+				return ((((1 << theNumBits) - 1) << mask) & value) >> mask;
 			}
 			else
 			{

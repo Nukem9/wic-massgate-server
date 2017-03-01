@@ -229,12 +229,14 @@ public:
 	bool	QueryProfileMedalsRawData	(const uint profileId, voidptr_t Data, ulong Length);
 	bool	QueryProfileBadgesRawData	(const uint profileId, voidptr_t Data, ulong Length);
 	bool	QueryProfileStats			(const uint profileId, MMG_Stats::PlayerStatsRsp *playerstats);
+	bool	QueryProfileExtraStats		(const uint profileId, MMG_Stats::ExtraPlayerStats *extrastats);
 
 	// MMG_TrackableServer
 	bool	VerifyServerKey				(const uint sequenceNum, uint *dstId);
-	bool	SavePlayerMatchStats		(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats);
 	bool	UpdateProfileMedals			(const uint profileId, const size_t Count, MMG_Stats::Medal medals[]);
 	bool	UpdateProfileBadges			(const uint profileId, const size_t Count, MMG_Stats::Badge badges[]);
 	bool	UpdateProfileMedalsRawData	(const uint profileId, voidptr_t Data, ulong Length);
 	bool	UpdateProfileBadgesRawData	(const uint profileId, voidptr_t Data, ulong Length);
+	bool	UpdatePlayerMatchStats		(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats);
+	bool	ProcessMatchStatistics		(const uint Count, MMG_Stats::PlayerMatchStats playermatchstats[]);
 };

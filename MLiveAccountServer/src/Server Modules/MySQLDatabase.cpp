@@ -4559,6 +4559,56 @@ bool MySQLDatabase::QueryProfileStats(const uint profileId, MMG_Stats::PlayerSta
 	return true;
 }
 
+bool MySQLDatabase::QueryProfileExtraStats(const uint profileId, MMG_Stats::ExtraPlayerStats *extrastats)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT currentassaultwinstreak, currentdominationwinstreak, currenttugofwarwinstreak, currentdominationperfectstreak, currentassaultperfectstreak, currenttugofwarperfectstreak, currentnukesdeployedstreak, numberoftimesbestplayer, currentbestplayerstreak, numberoftimesbestinfantry, currentbestinfantrystreak, numberoftimesbestsupport, currentbestsupportstreak, numberoftimesbestair, currentbestairstreak, numberoftimesbestarmor, currentbestarmorstreak FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], results[17];
+	memset(param, 0, sizeof(param));
+	memset(results, 0, sizeof(results));
+
+	query.Bind(&param[0], &profileId);
+
+	query.Bind(&results[0], &extrastats->m_CurrentAssaultWinStreak);
+	query.Bind(&results[1], &extrastats->m_CurrentDominationWinStreak);
+	query.Bind(&results[2], &extrastats->m_CurrentTugOfWarWinStreak);
+	query.Bind(&results[3], &extrastats->m_CurrentDominationPerfectStreak);
+	query.Bind(&results[4], &extrastats->m_CurrentAssaultPerfectStreak);
+	query.Bind(&results[5], &extrastats->m_CurrentTugOfWarPerfectStreak);
+	query.Bind(&results[6], &extrastats->m_CurrentNukesDeployedStreak);
+	query.Bind(&results[7], &extrastats->m_NumberOfTimesBestPlayer);
+	query.Bind(&results[8], &extrastats->m_CurrentBestPlayerStreak);
+	query.Bind(&results[9], &extrastats->m_NumberOfTimesBestInfantry);
+	query.Bind(&results[10], &extrastats->m_CurrentBestInfantryStreak);
+	query.Bind(&results[11], &extrastats->m_NumberOfTimesBestSupport);
+	query.Bind(&results[12], &extrastats->m_CurrentBestSupportStreak);
+	query.Bind(&results[13], &extrastats->m_NumberOfTimesBestAir);
+	query.Bind(&results[14], &extrastats->m_CurrentBestAirStreak);
+	query.Bind(&results[15], &extrastats->m_NumberOfTimesBestArmor);
+	query.Bind(&results[16], &extrastats->m_CurrentBestArmorStreak);
+
+	if(!query.StmtExecute(param, results))
+	{
+		DatabaseLog("QueryProfileExtraStats() failed:");
+	}
+	else
+	{
+		if (!query.StmtFetch())
+			DatabaseLog("extra stats not found");
+		//else
+		//	DatabaseLog("extra stats found");
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
 bool MySQLDatabase::VerifyServerKey(const uint sequenceNum, uint *dstId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
@@ -4575,7 +4625,6 @@ bool MySQLDatabase::VerifyServerKey(const uint sequenceNum, uint *dstId)
 
 	MySQLQuery query(this->m_Connection, SQL);
 	MYSQL_BIND param[1], result[1];
-
 	memset(param, 0, sizeof(param));
 	memset(result, 0, sizeof(result));
 
@@ -4687,17 +4736,8 @@ bool MySQLDatabase::UpdateProfileBadgesRawData(const uint profileId, voidptr_t D
 	return true;
 }
 
-bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats)
+bool MySQLDatabase::UpdatePlayerMatchStats(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats)
 {
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
-	BeginTransaction();
-
 	char SQL[8192];
 	memset(SQL, 0, sizeof(SQL));
 
@@ -4763,12 +4803,11 @@ bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::
 				 "currentbestsupportstreak = IF (? > 0, currentbestsupportstreak + 1, 0), "
 				 "numberoftimesbestair = IF (? > 0, numberoftimesbestair + 1, numberoftimesbestair), "
 				 "currentbestairstreak = IF (? > 0, currentbestairstreak + 1, 0), "
-				 "numberoftimesbestarmor  = IF (? > 0, numberoftimesbestarmor + 1, numberoftimesbestarmor), "
+				 "numberoftimesbestarmor = IF (? > 0, numberoftimesbestarmor + 1, numberoftimesbestarmor), "
 				 "currentbestarmorstreak = IF (? > 0, currentbestarmorstreak + 1, 0) "
 				 "WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
-
 	MYSQL_BIND params[79];
 	memset(params, 0, sizeof(params));
 
@@ -5000,12 +5039,57 @@ bool MySQLDatabase::SavePlayerMatchStats(const uint datematchplayed, MMG_Stats::
 	query.Bind(&params[i++], &playerstats->m_ProfileId);
 
 	if (!query.StmtExecute(params))
-		DatabaseLog("SavePlayerMatchStats() query failed:");
+		DatabaseLog("UpdatePlayerMatchStats() failed:");
 
 	if (!query.Success())
-	{
-		RollbackTransaction();
 		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMatchStats playermatchstats[])
+{
+	if (!TestDatabase())
+	{
+		EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	BeginTransaction();
+
+	time_t local_timestamp = time(NULL);
+	uint datePlayed = local_timestamp;
+
+	for (uint i = 0; i < Count; i++)
+	{
+		MMG_Stats::Medal medals[19];
+		MMG_Stats::Badge badges[14];
+		MMG_Stats::PlayerStatsRsp playerStats;
+		MMG_Stats::ExtraPlayerStats extraStats;
+		MMG_Stats::PlayerMatchStats *matchStats = &playermatchstats[i];
+		uint profileId = matchStats->m_ProfileId;
+
+		if (!UpdatePlayerMatchStats(datePlayed, matchStats))
+		{
+			DatabaseLog("could not save match statistics");
+			RollbackTransaction();
+			return false;
+		}
+
+		if (!QueryProfileMedals(profileId, 19, medals) || !QueryProfileBadges(profileId, 14, badges)
+			|| !QueryProfileStats(profileId, &playerStats) || !QueryProfileExtraStats(profileId, &extraStats))
+		{
+			DatabaseLog("could not retrieve player statistics");
+			RollbackTransaction();
+			return false;
+		}
+
+		if (!UpdateProfileMedals(profileId, 19, medals) || !UpdateProfileBadges(profileId, 14, badges))
+		{
+			DatabaseLog("could not update player achievements");
+			RollbackTransaction();
+			return false;
+		}
 	}
 
 	CommitTransaction();
