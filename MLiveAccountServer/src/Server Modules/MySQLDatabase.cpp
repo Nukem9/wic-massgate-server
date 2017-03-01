@@ -5084,6 +5084,24 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			return false;
 		}
 
+		// infantry skill medal
+		if ((matchStats->m_BestData & 0x02) && medals[0].level < 3)
+		{
+			medals[0].level = medals[0].level == 0 && extraStats.m_NumberOfTimesBestInfantry > 0 ? 1 : medals[0].level;
+			medals[0].stars = medals[0].level == 1 && extraStats.m_NumberOfTimesBestInfantry > 1 ? 1 : medals[0].stars;
+			medals[0].stars = medals[0].level == 1 && extraStats.m_NumberOfTimesBestInfantry > 2 ? 2 : medals[0].stars;
+			medals[0].stars = medals[0].level == 1 && extraStats.m_NumberOfTimesBestInfantry > 3 ? 3 : medals[0].stars;
+
+			medals[0].level = medals[0].level == 1 && extraStats.m_NumberOfTimesBestInfantry > 10 ? 2 : medals[0].level;
+			medals[0].stars = medals[0].level == 2 && extraStats.m_NumberOfTimesBestInfantry <= 20 ? 0 : medals[0].stars;
+			medals[0].stars = medals[0].level == 2 && extraStats.m_NumberOfTimesBestInfantry > 20 ? 1 : medals[0].stars;
+			medals[0].stars = medals[0].level == 2 && extraStats.m_NumberOfTimesBestInfantry > 30 ? 2 : medals[0].stars;
+			medals[0].stars = medals[0].level == 2 && extraStats.m_NumberOfTimesBestInfantry > 40 ? 3 : medals[0].stars;
+
+			medals[0].level = medals[0].level == 2 && extraStats.m_NumberOfTimesBestInfantry > 20 && extraStats.m_CurrentBestInfantryStreak >= 10 ? 3 : medals[0].level;
+			medals[0].stars = medals[0].level == 3 ? 0 : medals[0].stars;
+		}
+
 		if (!UpdateProfileMedals(profileId, 19, medals) || !UpdateProfileBadges(profileId, 14, badges))
 		{
 			DatabaseLog("could not update player achievements");
