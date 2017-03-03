@@ -5343,6 +5343,170 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			}
 		}
 
+		// tactical aid combat medal
+		if (medals[5].level == 0)
+		{
+			if (playerStats.m_NumberOfTacticalAidCriticalHits >= 25)
+			{
+				medals[5].level = 1;
+				medals[5].stars = 0;
+			}
+		}
+		else if (medals[5].level == 1)
+		{
+			uint req[] = {50, 75, 100};
+
+			if (medals[5].stars < 3 && playerStats.m_NumberOfTacticalAidCriticalHits >= req[medals[5].stars])
+				medals[5].stars++;
+
+			if (playerStats.m_NumberOfTacticalAidCriticalHits >= 125)
+			{
+				medals[5].level = 2;
+				medals[5].stars = 0;
+			}
+		}
+		else if (medals[5].level == 2)
+		{
+			uint req[] = {250, 375, 500};
+
+			if (medals[5].stars < 3 && playerStats.m_NumberOfTacticalAidCriticalHits >= req[medals[5].stars])
+				medals[5].stars++;
+
+			if (playerStats.m_NumberOfTacticalAidCriticalHits > 125 && matchStats->m_NumberOfTacticalAidCriticalHits >= 15)
+			{
+				medals[5].level = 3;
+				medals[5].stars = 0;
+			}
+		}
+
+		// infantry combat medal
+		if (medals[6].level == 0)
+		{
+			if (matchStats->m_ScoreAsInfantry >= 500)
+			{
+				medals[6].level = 1;
+				medals[6].stars = 0;
+			}
+		}
+		else if (medals[6].level == 1)
+		{
+			if (medals[6].stars < 3 && matchStats->m_ScoreAsInfantry >= 500)
+				medals[6].stars++;
+
+			if (matchStats->m_ScoreAsInfantry >= 1200)
+			{
+				medals[6].level = 2;
+				medals[6].stars = 0;
+			}
+		}
+		else if (medals[6].level == 2)
+		{
+			if (medals[6].stars < 3 && matchStats->m_ScoreAsInfantry >= 1200)
+				medals[6].stars++;
+
+			if (matchStats->m_ScoreAsInfantry >= 2000)
+			{
+				medals[6].level = 3;
+				medals[6].stars = 0;
+			}
+		}
+
+		// air combat medal
+		if (medals[7].level == 0)
+		{
+			if (matchStats->m_ScoreAsAir >= 500)
+			{
+				medals[7].level = 1;
+				medals[7].stars = 0;
+			}
+		}
+		else if (medals[7].level == 1)
+		{
+			if (medals[7].stars < 3 && matchStats->m_ScoreAsAir >= 500)
+				medals[7].stars++;
+
+			if (matchStats->m_ScoreAsAir >= 1200)
+			{
+				medals[7].level = 2;
+				medals[7].stars = 0;
+			}
+		}
+		else if (medals[7].level == 2)
+		{
+			if (medals[7].stars < 3 && matchStats->m_ScoreAsAir >= 1200)
+				medals[7].stars++;
+
+			if (matchStats->m_ScoreAsAir >= 2000)
+			{
+				medals[7].level = 3;
+				medals[7].stars = 0;
+			}
+		}
+
+		//  armor combat medal
+		if (medals[8].level == 0)
+		{
+			if (matchStats->m_ScoreAsArmor >= 500)
+			{
+				medals[8].level = 1;
+				medals[8].stars = 0;
+			}
+		}
+		else if (medals[8].level == 1)
+		{
+			if (medals[8].stars < 3 && matchStats->m_ScoreAsArmor >= 500)
+				medals[8].stars++;
+
+			if (matchStats->m_ScoreAsArmor >= 1200)
+			{
+				medals[8].level = 2;
+				medals[8].stars = 0;
+			}
+		}
+		else if (medals[8].level == 2)
+		{
+			if (medals[8].stars < 3 && matchStats->m_ScoreAsArmor >= 1200)
+				medals[8].stars++;
+
+			if (matchStats->m_ScoreAsArmor >= 2000)
+			{
+				medals[8].level = 3;
+				medals[8].stars = 0;
+			}
+		}
+
+		// support combat medal
+		if (medals[9].level == 0)
+		{
+			if (matchStats->m_ScoreAsSupport >= 500)
+			{
+				medals[9].level = 1;
+				medals[9].stars = 0;
+			}
+		}
+		else if (medals[9].level == 1)
+		{
+			if (medals[9].stars < 3 && matchStats->m_ScoreAsSupport >= 500)
+				medals[9].stars++;
+
+			if (matchStats->m_ScoreAsSupport >= 1200)
+			{
+				medals[9].level = 2;
+				medals[9].stars = 0;
+			}
+		}
+		else if (medals[9].level == 2)
+		{
+			if (medals[9].stars < 3 && matchStats->m_ScoreAsSupport >= 1200)
+				medals[9].stars++;
+
+			if (matchStats->m_ScoreAsSupport >= 2000)
+			{
+				medals[9].level = 3;
+				medals[9].stars = 0;
+			}
+		}
+
 		if (!UpdateProfileMedals(profileId, 19, medals) || !UpdateProfileBadges(profileId, 14, badges))
 		{
 			DatabaseLog("could not update player achievements");
