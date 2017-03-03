@@ -5507,6 +5507,350 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			}
 		}
 
+		// winning streak match medal
+		if (medals[10].level == 0)
+		{
+			if (playerStats.m_CurrentWinningStreak >= 5)
+			{
+				medals[10].level = 1;
+				medals[10].stars = 0;
+			}
+		}
+		else if (medals[10].level == 1)
+		{
+			if (medals[10].stars < 3 && playerStats.m_CurrentWinningStreak > 0 && playerStats.m_CurrentWinningStreak % 5 == 0)
+				medals[10].stars++;
+
+			if (playerStats.m_CurrentWinningStreak >= 10)
+			{
+				medals[10].level = 2;
+				medals[10].stars = 0;
+			}
+		}
+		else if (medals[10].level == 2)
+		{
+			if (medals[10].stars < 3 && playerStats.m_CurrentWinningStreak > 0 && playerStats.m_CurrentWinningStreak % 10 == 0)
+				medals[10].stars++;
+
+			if (playerStats.m_CurrentWinningStreak >= 20)
+			{
+				medals[10].level = 3;
+				medals[10].stars = 0;
+			}
+		}
+
+		// domination specialist
+		if (medals[11].level == 0)
+		{
+			if (playerStats.m_NumberOfDominationMatchesWon >= 10)
+			{
+				medals[11].level = 1;
+				medals[11].stars = 0;
+			}
+
+			if (extraStats.m_CurrentDominationWinStreak >= 10)
+			{
+				medals[11].level = 3;
+				medals[11].stars = 0;
+			}
+		}
+		else if (medals[11].level == 1)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[11].stars < 3 && playerStats.m_NumberOfDominationMatchesWon >= req[medals[11].stars])
+				medals[11].stars++;
+
+			if (playerStats.m_NumberOfDominationMatchesWon >= 100)
+			{
+				medals[11].level = 2;
+				medals[11].stars = 0;
+			}
+
+			if (extraStats.m_CurrentDominationWinStreak >= 10)
+			{
+				medals[11].level = 3;
+				medals[11].stars = 0;
+			}
+		}
+		else if (medals[11].level == 2)
+		{
+			uint req[] = {200, 300, 400};
+
+			if (medals[11].stars < 3 && playerStats.m_NumberOfDominationMatchesWon >= req[medals[11].stars])
+				medals[11].stars++;
+
+			if (extraStats.m_CurrentDominationWinStreak >= 10)
+			{
+				medals[11].level = 3;
+				medals[11].stars = 0;
+			}
+		}
+
+		// domination excellency
+		if (medals[12].level == 0)
+		{
+			if (playerStats.m_NumberOfMatchesWonByTotalDomination >= 1)
+			{
+				medals[12].level = 1;
+				medals[12].stars = 0;
+			}
+		}
+		else if (medals[12].level == 1)
+		{
+			uint req[] = {2, 3, 4};
+
+			if (medals[12].stars < 3 && playerStats.m_NumberOfMatchesWonByTotalDomination >= req[medals[12].stars])
+				medals[12].stars++;
+
+			if (playerStats.m_NumberOfMatchesWonByTotalDomination >= 10)
+			{
+				medals[12].level = 2;
+				medals[12].stars = 0;
+			}
+
+			if (extraStats.m_CurrentDominationPerfectStreak >= 5)
+			{
+				medals[12].level = 3;
+				medals[12].stars = 0;
+			}
+		}
+		else if (medals[12].level == 2)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[12].stars < 3 && playerStats.m_NumberOfMatchesWonByTotalDomination >= req[medals[12].stars])
+				medals[12].stars++;
+
+			if (extraStats.m_CurrentDominationPerfectStreak >= 5)
+			{
+				medals[12].level = 3;
+				medals[12].stars = 0;
+			}
+		}
+
+		// assault specialist
+		if (medals[13].level == 0)
+		{
+			if (playerStats.m_NumberOfAssaultMatchesWon >= 10)
+			{
+				medals[13].level = 1;
+				medals[13].stars = 0;
+			}
+
+			if (extraStats.m_CurrentAssaultWinStreak >= 10)
+			{
+				medals[13].level = 3;
+				medals[13].stars = 0;
+			}
+		}
+		else if (medals[13].level == 1)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[13].stars < 3 && playerStats.m_NumberOfAssaultMatchesWon >= req[medals[13].stars])
+				medals[13].stars++;
+
+			if (playerStats.m_NumberOfAssaultMatchesWon >= 100)
+			{
+				medals[13].level = 2;
+				medals[13].stars = 0;
+			}
+
+			if (extraStats.m_CurrentAssaultWinStreak >= 10)
+			{
+				medals[13].level = 3;
+				medals[13].stars = 0;
+			}
+		}
+		else if (medals[13].level == 2)
+		{
+			uint req[] = {200, 300, 400};
+
+			if (medals[13].stars < 3 && playerStats.m_NumberOfAssaultMatchesWon >= req[medals[13].stars])
+				medals[13].stars++;
+
+			if (extraStats.m_CurrentAssaultWinStreak >= 10)
+			{
+				medals[13].level = 3;
+				medals[13].stars = 0;
+			}
+		}
+
+		// assault excellency
+		if (medals[14].level == 0)
+		{
+			if (playerStats.m_NumberOfPerfectDefendsInAssaultMatch >= 1)
+			{
+				medals[14].level = 1;
+				medals[14].stars = 0;
+			}
+		}
+		else if (medals[14].level == 1)
+		{
+			uint req[] = {2, 3, 4};
+
+			if (medals[14].stars < 3 && playerStats.m_NumberOfPerfectDefendsInAssaultMatch >= req[medals[14].stars])
+				medals[14].stars++;
+
+			if (playerStats.m_NumberOfPerfectDefendsInAssaultMatch >= 10)
+			{
+				medals[14].level = 2;
+				medals[14].stars = 0;
+			}
+
+			if (extraStats.m_CurrentAssaultPerfectStreak >= 5)
+			{
+				medals[14].level = 3;
+				medals[14].stars = 0;
+			}
+		}
+		else if (medals[14].level == 2)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[14].stars < 3 && playerStats.m_NumberOfPerfectDefendsInAssaultMatch >= req[medals[14].stars])
+				medals[14].stars++;
+
+			if (extraStats.m_CurrentAssaultPerfectStreak >= 5)
+			{
+				medals[14].level = 3;
+				medals[14].stars = 0;
+			}
+		}
+
+		// tug of war specialist
+		if (medals[15].level == 0)
+		{
+			if (playerStats.m_NumberOfTugOfWarMatchesWon >= 10)
+			{
+				medals[15].level = 1;
+				medals[15].stars = 0;
+			}
+
+			if (extraStats.m_CurrentTugOfWarWinStreak >= 10)
+			{
+				medals[15].level = 3;
+				medals[15].stars = 0;
+			}
+		}
+		else if (medals[15].level == 1)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[15].stars < 3 && playerStats.m_NumberOfTugOfWarMatchesWon >= req[medals[15].stars])
+				medals[15].stars++;
+
+			if (playerStats.m_NumberOfTugOfWarMatchesWon >= 100)
+			{
+				medals[15].level = 2;
+				medals[15].stars = 0;
+			}
+
+			if (extraStats.m_CurrentTugOfWarWinStreak >= 10)
+			{
+				medals[15].level = 3;
+				medals[15].stars = 0;
+			}
+		}
+		else if (medals[15].level == 2)
+		{
+			uint req[] = {200, 300, 400};
+
+			if (medals[15].stars < 3 && playerStats.m_NumberOfTugOfWarMatchesWon >= req[medals[15].stars])
+				medals[15].stars++;
+
+			if (extraStats.m_CurrentTugOfWarWinStreak >= 10)
+			{
+				medals[15].level = 3;
+				medals[15].stars = 0;
+			}
+		}
+
+		// tug of war excellency
+		if (medals[16].level == 0)
+		{
+			if (playerStats.m_NumberOfPerfectPushesInTugOfWarMatch >= 1)
+			{
+				medals[16].level = 1;
+				medals[16].stars = 0;
+			}
+		}
+		else if (medals[16].level == 1)
+		{
+			uint req[] = {2, 3, 4};
+
+			if (medals[16].stars < 3 && playerStats.m_NumberOfPerfectPushesInTugOfWarMatch >= req[medals[16].stars])
+				medals[16].stars++;
+
+			if (playerStats.m_NumberOfPerfectPushesInTugOfWarMatch >= 10)
+			{
+				medals[16].level = 2;
+				medals[16].stars = 0;
+			}
+
+			if (extraStats.m_CurrentTugOfWarPerfectStreak >= 5)
+			{
+				medals[16].level = 3;
+				medals[16].stars = 0;
+			}
+		}
+		else if (medals[16].level == 2)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[16].stars < 3 && playerStats.m_NumberOfPerfectPushesInTugOfWarMatch >= req[medals[16].stars])
+				medals[16].stars++;
+
+			if (extraStats.m_CurrentTugOfWarPerfectStreak >= 5)
+			{
+				medals[16].level = 3;
+				medals[16].stars = 0;
+			}
+		}
+
+		// nuclear specialist
+		if (medals[17].level == 0)
+		{
+			if (playerStats.m_NumberOfNukesDeployed >= 1)
+			{
+				medals[17].level = 1;
+				medals[17].stars = 0;
+			}
+		}
+		else if (medals[17].level == 1)
+		{
+			uint req[] = {2, 3, 4};
+
+			if (medals[17].stars < 3 && playerStats.m_NumberOfNukesDeployed >= req[medals[17].stars])
+				medals[17].stars++;
+
+			if (playerStats.m_NumberOfNukesDeployed >= 10)
+			{
+				medals[17].level = 2;
+				medals[17].stars = 0;
+			}
+
+			if (extraStats.m_CurrentNukesDeployedStreak >= 8)
+			{
+				medals[17].level = 3;
+				medals[17].stars = 0;
+			}
+		}
+		else if (medals[17].level == 2)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[17].stars < 3 && playerStats.m_NumberOfNukesDeployed >= req[medals[17].stars])
+				medals[17].stars++;
+
+			if (extraStats.m_CurrentNukesDeployedStreak >= 8)
+			{
+				medals[17].level = 3;
+				medals[17].stars = 0;
+			}
+		}
+
 		if (!UpdateProfileMedals(profileId, 19, medals) || !UpdateProfileBadges(profileId, 14, badges))
 		{
 			DatabaseLog("could not update player achievements");
