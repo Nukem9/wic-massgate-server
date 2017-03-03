@@ -5164,21 +5164,183 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		}
 
 		// infantry skill medal
-		if ((matchStats->m_BestData & 0x02) && medals[0].level < 3)
+		if ((matchStats->m_BestData & 0x02) && medals[0].level == 0)
 		{
-			medals[0].level = medals[0].level == 0 && extraStats.m_NumberOfTimesBestInfantry > 0 ? 1 : medals[0].level;
-			medals[0].stars = medals[0].level == 1 && extraStats.m_NumberOfTimesBestInfantry > 1 ? 1 : medals[0].stars;
-			medals[0].stars = medals[0].level == 1 && extraStats.m_NumberOfTimesBestInfantry > 2 ? 2 : medals[0].stars;
-			medals[0].stars = medals[0].level == 1 && extraStats.m_NumberOfTimesBestInfantry > 3 ? 3 : medals[0].stars;
+			if (extraStats.m_NumberOfTimesBestInfantry > 0)
+			{
+				medals[0].level = 1;
+				medals[0].stars = 0;
+			}
+		}
+		else if ((matchStats->m_BestData & 0x02) && medals[0].level == 1)
+		{
+			uint req[] = {1, 2, 3};
 
-			medals[0].level = medals[0].level == 1 && extraStats.m_NumberOfTimesBestInfantry > 10 ? 2 : medals[0].level;
-			medals[0].stars = medals[0].level == 2 && extraStats.m_NumberOfTimesBestInfantry <= 20 ? 0 : medals[0].stars;
-			medals[0].stars = medals[0].level == 2 && extraStats.m_NumberOfTimesBestInfantry > 20 ? 1 : medals[0].stars;
-			medals[0].stars = medals[0].level == 2 && extraStats.m_NumberOfTimesBestInfantry > 30 ? 2 : medals[0].stars;
-			medals[0].stars = medals[0].level == 2 && extraStats.m_NumberOfTimesBestInfantry > 40 ? 3 : medals[0].stars;
+			if (medals[0].stars < 3 && extraStats.m_NumberOfTimesBestInfantry > req[medals[0].stars])
+				medals[0].stars++;
 
-			medals[0].level = medals[0].level == 2 && extraStats.m_NumberOfTimesBestInfantry > 20 && extraStats.m_CurrentBestInfantryStreak >= 10 ? 3 : medals[0].level;
-			medals[0].stars = medals[0].level == 3 ? 0 : medals[0].stars;
+			if (extraStats.m_NumberOfTimesBestInfantry > 10)
+			{
+				medals[0].level = 2;
+				medals[0].stars = 0;
+			}
+		}
+		else if ((matchStats->m_BestData & 0x02) && medals[0].level == 2)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[0].stars < 3 && extraStats.m_NumberOfTimesBestInfantry > req[medals[0].stars])
+				medals[0].stars++;
+
+			if (extraStats.m_NumberOfTimesBestInfantry > 20 && extraStats.m_CurrentBestInfantryStreak >= 10)
+			{
+				medals[0].level = 3;
+				medals[0].stars = 0;
+			}
+		}
+
+		// air skill medal
+		if ((matchStats->m_BestData & 0x08) && medals[1].level == 0)
+		{
+			if (extraStats.m_NumberOfTimesBestAir > 0)
+			{
+				medals[1].level = 1;
+				medals[1].stars = 0;
+			}
+		}
+		else if ((matchStats->m_BestData & 0x08) && medals[1].level == 1)
+		{
+			uint req[] = {1, 2, 3};
+
+			if (medals[1].stars < 3 && extraStats.m_NumberOfTimesBestAir > req[medals[1].stars])
+				medals[1].stars++;
+
+			if (extraStats.m_NumberOfTimesBestAir > 10)
+			{
+				medals[1].level = 2;
+				medals[1].stars = 0;
+			}
+		}
+		else if ((matchStats->m_BestData & 0x08) && medals[1].level == 2)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[1].stars < 3 && extraStats.m_NumberOfTimesBestAir > req[medals[1].stars])
+				medals[1].stars++;
+
+			if (extraStats.m_NumberOfTimesBestAir > 20 && extraStats.m_CurrentBestAirStreak >= 10)
+			{
+				medals[1].level = 3;
+				medals[1].stars = 0;
+			}
+		}
+
+		// armor skill medal
+		if ((matchStats->m_BestData & 0x10) && medals[2].level == 0)
+		{
+			if (extraStats.m_NumberOfTimesBestArmor > 0)
+			{
+				medals[2].level = 1;
+				medals[2].stars = 0;
+			}
+		}
+		else if ((matchStats->m_BestData & 0x10) && medals[2].level == 1)
+		{
+			uint req[] = {1, 2, 3};
+
+			if (medals[2].stars < 3 && extraStats.m_NumberOfTimesBestArmor > req[medals[2].stars])
+				medals[2].stars++;
+
+			if (extraStats.m_NumberOfTimesBestArmor > 10)
+			{
+				medals[2].level = 2;
+				medals[2].stars = 0;
+			}
+		}
+		else if ((matchStats->m_BestData & 0x10) && medals[2].level == 2)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[2].stars < 3 && extraStats.m_NumberOfTimesBestArmor > req[medals[2].stars])
+				medals[2].stars++;
+
+			if (extraStats.m_NumberOfTimesBestArmor > 20 && extraStats.m_CurrentBestArmorStreak >= 10)
+			{
+				medals[2].level = 3;
+				medals[2].stars = 0;
+			}
+		}
+
+		// support skill medal
+		if ((matchStats->m_BestData & 0x04) && medals[3].level == 0)
+		{
+			if (extraStats.m_NumberOfTimesBestSupport > 0)
+			{
+				medals[3].level = 1;
+				medals[3].stars = 0;
+			}
+		}
+		else if ((matchStats->m_BestData & 0x04) && medals[3].level == 1)
+		{
+			uint req[] = {1, 2, 3};
+
+			if (medals[3].stars < 3 && extraStats.m_NumberOfTimesBestSupport > req[medals[3].stars])
+				medals[3].stars++;
+
+			if (extraStats.m_NumberOfTimesBestSupport > 10)
+			{
+				medals[3].level = 2;
+				medals[3].stars = 0;
+			}
+		}
+		else if ((matchStats->m_BestData & 0x04) && medals[3].level == 2)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[3].stars < 3 && extraStats.m_NumberOfTimesBestSupport > req[medals[3].stars])
+				medals[3].stars++;
+
+			if (extraStats.m_NumberOfTimesBestSupport > 20 && extraStats.m_CurrentBestSupportStreak >= 10)
+			{
+				medals[3].level = 3;
+				medals[3].stars = 0;
+			}
+		}
+
+		// high score skill medal
+		if ((matchStats->m_BestData & 0x01) && medals[4].level == 0)
+		{
+			if (extraStats.m_NumberOfTimesBestPlayer > 0)
+			{
+				medals[4].level = 1;
+				medals[4].stars = 0;
+			}
+		}
+		else if ((matchStats->m_BestData & 0x01) && medals[4].level == 1)
+		{
+			uint req[] = {1, 2, 3};
+
+			if (medals[4].stars < 3 && extraStats.m_NumberOfTimesBestPlayer > req[medals[4].stars])
+				medals[4].stars++;
+
+			if (extraStats.m_NumberOfTimesBestPlayer > 10)
+			{
+				medals[4].level = 2;
+				medals[4].stars = 0;
+			}
+		}
+		else if ((matchStats->m_BestData & 0x01) && medals[4].level == 2)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (medals[4].stars < 3 && extraStats.m_NumberOfTimesBestPlayer > req[medals[4].stars])
+				medals[4].stars++;
+
+			if (extraStats.m_NumberOfTimesBestPlayer > 20 && extraStats.m_CurrentBestPlayerStreak >= 10)
+			{
+				medals[4].level = 3;
+				medals[4].stars = 0;
+			}
 		}
 
 		if (!UpdateProfileMedals(profileId, 19, medals) || !UpdateProfileBadges(profileId, 14, badges))
