@@ -6253,6 +6253,114 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			}
 		}
 
+		// US achievement badge
+		if (badges[9].level == 0)
+		{
+			if (playerStats.m_TimePlayedAsUSA / 3600 >= 1)
+			{
+				badges[9].level = 1;
+				badges[9].stars = 0;
+			}
+		}
+		else if (badges[9].level == 1)
+		{
+			uint req[] = {2, 3, 4};
+
+			if (badges[9].stars < 3 && playerStats.m_TimePlayedAsUSA / 3600 >= req[badges[9].stars])
+				badges[9].stars++;
+
+			if (playerStats.m_TimePlayedAsUSA / 3600 >= 24)
+			{
+				badges[9].level = 2;
+				badges[9].stars = 0;
+			}
+		}
+		else if (badges[9].level == 2)
+		{
+			uint req[] = {48, 72, 96};
+
+			if (badges[9].stars < 3 && playerStats.m_TimePlayedAsUSA / 3600 >= req[badges[9].stars])
+				badges[9].stars++;
+
+			if (playerStats.m_TimePlayedAsUSA / 3600 >= 100)
+			{
+				badges[9].level = 3;
+				badges[9].stars = 0;
+			}
+		}
+		
+		// USSR achievement badge
+		if (badges[10].level == 0)
+		{
+			if (playerStats.m_TimePlayedAsUSSR / 3600 >= 1)
+			{
+				badges[10].level = 1;
+				badges[10].stars = 0;
+			}
+		}
+		else if (badges[10].level == 1)
+		{
+			uint req[] = {2, 3, 4};
+
+			if (badges[10].stars < 3 && playerStats.m_TimePlayedAsUSSR / 3600 >= req[badges[10].stars])
+				badges[10].stars++;
+
+			if (playerStats.m_TimePlayedAsUSSR / 3600 >= 24)
+			{
+				badges[10].level = 2;
+				badges[10].stars = 0;
+			}
+		}
+		else if (badges[10].level == 2)
+		{
+			uint req[] = {48, 72, 96};
+
+			if (badges[10].stars < 3 && playerStats.m_TimePlayedAsUSSR / 3600 >= req[badges[10].stars])
+				badges[10].stars++;
+
+			if (playerStats.m_TimePlayedAsUSSR / 3600 >= 100)
+			{
+				badges[10].level = 3;
+				badges[10].stars = 0;
+			}
+		}
+		
+		// NATO achievement badge
+		if (badges[11].level == 0)
+		{
+			if (playerStats.m_TimePlayedAsNATO / 3600 >= 1)
+			{
+				badges[11].level = 1;
+				badges[11].stars = 0;
+			}
+		}
+		else if (badges[11].level == 1)
+		{
+			uint req[] = {2, 3, 4};
+
+			if (badges[11].stars < 3 && playerStats.m_TimePlayedAsNATO / 3600 >= req[badges[11].stars])
+				badges[11].stars++;
+
+			if (playerStats.m_TimePlayedAsNATO / 3600 >= 24)
+			{
+				badges[11].level = 2;
+				badges[11].stars = 0;
+			}
+		}
+		else if (badges[11].level == 2)
+		{
+			uint req[] = {48, 72, 96};
+
+			if (badges[11].stars < 3 && playerStats.m_TimePlayedAsNATO / 3600 >= req[badges[11].stars])
+				badges[11].stars++;
+
+			if (playerStats.m_TimePlayedAsNATO / 3600 >= 100)
+			{
+				badges[11].level = 3;
+				badges[11].stars = 0;
+			}
+		}
+
 		if (!UpdateProfileMedals(profileId, 19, medals) || !UpdateProfileBadges(profileId, 14, badges))
 		{
 			DatabaseLog("could not update player achievements");
