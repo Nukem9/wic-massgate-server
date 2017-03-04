@@ -826,8 +826,8 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 		preorderBadge.stars = isPreorder > 3 ? 3 : preorderBadge.stars;
 
 		recruitBadge.level = numFriendsRecruited > 0 ? 1 : 0;
-		recruitBadge.level = numFriendsRecruited > 5 ? 2 : recruitBadge.level;
-		recruitBadge.level = numFriendsRecruited > 15 ? 3 : recruitBadge.level;
+		recruitBadge.level = numFriendsRecruited > 4 ? 2 : recruitBadge.level;
+		recruitBadge.level = numFriendsRecruited > 9 ? 3 : recruitBadge.level;
 		recruitBadge.stars = 0;
 
 		MMG_BitWriter<unsigned int> writer(badgebuffer, sizeof(badgebuffer) * 8);
@@ -1325,8 +1325,8 @@ bool MySQLDatabase::UpdateMembershipBadges(const uint accountId, const uint prof
 	if (badges[13].level < 3)
 	{
 		badges[13].level = numFriendsRecruited > 0 ? 1 : 0;
-		badges[13].level = numFriendsRecruited > 5 ? 2 : badges[13].level;
-		badges[13].level = numFriendsRecruited > 15 ? 3 : badges[13].level;
+		badges[13].level = numFriendsRecruited > 4 ? 2 : badges[13].level;
+		badges[13].level = numFriendsRecruited > 9 ? 3 : badges[13].level;
 		badges[13].stars = 0;
 	}
 
@@ -5147,6 +5147,9 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		MMG_Stats::ExtraPlayerStats extraStats;
 		MMG_Stats::PlayerMatchStats *matchStats = &playermatchstats[i];
 		uint profileId = matchStats->m_ProfileId;
+		uint medalreadbuffer[256], badgereadbuffer[256];
+		memset(medalreadbuffer, 0, sizeof(medalreadbuffer));
+		memset(badgereadbuffer, 0, sizeof(badgereadbuffer));
 
 		if (!UpdatePlayerMatchStats(datePlayed, matchStats))
 		{
@@ -5155,12 +5158,27 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			return false;
 		}
 
-		if (!QueryProfileMedals(profileId, 19, medals) || !QueryProfileBadges(profileId, 14, badges)
+		if (!QueryProfileMedalsRawData(profileId, medalreadbuffer, sizeof(medalreadbuffer)) || !QueryProfileBadgesRawData(profileId, badgereadbuffer, sizeof(badgereadbuffer))
 			|| !QueryProfileStats(profileId, &playerStats) || !QueryProfileExtraStats(profileId, &extraStats))
 		{
 			DatabaseLog("could not retrieve player statistics");
 			RollbackTransaction();
 			return false;
+		}
+
+		MMG_BitReader<unsigned int> medalreader(medalreadbuffer, sizeof(medalreadbuffer) * 8);
+		MMG_BitReader<unsigned int> badgereader(badgereadbuffer, sizeof(badgereadbuffer) * 8);
+
+		for (uint i = 0; i < 19; i++)
+		{
+			medals[i].level = medalreader.ReadBits(2);
+			medals[i].stars = medalreader.ReadBits(2);
+		}
+
+		for (uint i = 0; i < 14; i++)
+		{
+			badges[i].level = badgereader.ReadBits(2);
+			badges[i].stars = badgereader.ReadBits(2);
 		}
 
 		// infantry skill medal
@@ -6361,11 +6379,59 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			}
 		}
 
-		if (!UpdateProfileMedals(profileId, 19, medals) || !UpdateProfileBadges(profileId, 14, badges))
+		// highly decorated medal
+		if (medals[18].level == 0)
 		{
-			DatabaseLog("could not update player achievements");
-			RollbackTransaction();
-			return false;
+			if (medals[0].level > 0 && medals[1].level > 0 && medals[2].level > 0 && medals[3].level > 0 && medals[4].level > 0
+				&& medals[5].level > 0 && medals[6].level > 0 && medals[7].level > 0 && medals[8].level > 0 && medals[9].level > 0
+				&& medals[10].level > 0 && medals[11].level > 0 && medals[12].level > 0 && medals[13].level > 0 && medals[14].level > 0
+				&& medals[15].level > 0 && medals[16].level > 0 && medals[17].level > 0
+				&& badges[0].level > 0 && badges[1].level > 0 && badges[2].level > 0 && badges[3].level > 0 && badges[4].level > 0
+				&& badges[5].level > 0 && badges[6].level > 0 && badges[7].level > 0 && badges[8].level > 0 && badges[9].level > 0
+				&& badges[10].level > 0 && badges[11].level > 0 && badges[13].level > 0)
+			{
+				medals[18].level = 1;
+				medals[18].stars = 0;
+			}
+		}
+
+		uint medalwritebuffer[256], badgewritebuffer[256];
+		memset(medalwritebuffer, 0, sizeof(medalwritebuffer));
+		memset(badgewritebuffer, 0, sizeof(badgewritebuffer));
+
+		MMG_BitWriter<unsigned int> medalwriter(medalwritebuffer, sizeof(medalwritebuffer) * 8);
+		MMG_BitWriter<unsigned int> badgewriter(badgewritebuffer, sizeof(badgewritebuffer) * 8);
+
+		for (uint i = 0; i < 19; i++)
+		{
+			medalwriter.WriteBits(medals[i].level, 2);
+			medalwriter.WriteBits(medals[i].stars, 2);
+		}
+
+		for (uint i = 0; i < 14; i++)
+		{
+			badgewriter.WriteBits(badges[i].level, 2);
+			badgewriter.WriteBits(badges[i].stars, 2);
+		}
+
+		if (memcmp(medalreadbuffer, medalwritebuffer, sizeof(medalwritebuffer)))
+		{
+			if (!UpdateProfileMedalsRawData(profileId, medalwritebuffer, sizeof(medalwritebuffer)))
+			{
+				DatabaseLog("could not update player medals");
+				RollbackTransaction();
+				return false;
+			}
+		}
+
+		if (memcmp(badgereadbuffer, badgewritebuffer, sizeof(badgewritebuffer)))
+		{
+			if (!UpdateProfileBadgesRawData(profileId, badgewritebuffer, sizeof(badgewritebuffer)))
+			{
+				DatabaseLog("could not update player badges");
+				RollbackTransaction();
+				return false;
+			}
 		}
 	}
 
