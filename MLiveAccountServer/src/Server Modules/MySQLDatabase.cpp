@@ -5166,7 +5166,7 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		// infantry skill medal
 		if ((matchStats->m_BestData & 0x02) && medals[0].level == 0)
 		{
-			if (extraStats.m_NumberOfTimesBestInfantry > 0)
+			if (extraStats.m_NumberOfTimesBestInfantry >= 1)
 			{
 				medals[0].level = 1;
 				medals[0].stars = 0;
@@ -5174,14 +5174,20 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		}
 		else if ((matchStats->m_BestData & 0x02) && medals[0].level == 1)
 		{
-			uint req[] = {1, 2, 3};
+			uint req[] = {2, 3, 4};
 
-			if (medals[0].stars < 3 && extraStats.m_NumberOfTimesBestInfantry > req[medals[0].stars])
+			if (medals[0].stars < 3 && extraStats.m_NumberOfTimesBestInfantry >= req[medals[0].stars])
 				medals[0].stars++;
 
-			if (extraStats.m_NumberOfTimesBestInfantry > 10)
+			if (extraStats.m_NumberOfTimesBestInfantry >= 10)
 			{
 				medals[0].level = 2;
+				medals[0].stars = 0;
+			}
+
+			if (extraStats.m_CurrentBestInfantryStreak >= 10)
+			{
+				medals[0].level = 3;
 				medals[0].stars = 0;
 			}
 		}
@@ -5189,10 +5195,10 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		{
 			uint req[] = {20, 30, 40};
 
-			if (medals[0].stars < 3 && extraStats.m_NumberOfTimesBestInfantry > req[medals[0].stars])
+			if (medals[0].stars < 3 && extraStats.m_NumberOfTimesBestInfantry >= req[medals[0].stars])
 				medals[0].stars++;
 
-			if (extraStats.m_NumberOfTimesBestInfantry > 20 && extraStats.m_CurrentBestInfantryStreak >= 10)
+			if (extraStats.m_CurrentBestInfantryStreak >= 10)
 			{
 				medals[0].level = 3;
 				medals[0].stars = 0;
@@ -5202,7 +5208,7 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		// air skill medal
 		if ((matchStats->m_BestData & 0x08) && medals[1].level == 0)
 		{
-			if (extraStats.m_NumberOfTimesBestAir > 0)
+			if (extraStats.m_NumberOfTimesBestAir >= 1)
 			{
 				medals[1].level = 1;
 				medals[1].stars = 0;
@@ -5210,14 +5216,20 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		}
 		else if ((matchStats->m_BestData & 0x08) && medals[1].level == 1)
 		{
-			uint req[] = {1, 2, 3};
+			uint req[] = {2, 3, 4};
 
-			if (medals[1].stars < 3 && extraStats.m_NumberOfTimesBestAir > req[medals[1].stars])
+			if (medals[1].stars < 3 && extraStats.m_NumberOfTimesBestAir >= req[medals[1].stars])
 				medals[1].stars++;
 
-			if (extraStats.m_NumberOfTimesBestAir > 10)
+			if (extraStats.m_NumberOfTimesBestAir >= 10)
 			{
 				medals[1].level = 2;
+				medals[1].stars = 0;
+			}
+
+			if (extraStats.m_CurrentBestAirStreak >= 10)
+			{
+				medals[1].level = 3;
 				medals[1].stars = 0;
 			}
 		}
@@ -5225,10 +5237,10 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		{
 			uint req[] = {20, 30, 40};
 
-			if (medals[1].stars < 3 && extraStats.m_NumberOfTimesBestAir > req[medals[1].stars])
+			if (medals[1].stars < 3 && extraStats.m_NumberOfTimesBestAir >= req[medals[1].stars])
 				medals[1].stars++;
 
-			if (extraStats.m_NumberOfTimesBestAir > 20 && extraStats.m_CurrentBestAirStreak >= 10)
+			if (extraStats.m_CurrentBestAirStreak >= 10)
 			{
 				medals[1].level = 3;
 				medals[1].stars = 0;
@@ -5238,7 +5250,7 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		// armor skill medal
 		if ((matchStats->m_BestData & 0x10) && medals[2].level == 0)
 		{
-			if (extraStats.m_NumberOfTimesBestArmor > 0)
+			if (extraStats.m_NumberOfTimesBestArmor >= 1)
 			{
 				medals[2].level = 1;
 				medals[2].stars = 0;
@@ -5246,14 +5258,20 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		}
 		else if ((matchStats->m_BestData & 0x10) && medals[2].level == 1)
 		{
-			uint req[] = {1, 2, 3};
+			uint req[] = {2, 3, 4};
 
-			if (medals[2].stars < 3 && extraStats.m_NumberOfTimesBestArmor > req[medals[2].stars])
+			if (medals[2].stars < 3 && extraStats.m_NumberOfTimesBestArmor >= req[medals[2].stars])
 				medals[2].stars++;
 
-			if (extraStats.m_NumberOfTimesBestArmor > 10)
+			if (extraStats.m_NumberOfTimesBestArmor >= 10)
 			{
 				medals[2].level = 2;
+				medals[2].stars = 0;
+			}
+
+			if (extraStats.m_CurrentBestArmorStreak >= 10)
+			{
+				medals[2].level = 3;
 				medals[2].stars = 0;
 			}
 		}
@@ -5261,10 +5279,10 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		{
 			uint req[] = {20, 30, 40};
 
-			if (medals[2].stars < 3 && extraStats.m_NumberOfTimesBestArmor > req[medals[2].stars])
+			if (medals[2].stars < 3 && extraStats.m_NumberOfTimesBestArmor >= req[medals[2].stars])
 				medals[2].stars++;
 
-			if (extraStats.m_NumberOfTimesBestArmor > 20 && extraStats.m_CurrentBestArmorStreak >= 10)
+			if (extraStats.m_CurrentBestArmorStreak >= 10)
 			{
 				medals[2].level = 3;
 				medals[2].stars = 0;
@@ -5274,7 +5292,7 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		// support skill medal
 		if ((matchStats->m_BestData & 0x04) && medals[3].level == 0)
 		{
-			if (extraStats.m_NumberOfTimesBestSupport > 0)
+			if (extraStats.m_NumberOfTimesBestSupport >= 1)
 			{
 				medals[3].level = 1;
 				medals[3].stars = 0;
@@ -5282,14 +5300,20 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		}
 		else if ((matchStats->m_BestData & 0x04) && medals[3].level == 1)
 		{
-			uint req[] = {1, 2, 3};
+			uint req[] = {2, 3, 4};
 
-			if (medals[3].stars < 3 && extraStats.m_NumberOfTimesBestSupport > req[medals[3].stars])
+			if (medals[3].stars < 3 && extraStats.m_NumberOfTimesBestSupport >= req[medals[3].stars])
 				medals[3].stars++;
 
-			if (extraStats.m_NumberOfTimesBestSupport > 10)
+			if (extraStats.m_NumberOfTimesBestSupport >= 10)
 			{
 				medals[3].level = 2;
+				medals[3].stars = 0;
+			}
+
+			if (extraStats.m_CurrentBestSupportStreak >= 10)
+			{
+				medals[3].level = 3;
 				medals[3].stars = 0;
 			}
 		}
@@ -5297,10 +5321,10 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		{
 			uint req[] = {20, 30, 40};
 
-			if (medals[3].stars < 3 && extraStats.m_NumberOfTimesBestSupport > req[medals[3].stars])
+			if (medals[3].stars < 3 && extraStats.m_NumberOfTimesBestSupport >= req[medals[3].stars])
 				medals[3].stars++;
 
-			if (extraStats.m_NumberOfTimesBestSupport > 20 && extraStats.m_CurrentBestSupportStreak >= 10)
+			if (extraStats.m_CurrentBestSupportStreak >= 10)
 			{
 				medals[3].level = 3;
 				medals[3].stars = 0;
@@ -5310,7 +5334,7 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		// high score skill medal
 		if ((matchStats->m_BestData & 0x01) && medals[4].level == 0)
 		{
-			if (extraStats.m_NumberOfTimesBestPlayer > 0)
+			if (extraStats.m_NumberOfTimesBestPlayer >= 1)
 			{
 				medals[4].level = 1;
 				medals[4].stars = 0;
@@ -5318,14 +5342,20 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		}
 		else if ((matchStats->m_BestData & 0x01) && medals[4].level == 1)
 		{
-			uint req[] = {1, 2, 3};
+			uint req[] = {2, 3, 4};
 
-			if (medals[4].stars < 3 && extraStats.m_NumberOfTimesBestPlayer > req[medals[4].stars])
+			if (medals[4].stars < 3 && extraStats.m_NumberOfTimesBestPlayer >= req[medals[4].stars])
 				medals[4].stars++;
 
-			if (extraStats.m_NumberOfTimesBestPlayer > 10)
+			if (extraStats.m_NumberOfTimesBestPlayer >= 10)
 			{
 				medals[4].level = 2;
+				medals[4].stars = 0;
+			}
+
+			if (extraStats.m_CurrentBestPlayerStreak >= 10)
+			{
+				medals[4].level = 3;
 				medals[4].stars = 0;
 			}
 		}
@@ -5333,10 +5363,10 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		{
 			uint req[] = {20, 30, 40};
 
-			if (medals[4].stars < 3 && extraStats.m_NumberOfTimesBestPlayer > req[medals[4].stars])
+			if (medals[4].stars < 3 && extraStats.m_NumberOfTimesBestPlayer >= req[medals[4].stars])
 				medals[4].stars++;
 
-			if (extraStats.m_NumberOfTimesBestPlayer > 20 && extraStats.m_CurrentBestPlayerStreak >= 10)
+			if (extraStats.m_CurrentBestPlayerStreak >= 10)
 			{
 				medals[4].level = 3;
 				medals[4].stars = 0;
@@ -5349,6 +5379,12 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			if (playerStats.m_NumberOfTacticalAidCriticalHits >= 25)
 			{
 				medals[5].level = 1;
+				medals[5].stars = 0;
+			}
+
+			if (matchStats->m_NumberOfTacticalAidCriticalHits >= 15)
+			{
+				medals[5].level = 3;
 				medals[5].stars = 0;
 			}
 		}
@@ -5364,6 +5400,12 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 				medals[5].level = 2;
 				medals[5].stars = 0;
 			}
+
+			if (matchStats->m_NumberOfTacticalAidCriticalHits >= 15)
+			{
+				medals[5].level = 3;
+				medals[5].stars = 0;
+			}
 		}
 		else if (medals[5].level == 2)
 		{
@@ -5372,7 +5414,7 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			if (medals[5].stars < 3 && playerStats.m_NumberOfTacticalAidCriticalHits >= req[medals[5].stars])
 				medals[5].stars++;
 
-			if (playerStats.m_NumberOfTacticalAidCriticalHits > 125 && matchStats->m_NumberOfTacticalAidCriticalHits >= 15)
+			if (matchStats->m_NumberOfTacticalAidCriticalHits >= 15)
 			{
 				medals[5].level = 3;
 				medals[5].stars = 0;
@@ -5387,6 +5429,18 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 				medals[6].level = 1;
 				medals[6].stars = 0;
 			}
+
+			if (matchStats->m_ScoreAsInfantry >= 1200)
+			{
+				medals[6].level = 2;
+				medals[6].stars = 0;
+			}
+
+			if (matchStats->m_ScoreAsInfantry >= 2000)
+			{
+				medals[6].level = 3;
+				medals[6].stars = 0;
+			}
 		}
 		else if (medals[6].level == 1)
 		{
@@ -5396,6 +5450,12 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			if (matchStats->m_ScoreAsInfantry >= 1200)
 			{
 				medals[6].level = 2;
+				medals[6].stars = 0;
+			}
+
+			if (matchStats->m_ScoreAsInfantry >= 2000)
+			{
+				medals[6].level = 3;
 				medals[6].stars = 0;
 			}
 		}
@@ -5419,6 +5479,18 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 				medals[7].level = 1;
 				medals[7].stars = 0;
 			}
+
+			if (matchStats->m_ScoreAsAir >= 1200)
+			{
+				medals[7].level = 2;
+				medals[7].stars = 0;
+			}
+
+			if (matchStats->m_ScoreAsAir >= 2000)
+			{
+				medals[7].level = 3;
+				medals[7].stars = 0;
+			}
 		}
 		else if (medals[7].level == 1)
 		{
@@ -5428,6 +5500,12 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			if (matchStats->m_ScoreAsAir >= 1200)
 			{
 				medals[7].level = 2;
+				medals[7].stars = 0;
+			}
+
+			if (matchStats->m_ScoreAsAir >= 2000)
+			{
+				medals[7].level = 3;
 				medals[7].stars = 0;
 			}
 		}
@@ -5451,6 +5529,18 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 				medals[8].level = 1;
 				medals[8].stars = 0;
 			}
+
+			if (matchStats->m_ScoreAsArmor >= 1200)
+			{
+				medals[8].level = 2;
+				medals[8].stars = 0;
+			}
+
+			if (matchStats->m_ScoreAsArmor >= 2000)
+			{
+				medals[8].level = 3;
+				medals[8].stars = 0;
+			}
 		}
 		else if (medals[8].level == 1)
 		{
@@ -5460,6 +5550,12 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			if (matchStats->m_ScoreAsArmor >= 1200)
 			{
 				medals[8].level = 2;
+				medals[8].stars = 0;
+			}
+
+			if (matchStats->m_ScoreAsArmor >= 2000)
+			{
+				medals[8].level = 3;
 				medals[8].stars = 0;
 			}
 		}
@@ -5483,6 +5579,18 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 				medals[9].level = 1;
 				medals[9].stars = 0;
 			}
+
+			if (matchStats->m_ScoreAsSupport >= 1200)
+			{
+				medals[9].level = 2;
+				medals[9].stars = 0;
+			}
+
+			if (matchStats->m_ScoreAsSupport >= 2000)
+			{
+				medals[9].level = 3;
+				medals[9].stars = 0;
+			}
 		}
 		else if (medals[9].level == 1)
 		{
@@ -5492,6 +5600,12 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			if (matchStats->m_ScoreAsSupport >= 1200)
 			{
 				medals[9].level = 2;
+				medals[9].stars = 0;
+			}
+
+			if (matchStats->m_ScoreAsSupport >= 2000)
+			{
+				medals[9].level = 3;
 				medals[9].stars = 0;
 			}
 		}
