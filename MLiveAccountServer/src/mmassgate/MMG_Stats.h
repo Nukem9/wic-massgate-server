@@ -33,6 +33,7 @@ public:
 		uint m_CurrentDominationPerfectStreak;
 		uint m_CurrentAssaultPerfectStreak;
 		uint m_CurrentTugOfWarPerfectStreak;
+		uint m_NumberOfCommandPointCaptures;
 		uint m_CurrentNukesDeployedStreak;
 		uint m_NumberOfTimesBestPlayer;
 		uint m_CurrentBestPlayerStreak;
@@ -56,6 +57,7 @@ public:
 			this->m_CurrentDominationPerfectStreak		= 0;
 			this->m_CurrentAssaultPerfectStreak			= 0;
 			this->m_CurrentTugOfWarPerfectStreak		= 0;
+			this->m_NumberOfCommandPointCaptures		= 0;
 			this->m_CurrentNukesDeployedStreak			= 0;
 			this->m_NumberOfTimesBestPlayer				= 0;
 			this->m_CurrentBestPlayerStreak				= 0;

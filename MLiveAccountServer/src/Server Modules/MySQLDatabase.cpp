@@ -4568,7 +4568,7 @@ bool MySQLDatabase::QueryProfileStats(const uint profileId, MMG_Stats::PlayerSta
 	query.Bind(&param[0], &profileId);
 
 	query.Bind(&results[0], &playerstats->m_LastMatchPlayed);
-	query.Bind(&results[1], &scoreTotal);
+	query.Bind(&results[1], &playerstats->m_ScoreTotal);
 	query.Bind(&results[2], &playerstats->m_ScoreAsInfantry);
 	query.Bind(&results[3], &playerstats->m_HighScoreAsInfantry);
 	query.Bind(&results[4], &playerstats->m_ScoreAsSupport);
@@ -4628,7 +4628,6 @@ bool MySQLDatabase::QueryProfileStats(const uint profileId, MMG_Stats::PlayerSta
 			//DatabaseLog("stats found");
 
 			playerstats->m_ProfileId = profileId;
-			playerstats->m_ScoreTotal = scoreTotal - scoreLost;
 		}
 	}
 
@@ -4643,10 +4642,10 @@ bool MySQLDatabase::QueryProfileExtraStats(const uint profileId, MMG_Stats::Extr
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	sprintf(SQL, "SELECT currentassaultwinstreak, currentdominationwinstreak, currenttugofwarwinstreak, currentdominationperfectstreak, currentassaultperfectstreak, currenttugofwarperfectstreak, currentnukesdeployedstreak, numberoftimesbestplayer, currentbestplayerstreak, numberoftimesbestinfantry, currentbestinfantrystreak, numberoftimesbestsupport, currentbestsupportstreak, numberoftimesbestair, currentbestairstreak, numberoftimesbestarmor, currentbestarmorstreak FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "SELECT currentassaultwinstreak, currentdominationwinstreak, currenttugofwarwinstreak, currentdominationperfectstreak, currentassaultperfectstreak, currenttugofwarperfectstreak, currentnukesdeployedstreak, numberoftimesbestplayer, currentbestplayerstreak, numberoftimesbestinfantry, currentbestinfantrystreak, numberoftimesbestsupport, currentbestsupportstreak, numberoftimesbestair, currentbestairstreak, numberoftimesbestarmor, currentbestarmorstreak, numberofcommandpointcaptures FROM %s WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
-	MYSQL_BIND param[1], results[17];
+	MYSQL_BIND param[1], results[18];
 	memset(param, 0, sizeof(param));
 	memset(results, 0, sizeof(results));
 
@@ -4669,6 +4668,7 @@ bool MySQLDatabase::QueryProfileExtraStats(const uint profileId, MMG_Stats::Extr
 	query.Bind(&results[14], &extrastats->m_CurrentBestAirStreak);
 	query.Bind(&results[15], &extrastats->m_NumberOfTimesBestArmor);
 	query.Bind(&results[16], &extrastats->m_CurrentBestArmorStreak);
+	query.Bind(&results[17], &extrastats->m_NumberOfCommandPointCaptures);
 
 	if(!query.StmtExecute(param, results))
 	{
@@ -6106,6 +6106,150 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			{
 				badges[3].level = 3;
 				badges[3].stars = 0;
+			}
+		}
+
+		// score achievement badge
+		if (badges[4].level == 0)
+		{
+			if (playerStats.m_ScoreTotal >= 10000)
+			{
+				badges[4].level = 1;
+				badges[4].stars = 0;
+			}
+		}
+		else if (badges[4].level == 1)
+		{
+			uint req[] = {20000, 30000, 40000};
+
+			if (badges[4].stars < 3 && playerStats.m_ScoreTotal >= req[badges[4].stars])
+				badges[4].stars++;
+
+			if (playerStats.m_ScoreTotal >= 100000)
+			{
+				badges[4].level = 2;
+				badges[4].stars = 0;
+			}
+		}
+		else if (badges[4].level == 2)
+		{
+			uint req[] = {200000, 300000, 400000};
+
+			if (badges[4].stars < 3 && playerStats.m_ScoreTotal >= req[badges[4].stars])
+				badges[4].stars++;
+
+			if (playerStats.m_ScoreTotal >= 800000)
+			{
+				badges[4].level = 3;
+				badges[4].stars = 0;
+			}
+		}
+
+		// command point achievement badge
+		if (badges[5].level == 0)
+		{
+			if (extraStats.m_NumberOfCommandPointCaptures >= 25)
+			{
+				badges[5].level = 1;
+				badges[5].stars = 0;
+			}
+		}
+		else if (badges[5].level == 1)
+		{
+			uint req[] = {25, 50, 75};
+
+			if (badges[5].stars < 3 && extraStats.m_NumberOfCommandPointCaptures >= req[badges[5].stars])
+				badges[5].stars++;
+
+			if (extraStats.m_NumberOfCommandPointCaptures >= 250)
+			{
+				badges[5].level = 2;
+				badges[5].stars = 0;
+			}
+		}
+		else if (badges[5].level == 2)
+		{
+			uint req[] = {500, 750, 1000};
+
+			if (badges[5].stars < 3 && extraStats.m_NumberOfCommandPointCaptures >= req[badges[5].stars])
+				badges[5].stars++;
+
+			if (extraStats.m_NumberOfCommandPointCaptures >= 1200)
+			{
+				badges[5].level = 3;
+				badges[5].stars = 0;
+			}
+		}
+
+		// fortification achievement badge
+		if (badges[6].level == 0)
+		{
+			if (playerStats.m_ScoreByFortifying >= 500)
+			{
+				badges[6].level = 1;
+				badges[6].stars = 0;
+			}
+		}
+		else if (badges[6].level == 1)
+		{
+			uint req[] = {1000, 1500, 2000};
+
+			if (badges[6].stars < 3 && playerStats.m_ScoreByFortifying >= req[badges[6].stars])
+				badges[6].stars++;
+
+			if (playerStats.m_ScoreByFortifying >= 3500)
+			{
+				badges[6].level = 2;
+				badges[6].stars = 0;
+			}
+		}
+		else if (badges[6].level == 2)
+		{
+			uint req[] = {7000, 10500, 14000};
+
+			if (badges[6].stars < 3 && playerStats.m_ScoreByFortifying >= req[badges[6].stars])
+				badges[6].stars++;
+
+			if (playerStats.m_ScoreByFortifying >= 15000)
+			{
+				badges[6].level = 3;
+				badges[6].stars = 0;
+			}
+		}
+		
+		// match achievement badge
+		if (badges[8].level == 0)
+		{
+			if (playerStats.m_NumberOfMatches >= 10)
+			{
+				badges[8].level = 1;
+				badges[8].stars = 0;
+			}
+		}
+		else if (badges[8].level == 1)
+		{
+			uint req[] = {20, 30, 40};
+
+			if (badges[8].stars < 3 && playerStats.m_NumberOfMatches >= req[badges[8].stars])
+				badges[8].stars++;
+
+			if (playerStats.m_NumberOfMatches >= 200)
+			{
+				badges[8].level = 2;
+				badges[8].stars = 0;
+			}
+		}
+		else if (badges[8].level == 2)
+		{
+			uint req[] = {400, 600, 800};
+
+			if (badges[8].stars < 3 && playerStats.m_NumberOfMatches >= req[badges[8].stars])
+				badges[8].stars++;
+
+			if (playerStats.m_NumberOfMatches >= 1500)
+			{
+				badges[8].level = 3;
+				badges[8].stars = 0;
 			}
 		}
 
