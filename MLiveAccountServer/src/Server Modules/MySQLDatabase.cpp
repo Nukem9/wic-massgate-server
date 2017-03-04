@@ -5965,6 +5965,150 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 			}
 		}
 
+		// infantry specialist badge
+		if (badges[0].level == 0)
+		{
+			if (playerStats.m_ScoreAsInfantry >= 8000)
+			{
+				badges[0].level = 1;
+				badges[0].stars = 0;
+			}
+		}
+		else if (badges[0].level == 1)
+		{
+			uint req[] = {16000, 24000, 32000};
+
+			if (badges[0].stars < 3 && playerStats.m_ScoreAsInfantry >= req[badges[0].stars])
+				badges[0].stars++;
+
+			if (playerStats.m_ScoreAsInfantry >= 50000)
+			{
+				badges[0].level = 2;
+				badges[0].stars = 0;
+			}
+		}
+		else if (badges[0].level == 2)
+		{
+			uint req[] = {100000, 150000, 200000};
+
+			if (badges[0].stars < 3 && playerStats.m_ScoreAsInfantry >= req[badges[0].stars])
+				badges[0].stars++;
+
+			if (playerStats.m_ScoreAsInfantry >= 400000)
+			{
+				badges[0].level = 3;
+				badges[0].stars = 0;
+			}
+		}
+
+		// air specialist badge
+		if (badges[1].level == 0)
+		{
+			if (playerStats.m_ScoreAsAir >= 8000)
+			{
+				badges[1].level = 1;
+				badges[1].stars = 0;
+			}
+		}
+		else if (badges[1].level == 1)
+		{
+			uint req[] = {16000, 24000, 32000};
+
+			if (badges[1].stars < 3 && playerStats.m_ScoreAsAir >= req[badges[1].stars])
+				badges[1].stars++;
+
+			if (playerStats.m_ScoreAsAir >= 50000)
+			{
+				badges[1].level = 2;
+				badges[1].stars = 0;
+			}
+		}
+		else if (badges[1].level == 2)
+		{
+			uint req[] = {100000, 150000, 200000};
+
+			if (badges[1].stars < 3 && playerStats.m_ScoreAsAir >= req[badges[1].stars])
+				badges[1].stars++;
+
+			if (playerStats.m_ScoreAsAir >= 400000)
+			{
+				badges[1].level = 3;
+				badges[1].stars = 0;
+			}
+		}
+
+		// armor specialist badge
+		if (badges[2].level == 0)
+		{
+			if (playerStats.m_ScoreAsArmor >= 8000)
+			{
+				badges[2].level = 1;
+				badges[2].stars = 0;
+			}
+		}
+		else if (badges[2].level == 1)
+		{
+			uint req[] = {16000, 24000, 32000};
+
+			if (badges[2].stars < 3 && playerStats.m_ScoreAsArmor >= req[badges[2].stars])
+				badges[2].stars++;
+
+			if (playerStats.m_ScoreAsArmor >= 50000)
+			{
+				badges[2].level = 2;
+				badges[2].stars = 0;
+			}
+		}
+		else if (badges[2].level == 2)
+		{
+			uint req[] = {100000, 150000, 200000};
+
+			if (badges[2].stars < 3 && playerStats.m_ScoreAsArmor >= req[badges[2].stars])
+				badges[2].stars++;
+
+			if (playerStats.m_ScoreAsArmor >= 400000)
+			{
+				badges[2].level = 3;
+				badges[2].stars = 0;
+			}
+		}
+
+		// support specialist badge
+		if (badges[3].level == 0)
+		{
+			if (playerStats.m_ScoreAsSupport >= 8000)
+			{
+				badges[3].level = 1;
+				badges[3].stars = 0;
+			}
+		}
+		else if (badges[3].level == 1)
+		{
+			uint req[] = {16000, 24000, 32000};
+
+			if (badges[3].stars < 3 && playerStats.m_ScoreAsSupport >= req[badges[3].stars])
+				badges[3].stars++;
+
+			if (playerStats.m_ScoreAsSupport >= 50000)
+			{
+				badges[3].level = 2;
+				badges[3].stars = 0;
+			}
+		}
+		else if (badges[3].level == 2)
+		{
+			uint req[] = {100000, 150000, 200000};
+
+			if (badges[3].stars < 3 && playerStats.m_ScoreAsSupport >= req[badges[3].stars])
+				badges[3].stars++;
+
+			if (playerStats.m_ScoreAsSupport >= 400000)
+			{
+				badges[3].level = 3;
+				badges[3].stars = 0;
+			}
+		}
+
 		if (!UpdateProfileMedals(profileId, 19, medals) || !UpdateProfileBadges(profileId, 14, badges))
 		{
 			DatabaseLog("could not update player achievements");
