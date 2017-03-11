@@ -348,7 +348,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				MMG_Profile *myProfile = aClient->GetProfile();
 
 				//password check should be done by massgate server, not by database
-				PasswordHash hasher(8, true);
+				PasswordHash hasher(8, false);
 
 				char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
 				memset(myPasswordHash, 0, sizeof(myPasswordHash));
@@ -409,6 +409,13 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 						// update missing sequence number & cipherkeys for handmade accounts
 						MySQLDatabase::ourInstance->UpdateCDKeyInfo(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
+
+						// if current password hash is md5 based, update to blowfish
+						if (!strncmp(myPasswordHash, "$H$", 3))
+						{
+							hasher.HashPassword(myPasswordHash, myQuery.m_Authenticate.m_Password);
+							MySQLDatabase::ourInstance->UpdatePassword(myAuthToken->m_AccountId, myPasswordHash);
+						}
 					}
 
 					bool ProfileQueryOK;
@@ -533,7 +540,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 					strcpy_s(realcountry, GeoIP::ClientLocateIP(aClient->GetIPAddress()));
 
-					PasswordHash hasher(8, true);
+					PasswordHash hasher(8, false);
 
 					char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
 					memset(myPasswordHash, 0, sizeof(myPasswordHash));
@@ -623,7 +630,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				MMG_AuthToken *myAuthToken = aClient->GetToken();
 				MMG_Profile myProfiles[5];
 
-				PasswordHash hasher(8, true);
+				PasswordHash hasher(8, false);
 
 				char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
 				memset(myPasswordHash, 0, sizeof(myPasswordHash));
@@ -677,6 +684,13 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 
 						// update missing sequence number & cipherkeys for handmade accounts
 						MySQLDatabase::ourInstance->UpdateCDKeyInfo(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
+
+						// if current password hash is md5 based, update to blowfish
+						if (!strncmp(myPasswordHash, "$H$", 3))
+						{
+							hasher.HashPassword(myPasswordHash, myQuery.m_RetrieveProfiles.m_Password);
+							MySQLDatabase::ourInstance->UpdatePassword(myAuthToken->m_AccountId, myPasswordHash);
+						}
 					}
 
 					bool RetrieveProfilesQueryOK = MySQLDatabase::ourInstance->RetrieveUserProfiles(myAuthToken->m_AccountId, &myProfileCount, myProfiles);

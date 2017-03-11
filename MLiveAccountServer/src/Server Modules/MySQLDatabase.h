@@ -170,6 +170,7 @@ public:
 	bool	AuthUserAccount				(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
 	bool	UpdateRealCountry			(const uint accountId, const char *realcountry);
 	bool	UpdateCDKeyInfo				(const uint accountId, const uint sequenceNum, const ulong cipherKeys[]);
+	bool	UpdatePassword				(const uint accountId, const char *password);
 	bool	CheckIfProfileExists	(const wchar_t* name, uint *dstId);
 	bool	CreateUserProfile	(const uint accountId, const wchar_t* name, const char* email);
 	bool	DeleteUserProfile	(const uint accountId, const uint profileId, const char* email);

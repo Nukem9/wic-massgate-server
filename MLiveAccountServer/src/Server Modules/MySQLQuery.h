@@ -133,21 +133,21 @@ public:
 	}
 
 	//VARCHAR (multibyte)
-	void Bind(MYSQL_BIND *param, const char *Value, ulong *Length)
+	void Bind(MYSQL_BIND *param, const char *Value, const ulong Length)
 	{
 		param->buffer_type = MYSQL_TYPE_VAR_STRING;
 		param->buffer = (void *)Value;
-		param->buffer_length = *Length;
+		param->buffer_length = Length;
 		param->is_null = (my_bool *)0;
 		param->length = &param->buffer_length;
 	}
 
 	//VARCHAR (unicode)
-	void Bind(MYSQL_BIND *param, const wchar_t *Value, ulong *Length)
+	void Bind(MYSQL_BIND *param, const wchar_t *Value, const ulong Length)
 	{
 		param->buffer_type = MYSQL_TYPE_VAR_STRING;
 		param->buffer = (void *)Value;
-		param->buffer_length = (*Length) << 1;		// multiply by 2, to handle widechar properly.
+		param->buffer_length = Length << 1;		// multiply by 2, to handle widechar properly.
 		param->is_null = (my_bool *)0;
 		param->length = &param->buffer_length;
 	}
@@ -189,7 +189,7 @@ public:
 	}
 
 	//BLOB
-	void BindBlob(MYSQL_BIND *param, voidptr_t Data, ulong Length)
+	void BindBlob(MYSQL_BIND *param, voidptr_t Data, const ulong Length)
 	{
 		//mysql_stmt_send_long_data(stmt, 2, (const char*)Data, Length)
 

@@ -295,11 +295,10 @@ bool MySQLDatabase::CheckIfEmailExists(const char *email, uint *dstId)
 	memset(result, 0, sizeof(result));
 
 	// query specific variables
-	ulong emailLength = strlen(email);
 	uint id;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], email, &emailLength);
+	query.Bind(&param[0], email, strlen(email));
 
 	// bind results
 	query.Bind(&result[0], &id);
@@ -401,17 +400,13 @@ bool MySQLDatabase::InsertUserAccount(const char *email, const char *password, c
 	MYSQL_BIND params[7];
 	memset(params, 0, sizeof(params));
 
-	ulong emailLength = strlen(email);
-	ulong passLength = strlen(password);
-	ulong countryLength = strlen(country);
-	ulong realCountryLength = strlen(realcountry);
 	time_t local_timestamp = time(NULL);
 	uint membersince = local_timestamp;
 
-	query.Bind(&params[0], email, &emailLength);
-	query.Bind(&params[1], password, &passLength);
-	query.Bind(&params[2], country, &countryLength);
-	query.Bind(&params[3], realcountry, &realCountryLength);
+	query.Bind(&params[0], email, strlen(email));
+	query.Bind(&params[1], password, strlen(password));
+	query.Bind(&params[2], country, strlen(country));
+	query.Bind(&params[3], realcountry, strlen(realcountry));
 	query.Bind(&params[4], emailgamerelated);
 	query.Bind(&params[5], acceptsemail);
 	query.Bind(&params[6], &membersince);
@@ -507,15 +502,13 @@ bool MySQLDatabase::QueryUserAccount(const char *email, char *dstPassword, uchar
 	char password[WIC_PASSWORDHASH_MAX_LENGTH];
 	memset(password, 0, sizeof(password));
 
-	ulong emailLength = strlen(email);
-	ulong passLength = ARRAYSIZE(password);
 	uint id, activeprofileid;
 	uchar isbanned;
 
-	query.Bind(&param[0], email, &emailLength);
+	query.Bind(&param[0], email, strlen(email));
 
 	query.Bind(&results[0], &id);
-	query.Bind(&results[1], password, &passLength);
+	query.Bind(&results[1], password, ARRAYSIZE(password));
 	query.Bind(&results[2], &activeprofileid);
 	query.Bind(&results[3], &isbanned);
 
@@ -641,9 +634,7 @@ bool MySQLDatabase::UpdateRealCountry(const uint accountId, const char *realcoun
 	MYSQL_BIND param[2];
 	memset(param, 0, sizeof(param));
 
-	ulong countryLength = strlen(realcountry);
-
-	query.Bind(&param[0], realcountry, &countryLength);
+	query.Bind(&param[0], realcountry, strlen(realcountry));
 	query.Bind(&param[1], &accountId);
 
 	if(!query.StmtExecute(param))
@@ -710,6 +701,42 @@ bool MySQLDatabase::UpdateCDKeyInfo(const uint accountId, const uint sequenceNum
 	return true;
 }
 
+bool MySQLDatabase::UpdatePassword(const uint accountId, const char *password)
+{
+	if (!this->TestDatabase())
+	{
+		this->EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "UPDATE %s SET password = ? WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[2];
+	memset(param, 0, sizeof(param));
+
+	query.Bind(&param[0], password, strlen(password));
+	query.Bind(&param[1], &accountId);
+
+	if(!query.StmtExecute(param))
+		DatabaseLog("UpdatePassword() failed:");
+
+	if (!query.Success())
+	{
+		RollbackTransaction();
+		return false;
+	}
+
+	CommitTransaction();
+
+	return true;
+}
+
 bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
 {
 	// test the connection before proceeding, disconnects everyone on fail
@@ -736,11 +763,10 @@ bool MySQLDatabase::CheckIfProfileExists(const wchar_t* name, uint *dstId)
 	memset(result, 0, sizeof(result));
 
 	// query specific variables
-	ulong nameLength = wcslen(name);
 	uint id;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], name, &nameLength);
+	query.Bind(&param[0], name, wcslen(name));
 
 	// bind results
 	query.Bind(&result[0], &id);
@@ -801,7 +827,6 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	memset(params1, 0, sizeof(params1));
 
 	// query specific variables
-	ulong nameLength = wcslen(name);
 	uint profile_insert_id;
 	time_t local_timestamp = time(NULL);
 	uint membersince = local_timestamp;
@@ -847,7 +872,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 
 	// bind parameters to prepared statement
 	query1.Bind(&params1[0], &accountId);
-	query1.Bind(&params1[1], name, &nameLength);
+	query1.Bind(&params1[1], name, wcslen(name));
 	query1.Bind(&params1[2], &membersince);
 	query1.BindBlob(&params1[3], medalbuffer, sizeof(medalbuffer));
 	query1.BindBlob(&params1[4], badgebuffer, sizeof(badgebuffer));
@@ -1383,7 +1408,6 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 	// query specific variables
 	wchar_t name[WIC_NAME_MAX_LENGTH];
 	memset(name, 0, sizeof(name));
-	ulong nameLength = ARRAYSIZE(name);
 
 	uint id, clanid;
 	uchar rank, rankinclan;
@@ -1393,7 +1417,7 @@ bool MySQLDatabase::QueryUserProfile(const uint accountId, const uint profileId,
 
 	// bind results
 	query1.Bind(&results1[0], &id);
-	query1.Bind(&results1[1], name, &nameLength);
+	query1.Bind(&results1[1], name, ARRAYSIZE(name));
 	query1.Bind(&results1[2], &rank);
 	query1.Bind(&results1[3], &clanid);
 	query1.Bind(&results1[4], &rankinclan);
@@ -1558,7 +1582,6 @@ bool MySQLDatabase::RetrieveUserProfiles(const uint accountId, ulong *dstProfile
 	// query specific variables
 	wchar_t name[WIC_NAME_MAX_LENGTH];
 	memset(name, 0, sizeof(name));
-	ulong nameLength = ARRAYSIZE(name);
 
 	uint id, clanid;
 	uchar rank, rankinclan;
@@ -1568,7 +1591,7 @@ bool MySQLDatabase::RetrieveUserProfiles(const uint accountId, ulong *dstProfile
 
 	// bind results
 	query.Bind(&results[0], &id);
-	query.Bind(&results[1], name, &nameLength);
+	query.Bind(&results[1], name, ARRAYSIZE(name));
 	query.Bind(&results[2], &rank);
 	query.Bind(&results[3], &clanid);
 	query.Bind(&results[4], &rankinclan);
@@ -2140,13 +2163,6 @@ bool MySQLDatabase::RemoveIgnoredProfile(const uint profileId, uint ignoredProfi
 
 bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 {
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
@@ -2166,7 +2182,6 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 	// query specific variables
 	wchar_t name[WIC_NAME_MAX_LENGTH];
 	memset(name, 0, sizeof(name));
-	ulong nameLength = ARRAYSIZE(name);
 
 	uint id, clanid;
 	uchar rank, rankinclan;
@@ -2176,7 +2191,7 @@ bool MySQLDatabase::QueryProfileName(const uint profileId, MMG_Profile *profile)
 
 	// bind results
 	query.Bind(&results[0], &id);
-	query.Bind(&results[1], name, &nameLength);
+	query.Bind(&results[1], name, ARRAYSIZE(name));
 	query.Bind(&results[2], &rank);
 	query.Bind(&results[3], &clanid);
 	query.Bind(&results[4], &rankinclan);
@@ -2266,10 +2281,9 @@ bool MySQLDatabase::SearchProfileName(const wchar_t* const name, uint *dstCount,
 
 	// query specific variables
 	uint id;
-	ulong nameLength = wcslen(name);
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], name, &nameLength);
+	query.Bind(&param[0], name, wcslen(name));
 
 	// bind results
 	query.Bind(&result[0], &id);
@@ -2337,19 +2351,14 @@ bool MySQLDatabase::SearchClanName(const wchar_t* const name, uint *dstCount, MM
 	memset(clanname, 0, sizeof(clanname));
 	memset(clantag, 0, sizeof(clantag));
 
-	ulong clannameLength = ARRAYSIZE(clanname);
-	ulong clantagLength = ARRAYSIZE(clantag);
-
-	ulong nameLength = wcslen(name);
-
 	// bind parameters to prepared statement
-	query.Bind(&param[0], name, &nameLength);
-	query.Bind(&param[1], name, &nameLength);
+	query.Bind(&param[0], name, wcslen(name));
+	query.Bind(&param[1], name, wcslen(name));
 	
 	// bind results
 	query.Bind(&results[0], &id);
-	query.Bind(&results[1], clanname, &clannameLength);
-	query.Bind(&results[2], clantag, &clantagLength);
+	query.Bind(&results[1], clanname, ARRAYSIZE(clanname));
+	query.Bind(&results[2], clantag, ARRAYSIZE(clantag));
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
@@ -2415,15 +2424,12 @@ bool MySQLDatabase::QueryEditableVariables(const uint profileId, wchar_t *dstMot
 	memset(motto, 0, sizeof(motto));
 	memset(homepage, 0, sizeof(homepage));
 
-	ulong mottoLength = ARRAYSIZE(motto);
-	ulong homepageLength = ARRAYSIZE(homepage);
-
 	// bind parameters to prepared statement
 	query.Bind(&param[0], &profileId);
 
 	// bind results
-	query.Bind(&results[0], motto, &mottoLength);
-	query.Bind(&results[1], homepage, &homepageLength);
+	query.Bind(&results[0], motto, ARRAYSIZE(motto));
+	query.Bind(&results[1], homepage, ARRAYSIZE(homepage));
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
@@ -2491,12 +2497,12 @@ bool MySQLDatabase::SaveEditableVariables(const uint profileId, const wchar_t *m
 	// bind parameters to prepared statement
 	// if either string is empty BindNull
 	if (mottoLength)
-		query.Bind(&params[0], motto, &mottoLength);
+		query.Bind(&params[0], motto, mottoLength);
 	else
 		query.BindNull(&params[0]);
 
 	if (homepageLength)
-		query.Bind(&params[1], homepage, &homepageLength);
+		query.Bind(&params[1], homepage, homepageLength);
 	else
 		query.BindNull(&params[1]);
 
@@ -2550,7 +2556,6 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 	// query specific variables
 	wchar_t message[WIC_INSTANTMSG_MAX_LENGTH];
 	memset(message, 0, sizeof(message));
-	ulong msgLength = ARRAYSIZE(message);
 
 	uint id, senderid, recipientid;
 	uint writtenat;
@@ -2563,7 +2568,7 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 	query.Bind(&results[1], &writtenat);
 	query.Bind(&results[2], &senderid);
 	query.Bind(&results[3], &recipientid);
-	query.Bind(&results[4], message, &msgLength);
+	query.Bind(&results[4], message, ARRAYSIZE(message));
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
@@ -2630,9 +2635,6 @@ bool MySQLDatabase::AddInstantMessage(const uint profileId, MMG_InstantMessageLi
 	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
 
-	// query specific variables
-	ulong msgLength = wcslen(message->m_Message);
-
 	time_t local_timestamp = time(NULL);
 	//struct tm* gtime = gmtime(&local_timestamp);
 	//time_t utc_timestamp = mktime(gtime);
@@ -2643,7 +2645,7 @@ bool MySQLDatabase::AddInstantMessage(const uint profileId, MMG_InstantMessageLi
 	query.Bind(&params[0], &message->m_WrittenAt);
 	query.Bind(&params[1], &message->m_SenderProfile.m_ProfileId);
 	query.Bind(&params[2], &message->m_RecipientProfile);
-	query.Bind(&params[3], message->m_Message, &msgLength);
+	query.Bind(&params[3], message->m_Message, wcslen(message->m_Message));
 
 	// execute prepared statement
 	if (!query.StmtExecute(params))
@@ -2753,9 +2755,7 @@ bool MySQLDatabase::AddAbuseReport(const uint profileId, const MMG_Profile sende
 	memset(params, 0, sizeof(params));
 
 	// query specific variables
-	ulong senderNameLength = wcslen(senderProfile.m_Name);
 	ulong reportedNameLength = wcslen(flaggedProfile.m_Name);
-	ulong reportLength = wcslen(report);
 
 	time_t local_timestamp = time(NULL);
 	//struct tm* gtime = gmtime(&local_timestamp);
@@ -2766,16 +2766,16 @@ bool MySQLDatabase::AddAbuseReport(const uint profileId, const MMG_Profile sende
 	// bind parameters to prepared statement
 	query.Bind(&params[0], &senderAccountId);
 	query.Bind(&params[1], &senderProfile.m_ProfileId);
-	query.Bind(&params[2], senderProfile.m_Name, &senderNameLength);
+	query.Bind(&params[2], senderProfile.m_Name, wcslen(senderProfile.m_Name));
 	query.Bind(&params[3], &flaggedAccountId);
 	query.Bind(&params[4], &flaggedProfile.m_ProfileId);
 
 	if (reportedNameLength)
-		query.Bind(&params[5], flaggedProfile.m_Name, &reportedNameLength);
+		query.Bind(&params[5], flaggedProfile.m_Name, reportedNameLength);
 	else
 		query.BindNull(&params[5]);
 	
-	query.Bind(&params[6], report, &reportLength);
+	query.Bind(&params[6], report, wcslen(report));
 	query.Bind(&params[7], &datereported);
 
 	// execute prepared statement
@@ -2798,13 +2798,6 @@ bool MySQLDatabase::AddAbuseReport(const uint profileId, const MMG_Profile sende
 
 bool MySQLDatabase::QueryProfileAccountId(const uint profileId, uint *dstAccountId)
 {
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
@@ -2884,7 +2877,6 @@ bool MySQLDatabase::QueryProfileGuestbook(const uint profileId, uint *dstEntryCo
 	// query specific variables
 	wchar_t message[WIC_GUESTBOOK_MAX_LENGTH];
 	memset(message, 0, sizeof(message));
-	ulong msgLength = ARRAYSIZE(message);
 
 	uint id, profileid, posterid;
 	uint timestamp, requestid;
@@ -2898,7 +2890,7 @@ bool MySQLDatabase::QueryProfileGuestbook(const uint profileId, uint *dstEntryCo
 	query.Bind(&results[2], &timestamp);
 	query.Bind(&results[3], &requestid);
 	query.Bind(&results[4], &posterid);
-	query.Bind(&results[5], message, &msgLength);
+	query.Bind(&results[5], message, ARRAYSIZE(message));
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
@@ -2964,7 +2956,6 @@ bool MySQLDatabase::AddProfileGuestbookEntry(const uint profileId, const uint re
 	memset(params, 0, sizeof(params));
 
 	// query specific variables
-	ulong msgLength = wcslen(entry->m_Message);
 	time_t local_timestamp = time(NULL);
 	
 	entry->m_Timestamp = local_timestamp;
@@ -2974,7 +2965,7 @@ bool MySQLDatabase::AddProfileGuestbookEntry(const uint profileId, const uint re
 	query.Bind(&params[1], &entry->m_Timestamp);
 	query.Bind(&params[2], &requestId);
 	query.Bind(&params[3], &entry->m_ProfileId);
-	query.Bind(&params[4], entry->m_Message, &msgLength);
+	query.Bind(&params[4], entry->m_Message, wcslen(entry->m_Message));
 	
 	// execute prepared statement
 	if (!query.StmtExecute(params))
@@ -3152,11 +3143,10 @@ bool MySQLDatabase::CheckIfClanNameExists(const wchar_t* clanname, uint *dstId)
 	memset(result, 0, sizeof(result));
 
 	// query specific variables
-	ulong clannameLength = wcslen(clanname);
 	uint id;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], clanname, &clannameLength);
+	query.Bind(&param[0], clanname, wcslen(clanname));
 	
 	// bind results
 	query.Bind(&result[0], &id);
@@ -3213,11 +3203,10 @@ bool MySQLDatabase::CheckIfClanTagExists(const wchar_t* clantag, uint *dstId)
 	memset(result, 0, sizeof(result));
 
 	// query specific variables
-	ulong clantagLength = wcslen(clantag);
 	uint id;
 
 	// bind parameters to prepared statement
-	query.Bind(&param[0], clantag, &clantagLength);
+	query.Bind(&param[0], clantag, wcslen(clantag));
 	
 	// bind results
 	query.Bind(&result[0], &id);
@@ -3279,10 +3268,6 @@ bool MySQLDatabase::CreateClan(const uint profileId, const wchar_t* clanname, co
 	wchar_t temptags[WIC_CLANTAG_MAX_LENGTH];
 	memset(temptags, 0, sizeof(temptags));
 
-	ulong clannameLength = wcslen(clanname);
-	ulong clantagLength = wcslen(clantag);
-	ulong displayTagLength = strlen(displayTag);
-
 	if (strcmp(displayTag, "[C]P") == 0)
 		swprintf(temptags, WIC_CLANTAG_MAX_LENGTH, L"[%ws]", clantag);
 	else if (strcmp(displayTag, "P[C]") == 0)
@@ -3294,13 +3279,11 @@ bool MySQLDatabase::CreateClan(const uint profileId, const wchar_t* clanname, co
 	else
 		assert(false);
 
-	ulong temptagsLength = wcslen(temptags);
-
 	// bind parameters to prepared statement
-	query.Bind(&params1[0], clanname, &clannameLength);
-	query.Bind(&params1[1], temptags, &temptagsLength);
-	query.Bind(&params1[2], clantag, &clantagLength);
-	query.Bind(&params1[3], displayTag, &displayTagLength);
+	query.Bind(&params1[0], clanname, wcslen(clanname));
+	query.Bind(&params1[1], temptags, wcslen(temptags));
+	query.Bind(&params1[2], clantag, wcslen(clantag));
+	query.Bind(&params1[3], displayTag, strlen(displayTag));
 	uint aZero = 0; // temporary
 	query.Bind(&params1[4], &aZero);
 	
@@ -3459,12 +3442,10 @@ bool MySQLDatabase::DeleteProfileClanInvites(const uint profileId, const uint cl
 
 	swprintf(message, WIC_INSTANTMSG_MAX_LENGTH, L"|clan|%u%%", clanId);
 
-	ulong msgLength = wcslen(message);
-
 	// bind parameters to prepared statement
 	query.Bind(&params[0], &profileId);
 	query.Bind(&params[1], &profileId);
-	query.Bind(&params[2], message, &msgLength);
+	query.Bind(&params[2], message, wcslen(message));
 
 	// execute prepared statement
 	if (!query.StmtExecute(params))
@@ -3517,12 +3498,10 @@ bool MySQLDatabase::DeleteProfileClanMessages(const uint profileId)
 
 	swprintf(message, WIC_INSTANTMSG_MAX_LENGTH, L"|clms|%%");
 
-	ulong msgLength = wcslen(message);
-
 	// bind parameters to prepared statement
 	query.Bind(&params[0], &profileId);
 	query.Bind(&params[1], &profileId);
-	query.Bind(&params[2], message, &msgLength);
+	query.Bind(&params[2], message, wcslen(message));
 
 	// execute prepared statement
 	if(!query.StmtExecute(params))
@@ -3658,10 +3637,8 @@ bool MySQLDatabase::DeleteClan(const uint clanId)
 
 	swprintf(message, WIC_INSTANTMSG_MAX_LENGTH, L"|clan|%u%%", clanId);
 
-	ulong msgLength = wcslen(message);
-
 	// bind parameters to prepared statement
-	query2.Bind(&params2[0], message, &msgLength);
+	query2.Bind(&params2[0], message, wcslen(message));
 
 	// execute prepared statement
 	if (!query2.StmtExecute(params2))
@@ -3713,9 +3690,6 @@ bool MySQLDatabase::QueryClanFullInfo(const uint clanId, uint *dstMemberCount, M
 	wchar_t clantag[WIC_CLANTAG_MAX_LENGTH];
 	memset(clanname, 0, sizeof(clanname));
 	memset(clantag, 0, sizeof(clantag));
-
-	ulong clannameLength = ARRAYSIZE(clanname);
-	ulong clantagLength = ARRAYSIZE(clantag);
 	
 	uint id, playeroftheweekid;
 
@@ -3725,21 +3699,18 @@ bool MySQLDatabase::QueryClanFullInfo(const uint clanId, uint *dstMemberCount, M
 	memset(clanmotto, 0, sizeof(clanmotto));
 	memset(clanmotd, 0, sizeof(clanmotd));
 	memset(clanhomepage, 0, sizeof(clanhomepage));
-	ulong clanmottoLength = ARRAYSIZE(clanmotto);
-	ulong clanmotdLength = ARRAYSIZE(clanmotd);
-	ulong clanhomepageLength = ARRAYSIZE(clanhomepage);
 
 	// bind parameters to prepared statement
 	query1.Bind(&param1[0], &clanId);
 
 	// bind results
 	query1.Bind(&results1[0], &id);
-	query1.Bind(&results1[1], clanname, &clannameLength);
-	query1.Bind(&results1[2], clantag, &clantagLength);
+	query1.Bind(&results1[1], clanname, ARRAYSIZE(clanname));
+	query1.Bind(&results1[2], clantag, ARRAYSIZE(clantag));
 	query1.Bind(&results1[3], &playeroftheweekid);
-	query1.Bind(&results1[4], clanmotto, &clanmottoLength);
-	query1.Bind(&results1[5], clanmotd, &clanmotdLength);
-	query1.Bind(&results1[6], clanhomepage, &clanhomepageLength);
+	query1.Bind(&results1[4], clanmotto, ARRAYSIZE(clanmotto));
+	query1.Bind(&results1[5], clanmotd, ARRAYSIZE(clanmotd));
+	query1.Bind(&results1[6], clanhomepage, ARRAYSIZE(clanhomepage));
 
 	// execute prepared statement
 	if(!query1.StmtExecute(param1, results1))
@@ -3882,16 +3853,13 @@ bool MySQLDatabase::QueryClanDescription(const uint clanId, MMG_Clan::Descriptio
 	memset(clanname, 0, sizeof(clanname));
 	memset(clantag, 0, sizeof(clantag));
 
-	ulong clannameLength = ARRAYSIZE(clanname);
-	ulong clantagLength = ARRAYSIZE(clantag);
-
 	// bind parameters to prepared statement
 	query.Bind(&param[0], &clanId);
 	
 	// bind results
 	query.Bind(&results[0], &id);
-	query.Bind(&results[1], clanname, &clannameLength);
-	query.Bind(&results[2], clantag, &clantagLength);
+	query.Bind(&results[1], clanname, ARRAYSIZE(clanname));
+	query.Bind(&results[2], clantag, ARRAYSIZE(clantag));
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
@@ -3930,26 +3898,13 @@ bool MySQLDatabase::QueryClanDescription(const uint clanId, MMG_Clan::Descriptio
 
 bool MySQLDatabase::QueryClanTag(const uint clanId, wchar_t *shortclanname, char *displaytag)
 {
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	// build sql query using table names defined in settings file
 	sprintf(SQL, "SELECT shortclanname, displaytag FROM %s WHERE id = ? LIMIT 1", TABLENAME[CLANS_TABLE]);
 
-	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
-	
-	// prepared statement binding structures
 	MYSQL_BIND param[1], results[2];
-
-	// initialize (zero) bind structures
 	memset(param, 0, sizeof(param));
 	memset(results, 0, sizeof(results));
 
@@ -3959,17 +3914,11 @@ bool MySQLDatabase::QueryClanTag(const uint clanId, wchar_t *shortclanname, char
 	memset(clantag, 0, sizeof(clantag));
 	memset(disptag, 0, sizeof(disptag));
 
-	ulong clantagLength = ARRAYSIZE(clantag);
-	ulong disptagLength = ARRAYSIZE(disptag);
-
-	// bind parameters to prepared statement
 	query.Bind(&param[0], &clanId);
 	
-	// bind results
-	query.Bind(&results[0], clantag, &clantagLength);
-	query.Bind(&results[1], disptag, &disptagLength);
+	query.Bind(&results[0], clantag, ARRAYSIZE(clantag));
+	query.Bind(&results[1], disptag, ARRAYSIZE(disptag));
 
-	// execute prepared statement
 	if(!query.StmtExecute(param, results))
 	{
 		DatabaseLog("QueryClanTag() failed: clanid(%u)", clanId);
@@ -4075,17 +4024,17 @@ bool MySQLDatabase::SaveClanEditableVariables(const uint clanId, const uint prof
 
 	// if either string is empty BindNull
 	if (mottoLength)
-		query.Bind(&params[1], motto, &mottoLength);
+		query.Bind(&params[1], motto, mottoLength);
 	else
 		query.BindNull(&params[1]);
 
 	if (motdLength)
-		query.Bind(&params[2], motd, &motdLength);
+		query.Bind(&params[2], motd, motdLength);
 	else
 		query.BindNull(&params[2]);
 
 	if (homepageLength)
-		query.Bind(&params[3], homepage, &homepageLength);
+		query.Bind(&params[3], homepage, homepageLength);
 	else
 		query.BindNull(&params[3]);
 
@@ -4140,12 +4089,11 @@ bool MySQLDatabase::CheckIfInvitedAlready(const uint clanId, const uint inviteeP
 
 	swprintf(message, WIC_INSTANTMSG_MAX_LENGTH, L"|clan|%%");	// in SQL % is wildcard used with LIKE, use %% to escape
 
-	ulong msgLength = wcslen(message);
 	uint id;
 
 	// bind parameters to prepared statement
 	query.Bind(&params[0], &inviteeProfileId);
-	query.Bind(&params[1], message, &msgLength);
+	query.Bind(&params[1], message, wcslen(message));
 	
 	// bind results
 	query.Bind(&result[0], &id);
@@ -4204,7 +4152,6 @@ bool MySQLDatabase::QueryClanGuestbook(const uint clanId, uint *dstEntryCount, M
 	// query specific variables
 	wchar_t message[WIC_GUESTBOOK_MAX_LENGTH];
 	memset(message, 0, sizeof(message));
-	ulong msgLength = ARRAYSIZE(message);
 
 	uint id, clanid, posterid;
 	uint timestamp, requestid;
@@ -4218,7 +4165,7 @@ bool MySQLDatabase::QueryClanGuestbook(const uint clanId, uint *dstEntryCount, M
 	query.Bind(&results[2], &timestamp);
 	query.Bind(&results[3], &requestid);
 	query.Bind(&results[4], &posterid);
-	query.Bind(&results[5], message, &msgLength);
+	query.Bind(&results[5], message, ARRAYSIZE(message));
 
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
@@ -4284,7 +4231,6 @@ bool MySQLDatabase::AddClanGuestbookEntry(const uint clanId, const uint requestI
 	memset(params1, 0, sizeof(params1));
 
 	// query specific variables
-	ulong msgLength = wcslen(entry->m_Message);
 	time_t local_timestamp = time(NULL);
 	
 	entry->m_Timestamp = local_timestamp;
@@ -4294,7 +4240,7 @@ bool MySQLDatabase::AddClanGuestbookEntry(const uint clanId, const uint requestI
 	query.Bind(&params1[1], &entry->m_Timestamp);
 	query.Bind(&params1[2], &requestId);
 	query.Bind(&params1[3], &entry->m_ProfileId);
-	query.Bind(&params1[4], entry->m_Message, &msgLength);
+	query.Bind(&params1[4], entry->m_Message, wcslen(entry->m_Message));
 	
 	// execute prepared statement
 	if (!query.StmtExecute(params1))
