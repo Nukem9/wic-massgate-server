@@ -312,6 +312,9 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\misc\md5.h">
       <Filter>Header Files\misc</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\MLiveAccountServer\src\misc\crypt_blowfish.h">
+      <Filter>Header Files\misc</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\MLiveAccountServer\libraries\jansson\dump.c">
@@ -543,6 +546,9 @@
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
     <ClCompile Include="..\..\MLiveAccountServer\src\misc\md5.c">
+      <Filter>Source Files\misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\MLiveAccountServer\src\misc\crypt_blowfish.c">
       <Filter>Source Files\misc</Filter>
     </ClCompile>
   </ItemGroup>

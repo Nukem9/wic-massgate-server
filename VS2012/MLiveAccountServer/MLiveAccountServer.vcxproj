@@ -110,6 +110,7 @@
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MP_Pack.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MT_Mutex.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\stdafx.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\misc\crypt_blowfish.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\misc\debuglog.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\misc\md5.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\misc\stdafx.h" />
@@ -201,6 +202,7 @@
     <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MI_Time.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MP_Pack.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\mcommon2\MT_Mutex.cpp" />
+    <ClCompile Include="..\..\MLiveAccountServer\src\misc\crypt_blowfish.c" />
     <ClCompile Include="..\..\MLiveAccountServer\src\misc\debuglog.cpp" />
     <ClCompile Include="..\..\MLiveAccountServer\src\misc\md5.c" />
     <ClCompile Include="..\..\MLiveAccountServer\src\misc\tiger.c" />

@@ -314,6 +314,9 @@
     <ClInclude Include="src\misc\md5.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\misc\crypt_blowfish.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Server Modules\Database.cpp">
@@ -545,6 +548,9 @@
       <Filter>Source Files\mmassgate</Filter>
     </ClCompile>
     <ClCompile Include="src\misc\md5.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\misc\crypt_blowfish.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
