@@ -160,13 +160,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="libraries\openssl\e_os2.h" />
-    <ClInclude Include="libraries\openssl\md5.h" />
-    <ClInclude Include="libraries\openssl\opensslconf.h" />
     <ClInclude Include="libraries\sqlite\sqlite3.h" />
     <ClInclude Include="libraries\stdafx.h" />
     <ClInclude Include="src\mcommon2\MC_MTwister.h" />
     <ClInclude Include="src\mcommon2\stdafx.h" />
+    <ClInclude Include="src\misc\md5.h" />
     <ClInclude Include="src\misc\stdafx.h" />
     <ClInclude Include="src\misc\tiger.h" />
     <ClInclude Include="src\mmassgate\MMG_AccountProxy.h" />
@@ -250,6 +248,7 @@
   <ItemGroup>
     <ClCompile Include="libraries\sqlite\sqlite3.c" />
     <ClCompile Include="src\mcommon2\MC_MTwister.cpp" />
+    <ClCompile Include="src\misc\md5.c" />
     <ClCompile Include="src\misc\tiger.c" />
     <ClCompile Include="src\misc\tiger_sboxes.c" />
     <ClCompile Include="src\mmassgate\MMG_AccountProxy.cpp" />

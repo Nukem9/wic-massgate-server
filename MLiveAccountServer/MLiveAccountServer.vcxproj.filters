@@ -60,9 +60,6 @@
     <Filter Include="Libraries\CURL">
       <UniqueIdentifier>{e6ff7642-b093-47f5-9c6d-158a2a300c05}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Libraries\openssl">
-      <UniqueIdentifier>{4d68dda9-0681-402b-b9c9-c67fd366be09}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Server Modules\Database.h">
@@ -287,15 +284,6 @@
     <ClInclude Include="src\mmassgate\MMG_ServerFilter.h">
       <Filter>Header Files\mmassgate</Filter>
     </ClInclude>
-    <ClInclude Include="libraries\openssl\e_os2.h">
-      <Filter>Libraries\openssl</Filter>
-    </ClInclude>
-    <ClInclude Include="libraries\openssl\md5.h">
-      <Filter>Libraries\openssl</Filter>
-    </ClInclude>
-    <ClInclude Include="libraries\openssl\opensslconf.h">
-      <Filter>Libraries\openssl</Filter>
-    </ClInclude>
     <ClInclude Include="src\Server Modules\PasswordHash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -322,6 +310,9 @@
     </ClInclude>
     <ClInclude Include="src\mmassgate\MMG_ClanGuestbookProtocol.h">
       <Filter>Header Files\mmassgate</Filter>
+    </ClInclude>
+    <ClInclude Include="src\misc\md5.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -552,6 +543,9 @@
     </ClCompile>
     <ClCompile Include="src\mmassgate\MMG_ClanGuestbookProtocol.cpp">
       <Filter>Source Files\mmassgate</Filter>
+    </ClCompile>
+    <ClCompile Include="src\misc\md5.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
