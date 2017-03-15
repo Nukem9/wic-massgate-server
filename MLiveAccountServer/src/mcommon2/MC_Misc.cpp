@@ -33,4 +33,34 @@ namespace MC_Misc
 
 		return hash;
 	}
+
+	char* MD5String(const wchar_t* input, char* output)
+	{
+		MD5_CTX ctx;
+		unsigned char digest[16];
+
+		MD5_Init(&ctx);
+		MD5_Update(&ctx, input, wcslen(input) * 2);
+		MD5_Final(digest, &ctx);
+
+		for (int i = 0; i < 16; ++i)
+			sprintf(&output[i*2], "%02x", (unsigned int)digest[i]);
+
+		return output;
+	}
+
+	char* MD5String(const char* input, char* output)
+	{
+		MD5_CTX ctx;
+		unsigned char digest[16];
+
+		MD5_Init(&ctx);
+		MD5_Update(&ctx, input, strlen(input));
+		MD5_Final(digest, &ctx);
+
+		for (int i = 0; i < 16; ++i)
+			sprintf(&output[i*2], "%02x", (unsigned int)digest[i]);
+
+		return output;
+	}
 }

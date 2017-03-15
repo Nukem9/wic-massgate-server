@@ -353,6 +353,11 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
 				memset(myPasswordHash, 0, sizeof(myPasswordHash));
 
+				char myPasswordMD5[64];
+				memset(myPasswordMD5, 0, sizeof(myPasswordMD5));
+
+				MC_Misc::MD5String(myQuery.m_Authenticate.m_Password, myPasswordMD5);
+
 				uchar isBanned = 0;
 
 				uint myStatusCode = 0;
@@ -370,7 +375,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myStatusCode = AuthFailed_NoSuchAccount;
 					mySuccessFlag = 0;
 				}
-				else if(!hasher.CheckPassword(myQuery.m_Authenticate.m_Password, myPasswordHash) && AuthQueryOK)	//wrong password
+				else if(!hasher.CheckPassword(myPasswordMD5, myPasswordHash) && AuthQueryOK)	//wrong password
 				{
 					myStatusCode = AuthFailed_BadCredentials;
 					mySuccessFlag = 0;
@@ -413,7 +418,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 						// if current password hash is md5 based, update to blowfish
 						if (!strncmp(myPasswordHash, "$H$", 3))
 						{
-							hasher.HashPassword(myPasswordHash, myQuery.m_Authenticate.m_Password);
+							hasher.HashPassword(myPasswordHash, myPasswordMD5);
 							MySQLDatabase::ourInstance->UpdatePassword(myAuthToken->m_AccountId, myPasswordHash);
 						}
 					}
@@ -545,7 +550,11 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
 					memset(myPasswordHash, 0, sizeof(myPasswordHash));
 
-					hasher.HashPassword(myPasswordHash, myQuery.m_Create.m_Password);
+					char myPasswordMD5[64];
+					memset(myPasswordMD5, 0, sizeof(myPasswordMD5));
+
+					MC_Misc::MD5String(myQuery.m_Create.m_Password, myPasswordMD5);
+					hasher.HashPassword(myPasswordHash, myPasswordMD5);
 
 					bool CreateQueryOK = MySQLDatabase::ourInstance->CreateUserAccount(myQuery.m_Create.m_Email, myPasswordHash, 
 						myQuery.m_Create.m_Country, realcountry, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
@@ -635,6 +644,11 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
 				memset(myPasswordHash, 0, sizeof(myPasswordHash));
 
+				char myPasswordMD5[64];
+				memset(myPasswordMD5, 0, sizeof(myPasswordMD5));
+
+				MC_Misc::MD5String(myQuery.m_RetrieveProfiles.m_Password, myPasswordMD5);
+
 				uchar isBanned = 0;
 				ulong myProfileCount = 0;
 				uint lastUsedId = 0;
@@ -650,7 +664,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myStatusCode = AuthFailed_BadCredentials;	//AuthFailed_NoSuchAccount
 					mySuccessFlag = 0;
 				}
-				else if(!hasher.CheckPassword(myQuery.m_RetrieveProfiles.m_Password, myPasswordHash) && AuthQueryOK)	//wrong password
+				else if(!hasher.CheckPassword(myPasswordMD5, myPasswordHash) && AuthQueryOK)	//wrong password
 				{
 					myStatusCode = AuthFailed_BadCredentials;
 					mySuccessFlag = 0;
@@ -688,7 +702,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 						// if current password hash is md5 based, update to blowfish
 						if (!strncmp(myPasswordHash, "$H$", 3))
 						{
-							hasher.HashPassword(myPasswordHash, myQuery.m_RetrieveProfiles.m_Password);
+							hasher.HashPassword(myPasswordHash, myPasswordMD5);
 							MySQLDatabase::ourInstance->UpdatePassword(myAuthToken->m_AccountId, myPasswordHash);
 						}
 					}

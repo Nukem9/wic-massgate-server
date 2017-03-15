@@ -10,7 +10,7 @@ void PasswordHash::get_random_bytes(char *dst, int count)
 	memset(md5str1, 0, sizeof(md5str1));
 	memset(md5str2, 0, sizeof(md5str2));
 
-	for (int i = 0; i < count; i += 16)
+	for (int j = 0; j < count; j += 16)
 	{
 		char random_string[32];
 		memset(random_string, 0, sizeof(random_string));
@@ -63,7 +63,7 @@ void PasswordHash::gensalt_private(char* output, char *input)
 	encode64(output+4, input, 6);
 }
 
-void PasswordHash::crypt_private(char *dst, wchar_t *password, char *setting)
+void PasswordHash::crypt_private(char *dst, char *password, char *setting)
 {
 	MD5_CTX ctx;
 	char hash[MD5_DIGEST_LENGTH];
@@ -88,7 +88,7 @@ void PasswordHash::crypt_private(char *dst, wchar_t *password, char *setting)
 	if (strlen(salt) < 8)
 		return;
 
-	length = wcslen(password) << 1;
+	length = strlen(password);
 
 	MD5_Init(&ctx);
 	MD5_Update(&ctx, salt, 8);
@@ -125,12 +125,26 @@ void PasswordHash::gensalt_blowfish(char *output, char *input)
 	_crypt_gensalt_blowfish_rn("$2y$", this->iteration_count_log2, input, strlen(input), output, CRYPT_GENSALT_OUTPUT_SIZE);
 }
 
-void PasswordHash::crypt_blowfish(char *dst, wchar_t *password, char *setting)
+void PasswordHash::crypt_blowfish(char *dst, char *password, char *setting)
 {
 	_crypt_blowfish_rn(password, setting, dst, CRYPT_OUTPUT_SIZE);
 }
 
-void PasswordHash::HashPassword(char *dst, wchar_t *input)
+int PasswordHash::hash_equals(const void *stored_hash, const void *user_hash, const size_t size) 
+{
+  const unsigned char *_a = (const unsigned char *) stored_hash;
+  const unsigned char *_b = (const unsigned char *) user_hash;
+  unsigned char result = 0;
+  size_t i;
+
+  for (i = 0; i < size; i++) {
+    result |= _a[i] ^ _b[i];
+  }
+
+  return result;
+}
+
+void PasswordHash::HashPassword(char *dst, char *input)
 {
 	char random[32];
 	memset(random, 0, sizeof(random));
@@ -173,7 +187,7 @@ void PasswordHash::HashPassword(char *dst, wchar_t *input)
 	dst[0] = '*';
 }
 
-bool PasswordHash::CheckPassword(wchar_t *password, char *stored_hash)
+bool PasswordHash::CheckPassword(char *password, char *stored_hash)
 {
 	char hash[CRYPT_OUTPUT_SIZE];
 	memset(hash, 0, sizeof(hash));
@@ -183,7 +197,7 @@ bool PasswordHash::CheckPassword(wchar_t *password, char *stored_hash)
 	if (hash[0] == '*')
 		this->crypt_blowfish(hash, password, stored_hash);
 
-	return strncmp(hash, stored_hash, CRYPT_OUTPUT_SIZE) == 0;
+	return hash_equals(stored_hash, hash, CRYPT_OUTPUT_SIZE) == 0;
 }
 
 /*
@@ -191,11 +205,11 @@ bool PasswordHash::CheckPassword(wchar_t *password, char *stored_hash)
 	memset(password, 0, sizeof(password));
 
 	PasswordHash hasher(8, false);
-	hasher.HashPassword(password, L"rightpass");
+	hasher.HashPassword(password, "rightpass");
 
-	if (hasher.CheckPassword(L"rightpass", password))
+	if (hasher.CheckPassword("rightpass", password))
 		printf("pass matched\n");
 
-	if (!hasher.CheckPassword(L"wrongpass", password))
+	if (!hasher.CheckPassword("wrongpass", password))
 		printf("pass not matched\n");
 */

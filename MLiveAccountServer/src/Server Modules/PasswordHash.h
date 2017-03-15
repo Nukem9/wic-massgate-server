@@ -9,8 +9,8 @@
  * http://cvsweb.openwall.com/cgi/cvsweb.cgi/projects/phpass/
  * http://cvsweb.openwall.com/cgi/cvsweb.cgi/Owl/packages/glibc/crypt_blowfish/
  *
- * - changed crypt_private & crypt_blowfish to be able to accept widechar passwords
  * - mersenne twister prng is used instead of microtime()/getmypid()/rand() function
+ * - added a variation of phps hash_equals function
  *
  *******************************************************************************/
 
@@ -30,16 +30,18 @@ private:
 	bool portable_hashes;
 	uint32 random_state;
 
-public:
 	void get_random_bytes	(char *dst, int count);
 	void encode64			(char *dst, char *src, int count);
 	void gensalt_private	(char *output, char *input);
-	void crypt_private		(char *dst, wchar_t *password, char *setting);
+	void crypt_private		(char *dst, char *password, char *setting);
 	void gensalt_extended	(char *output, char *input);
 	void gensalt_blowfish	(char *output, char *input);
-	void crypt_blowfish		(char *dst, wchar_t *password, char *setting);
-	void HashPassword		(char *dst, wchar_t *input);
-	bool CheckPassword		(wchar_t *password, char *stored_hash);
+	void crypt_blowfish		(char *dst, char *password, char *setting);
+	int hash_equals			(const void *stored_hash, const void *user_hash, const size_t size);
+
+public:
+	void HashPassword		(char *dst, char *input);
+	bool CheckPassword		(char *password, char *stored_hash);
 
 	PasswordHash(int iteration_count_log2, bool portable_hashes) : twister()
 	{

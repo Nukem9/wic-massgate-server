@@ -540,10 +540,10 @@ static void BF_swap(BF_word *x, int count)
 	} while (ptr < &data.ctx.S[3][0xFF]);
 #endif
 
-static void BF_set_key(const void *key, BF_key expanded, BF_key initial,
+static void BF_set_key(const char *key, BF_key expanded, BF_key initial,
     unsigned char flags)
 {
-	const char *ptr = (char*)key;
+	const char *ptr = key;
 	unsigned int bug, i, j;
 	BF_word safety, sign, diff, tmp[2];
 
@@ -603,7 +603,7 @@ static void BF_set_key(const void *key, BF_key expanded, BF_key initial,
 			if (j)
 				sign |= tmp[1] & 0x80;
 			if (!*ptr)
-				ptr = (char*)key;
+				ptr = key;
 			else
 				ptr++;
 		}
@@ -646,7 +646,7 @@ static const unsigned char flags_by_subtype[26] =
 	{2, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 4, 0};
 
-static char *BF_crypt(const void *key, const char *setting,
+static char *BF_crypt(const char *key, const char *setting,
 	char *output, int size,
 	BF_word min)
 {
@@ -813,7 +813,7 @@ int _crypt_output_magic(const char *setting, char *output, int size)
  * The performance cost of this quick self-test is around 0.6% at the "$2a$08"
  * setting.
  */
-char *_crypt_blowfish_rn(const void *key, const char *setting,
+char *_crypt_blowfish_rn(const char *key, const char *setting,
 	char *output, int size)
 {
 	const char *test_key = "8b \xd0\xc1\xd2\xcf\xcc\xd8";
@@ -896,8 +896,8 @@ char *_crypt_gensalt_blowfish_rn(const char *prefix, unsigned long count,
 	output[1] = '2';
 	output[2] = prefix[2];
 	output[3] = '$';
-	output[4] = '0' + (char)count / 10;
-	output[5] = '0' + (char)count % 10;
+	output[4] = '0' + count / 10;
+	output[5] = '0' + count % 10;
 	output[6] = '$';
 
 	BF_encode(&output[7], (const BF_word *)input, 16);
