@@ -105,12 +105,14 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 	strncpy(this->TABLENAME[CDKEYS_TABLE],			strstr(settings[6], "=") + 1, sizeof(this->TABLENAME[CDKEYS_TABLE]));
 	strncpy(this->TABLENAME[PROFILES_TABLE],		strstr(settings[7], "=") + 1, sizeof(this->TABLENAME[PROFILES_TABLE]));
 	strncpy(this->TABLENAME[PROFILE_GB_TABLE],		strstr(settings[8], "=") + 1, sizeof(this->TABLENAME[PROFILE_GB_TABLE]));
-	strncpy(this->TABLENAME[FRIENDS_TABLE],			strstr(settings[9], "=") + 1, sizeof(this->TABLENAME[FRIENDS_TABLE]));
-	strncpy(this->TABLENAME[IGNORED_TABLE],			strstr(settings[10], "=") + 1, sizeof(this->TABLENAME[IGNORED_TABLE]));
-	strncpy(this->TABLENAME[MESSAGES_TABLE],		strstr(settings[11], "=") + 1, sizeof(this->TABLENAME[MESSAGES_TABLE]));
-	strncpy(this->TABLENAME[ABUSEREPORTS_TABLE],	strstr(settings[12], "=") + 1, sizeof(this->TABLENAME[ABUSEREPORTS_TABLE]));
-	strncpy(this->TABLENAME[CLANS_TABLE],			strstr(settings[13], "=") + 1, sizeof(this->TABLENAME[CLANS_TABLE]));
-	strncpy(this->TABLENAME[CLAN_GB_TABLE],			strstr(settings[14], "=") + 1, sizeof(this->TABLENAME[CLAN_GB_TABLE]));
+	strncpy(this->TABLENAME[PLAYER_MATCHSTATS_TABLE],strstr(settings[9], "=") + 1, sizeof(this->TABLENAME[PLAYER_MATCHSTATS_TABLE]));
+	strncpy(this->TABLENAME[PLAYER_LADDER_TABLE],		strstr(settings[10], "=") + 1, sizeof(this->TABLENAME[PLAYER_LADDER_TABLE]));
+	strncpy(this->TABLENAME[FRIENDS_TABLE],			strstr(settings[11], "=") + 1, sizeof(this->TABLENAME[FRIENDS_TABLE]));
+	strncpy(this->TABLENAME[IGNORED_TABLE],			strstr(settings[12], "=") + 1, sizeof(this->TABLENAME[IGNORED_TABLE]));
+	strncpy(this->TABLENAME[MESSAGES_TABLE],		strstr(settings[13], "=") + 1, sizeof(this->TABLENAME[MESSAGES_TABLE]));
+	strncpy(this->TABLENAME[ABUSEREPORTS_TABLE],	strstr(settings[14], "=") + 1, sizeof(this->TABLENAME[ABUSEREPORTS_TABLE]));
+	strncpy(this->TABLENAME[CLANS_TABLE],			strstr(settings[15], "=") + 1, sizeof(this->TABLENAME[CLANS_TABLE]));
+	strncpy(this->TABLENAME[CLAN_GB_TABLE],			strstr(settings[16], "=") + 1, sizeof(this->TABLENAME[CLAN_GB_TABLE]));
 
 	return true;
 }
@@ -1322,7 +1324,10 @@ bool MySQLDatabase::UpdateMembershipBadges(const uint accountId, const uint prof
 		badges[i].stars = reader.ReadBits(2);
 	}
 
-	double days = difftime(time(NULL), membersince) / 86400;
+	uint todaysdate = (time(NULL) / 86400) * 86400;
+	uint signupdate = (membersince / 86400) * 86400;
+
+	double days = difftime(todaysdate, signupdate) / 86400;
 
 	if (badges[7].level < 3)
 	{
@@ -2254,7 +2259,7 @@ bool MySQLDatabase::QueryProfileList(const size_t Count, const uint *profileIds,
 	return true;
 }
 
-bool MySQLDatabase::SearchProfileName(const wchar_t* const name, uint *dstCount, uint *profileIds)
+bool MySQLDatabase::QueryPlayerSearch(const wchar_t* const name, const uint maxResults, uint *dstCount, uint profileIds[])
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -2267,13 +2272,13 @@ bool MySQLDatabase::SearchProfileName(const wchar_t* const name, uint *dstCount,
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT id FROM %s WHERE isdeleted = 0 AND name LIKE CONCAT('%%',?,'%%') ORDER BY id ASC LIMIT 100", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "SELECT id FROM %s WHERE isdeleted = 0 AND name LIKE CONCAT('%%',?,'%%') ORDER BY name ASC, id ASC LIMIT ?", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
 
 	// prepared statement binding structures
-	MYSQL_BIND param[1], result[1];
+	MYSQL_BIND param[2], result[1];
 
 	// initialize (zero) bind structures
 	memset(param, 0, sizeof(param));
@@ -2284,6 +2289,7 @@ bool MySQLDatabase::SearchProfileName(const wchar_t* const name, uint *dstCount,
 
 	// bind parameters to prepared statement
 	query.Bind(&param[0], name, wcslen(name));
+	query.Bind(&param[1], &maxResults);
 
 	// bind results
 	query.Bind(&result[0], &id);
@@ -2291,7 +2297,7 @@ bool MySQLDatabase::SearchProfileName(const wchar_t* const name, uint *dstCount,
 	// execute prepared statement
 	if(!query.StmtExecute(param, result))
 	{
-		DatabaseLog("SearchProfileName() failed:");
+		DatabaseLog("QueryPlayerSearch() failed:");
 	}
 	else
 	{
@@ -2319,7 +2325,7 @@ bool MySQLDatabase::SearchProfileName(const wchar_t* const name, uint *dstCount,
 	return true;
 }
 
-bool MySQLDatabase::SearchClanName(const wchar_t* const name, uint *dstCount, MMG_Clan::Description *clans)
+bool MySQLDatabase::QueryClanSearch(const wchar_t* const name, const uint maxResults, uint *dstCount, MMG_Clan::Description clans[])
 {
 	// test the connection before proceeding, disconnects everyone on fail
 	if (!this->TestDatabase())
@@ -2332,13 +2338,13 @@ bool MySQLDatabase::SearchClanName(const wchar_t* const name, uint *dstCount, MM
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT id, clanname, clantag FROM %s WHERE clanname LIKE CONCAT('%%',?,'%%') OR shortclanname LIKE CONCAT('%%',?,'%%') ORDER BY id ASC LIMIT 100", TABLENAME[CLANS_TABLE]);
+	sprintf(SQL, "SELECT id, clanname, clantag FROM %s WHERE clanname LIKE CONCAT('%%',?,'%%') OR shortclanname LIKE CONCAT('%%',?,'%%') ORDER BY clanname ASC, clantag ASC, id ASC LIMIT ?", TABLENAME[CLANS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
 	
 	// prepared statement binding structures
-	MYSQL_BIND param[2], results[3];
+	MYSQL_BIND param[3], results[3];
 
 	// initialize (zero) bind structures
 	memset(param, 0, sizeof(param));
@@ -2354,6 +2360,7 @@ bool MySQLDatabase::SearchClanName(const wchar_t* const name, uint *dstCount, MM
 	// bind parameters to prepared statement
 	query.Bind(&param[0], name, wcslen(name));
 	query.Bind(&param[1], name, wcslen(name));
+	query.Bind(&param[2], &maxResults);
 	
 	// bind results
 	query.Bind(&results[0], &id);
@@ -2363,7 +2370,7 @@ bool MySQLDatabase::SearchClanName(const wchar_t* const name, uint *dstCount, MM
 	// execute prepared statement
 	if(!query.StmtExecute(param, results))
 	{
-		DatabaseLog("SearchClanName() failed:");
+		DatabaseLog("QueryClanSearch() failed:");
 	}
 	else
 	{
@@ -4392,6 +4399,135 @@ bool MySQLDatabase::DeleteClanGuestbookEntry(const uint clanId, const uint messa
 	return true;
 }
 
+bool MySQLDatabase::QueryProfileLadderPosition(const uint profileId, uint *position)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT id FROM %s WHERE profileid = ? LIMIT 1", TABLENAME[PLAYER_LADDER_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], result[1];
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	uint id = 0;
+
+	query.Bind(&param[0], &profileId);
+
+	query.Bind(&result[0], &id);
+
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("QueryProfileLadderPosition() failed:");
+		*position = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+			*position = 0;
+		else
+			*position = id;
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::QueryPlayerLadderCount(uint *dstTotalCount)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT COUNT(id) FROM %s USE INDEX(PRIMARY)", TABLENAME[PLAYER_LADDER_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND result[1];
+	memset(result, 0, sizeof(result));
+
+	uint count = 0;
+
+	query.Bind(&result[0], &count);
+	mysql_stmt_bind_result(query.GetStatement(), result);
+	mysql_stmt_store_result(query.GetStatement());
+
+	if(!query.StmtExecute())
+	{
+		DatabaseLog("QueryPlayerLadderCount() failed:");
+		*dstTotalCount = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+			*dstTotalCount = 0;
+		else
+			*dstTotalCount = count;
+	}
+
+	mysql_stmt_free_result(query.GetStatement());
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::QueryPlayerLadder(uint *dstFoundItems, MMG_LadderProtocol::LadderRsp *ladder, uint startPos, uint numItems)
+{
+	QueryPlayerLadderCount(&ladder->ladderSize);
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT profileid, ladderscore FROM %s WHERE id >= ? ORDER BY id ASC LIMIT ?", TABLENAME[PLAYER_LADDER_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[2], result[2];
+
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	query.Bind(&param[0], &startPos);
+	query.Bind(&param[1], &numItems);
+
+	uint profileid;
+	uint ladderscore;
+
+	query.Bind(&result[0], &profileid);
+	query.Bind(&result[1], &ladderscore);
+
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("QueryPlayerLadder() failed:");
+		*dstFoundItems = 0;
+	}
+	else
+	{
+		ulong count = (ulong)query.StmtNumRows();
+		*dstFoundItems = 0;
+
+		if (count > 0)
+		{
+			int i = 0;
+			while (query.StmtFetch())
+			{
+				QueryProfileName(profileid, &ladder->ladderItems[i].profile);
+				ladder->ladderItems[i].score = ladderscore;
+				i++;
+			}
+
+			*dstFoundItems = count;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
 bool MySQLDatabase::QueryProfileMedals(const uint profileId, const size_t Count, MMG_Stats::Medal medals[])
 {
 	uint buffer[256];
@@ -4677,6 +4813,147 @@ bool MySQLDatabase::VerifyServerKey(const uint sequenceNum, uint *dstId)
 	return true;
 }
 
+bool MySQLDatabase::InsertPlayerMatchStats(const uint datematchplayed, const MMG_Stats::PlayerMatchStats playerstats)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "INSERT INTO %s (datematchplayed, profileid, timeplayedasusa, timeplayedasussr, timeplayedasnato, timeplayedasinfantry, timeplayedasair, timeplayedasarmor, timeplayedassupport, scoretotal, scoreasinfantry, scoreassupport, scoreasarmor, scoreasair, scorebydamagingenemies, scorebyrepairing, scorebyusingtacticalaid, scorebycommandpointcaptures, scorebyfortifying, scorelostbykillingfriendly, numberofunitskilled, numberofunitslost, numberofcommandpointcaptures, numberofreinforcementpointsspent, numberoftacticalaidpointsspent, numberofnukesdeployed, numberoftacticalaidcriticalhits, numberofrolechanges, timetotalmatchlength, matchtype, matchwon, matchlost, matchwasflawlessvictory, bestdata) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", TABLENAME[PLAYER_MATCHSTATS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+
+	MYSQL_BIND params[34];
+	memset(params, 0, sizeof(params));
+	
+	// NOTE: saving buffer_type short to column type INT
+	query.Bind(&params[0], &datematchplayed);
+	query.Bind(&params[1], &playerstats.m_ProfileId);
+	query.Bind(&params[2], &playerstats.m_TimePlayedAsUSA);
+	query.Bind(&params[3], &playerstats.m_TimePlayedAsUSSR);
+	query.Bind(&params[4], &playerstats.m_TimePlayedAsNATO);
+	query.Bind(&params[5], &playerstats.m_TimePlayedAsInfantry);
+	query.Bind(&params[6], &playerstats.m_TimePlayedAsAir);
+	query.Bind(&params[7], &playerstats.m_TimePlayedAsArmor);
+	query.Bind(&params[8], &playerstats.m_TimePlayedAsSupport);
+	query.Bind(&params[9], &playerstats.m_ScoreTotal);
+	query.Bind(&params[10], &playerstats.m_ScoreAsInfantry);
+	query.Bind(&params[11], &playerstats.m_ScoreAsSupport);
+	query.Bind(&params[12], &playerstats.m_ScoreAsArmor);
+	query.Bind(&params[13], &playerstats.m_ScoreAsAir);
+	query.Bind(&params[14], &playerstats.m_ScoreByDamagingEnemies);
+	query.Bind(&params[15], &playerstats.m_ScoreByRepairing);
+	query.Bind(&params[16], &playerstats.m_ScoreByUsingTacticalAids);
+	query.Bind(&params[17], &playerstats.m_ScoreByCommandPointCaptures);
+	query.Bind(&params[18], &playerstats.m_ScoreByFortifying);
+	query.Bind(&params[19], &playerstats.m_ScoreLostByKillingFriendly);
+	query.Bind(&params[20], &playerstats.m_NumberOfUnitsKilled);
+	query.Bind(&params[21], &playerstats.m_NumberOfUnitsLost);
+	query.Bind(&params[22], &playerstats.m_NumberOfCommandPointCaptures);
+	query.Bind(&params[23], &playerstats.m_NumberOfReinforcementPointsSpent);
+	query.Bind(&params[24], &playerstats.m_NumberOfTacticalAidPointsSpent);
+	query.Bind(&params[25], &playerstats.m_NumberOfNukesDeployed);
+	query.Bind(&params[26], &playerstats.m_NumberOfTacticalAidCriticalHits);
+	query.Bind(&params[27], &playerstats.m_NumberOfRoleChanges);
+	query.Bind(&params[28], &playerstats.m_TimeTotalMatchLength);
+	query.Bind(&params[29], &playerstats.m_MatchType);
+	query.Bind(&params[30], &playerstats.m_MatchWon);
+	query.Bind(&params[31], &playerstats.m_MatchLost);
+	query.Bind(&params[32], &playerstats.m_MatchWasFlawlessVictory);
+	query.Bind(&params[33], &playerstats.m_BestData);
+
+	if (!query.StmtExecute(params))
+		DatabaseLog("InsertPlayerMatchStats() failed:");
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::DeletePlayerLadder()
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "DELETE FROM %s", TABLENAME[PLAYER_LADDER_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+
+	if (!query.StmtExecute())
+		DatabaseLog("DeletePlayerLadder() failed:");
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::ResetPlayerLadderAutoInc()
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "ALTER TABLE %s AUTO_INCREMENT = 1", TABLENAME[PLAYER_LADDER_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+
+	if (!query.StmtExecute())
+		DatabaseLog("ResetPlayerLadderAutoInc() failed:");
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::InsertPlayerLadderData()
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "INSERT INTO %s (profileid, ladderscore) "
+				 "SELECT a.profileid, CEIL(SUM(IF(a.matchwon = 1, a.scoretotal * 1.5, a.scoretotal))) AS ladderscore "
+				 "FROM (SELECT * FROM %s WHERE datematchplayed > ?) AS a "
+				 "WHERE (SELECT COUNT(*) FROM %s AS b WHERE b.profileid = a.profileid AND b.scoretotal >= a.scoretotal AND b.datematchplayed > ?) <= 20 "
+				 "GROUP BY a.profileid "
+				 "ORDER BY ladderscore DESC", TABLENAME[PLAYER_LADDER_TABLE] , TABLENAME[PLAYER_MATCHSTATS_TABLE], TABLENAME[PLAYER_MATCHSTATS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+
+	MYSQL_BIND params[2];
+	memset(params, 0, sizeof(params));
+
+	uint local_timestamp = time(NULL);
+	uint datematchplayed = ((local_timestamp / 86400) * 86400) - 1814400;
+
+	query.Bind(&params[0], &datematchplayed);
+	query.Bind(&params[1], &datematchplayed);
+
+	if (!query.StmtExecute(params))
+		DatabaseLog("InsertPlayerLadderData() failed:");
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::BuildPlayerLeaderboard()
+{
+	if (!DeletePlayerLadder())
+		return false;
+
+	if (!ResetPlayerLadderAutoInc())
+		return false;
+
+	// todo: this needs to be done daily at midnight
+	// this will take longer as more matches are played
+	if (!InsertPlayerLadderData())
+		return false;
+
+	return true;
+}
+
 bool MySQLDatabase::UpdateProfileMedals(const uint profileId, const size_t Count, MMG_Stats::Medal medals[])
 {
 	uint buffer[256];
@@ -4761,7 +5038,7 @@ bool MySQLDatabase::UpdateProfileBadgesRawData(const uint profileId, voidptr_t D
 	return true;
 }
 
-bool MySQLDatabase::UpdatePlayerMatchStats(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats)
+bool MySQLDatabase::UpdateProfileMatchStats(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats)
 {
 	char SQL[8192];
 	memset(SQL, 0, sizeof(SQL));
@@ -5064,7 +5341,7 @@ bool MySQLDatabase::UpdatePlayerMatchStats(const uint datematchplayed, MMG_Stats
 	query.Bind(&params[i++], &playerstats->m_ProfileId);
 
 	if (!query.StmtExecute(params))
-		DatabaseLog("UpdatePlayerMatchStats() failed:");
+		DatabaseLog("UpdateProfileMatchStats() failed:");
 
 	if (!query.Success())
 		return false;
@@ -5087,6 +5364,23 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 
 	for (uint i = 0; i < Count; i++)
 	{
+		if (!InsertPlayerMatchStats(datePlayed, playermatchstats[i]))
+		{
+			DatabaseLog("could not save match statistics");
+			RollbackTransaction();
+			return false;
+		}
+	}
+
+	if (!BuildPlayerLeaderboard())
+	{
+		DatabaseLog("could not build player leaderboard");
+		RollbackTransaction();
+		return false;
+	}
+
+	for (uint i = 0; i < Count; i++)
+	{
 		MMG_Stats::Medal medals[19];
 		MMG_Stats::Badge badges[14];
 		MMG_Stats::PlayerStatsRsp playerStats;
@@ -5097,9 +5391,9 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		memset(medalreadbuffer, 0, sizeof(medalreadbuffer));
 		memset(badgereadbuffer, 0, sizeof(badgereadbuffer));
 
-		if (!UpdatePlayerMatchStats(datePlayed, matchStats))
+		if (!UpdateProfileMatchStats(datePlayed, matchStats))
 		{
-			DatabaseLog("could not save match statistics");
+			DatabaseLog("could not update player statistics");
 			RollbackTransaction();
 			return false;
 		}

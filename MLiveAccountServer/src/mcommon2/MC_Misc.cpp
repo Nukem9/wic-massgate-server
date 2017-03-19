@@ -44,7 +44,7 @@ namespace MC_Misc
 		MD5_Final(digest, &ctx);
 
 		for (int i = 0; i < 16; ++i)
-			sprintf(&output[i*2], "%02x", (unsigned int)digest[i]);
+			sprintf_s(&output[i*2], sizeof(unsigned int), "%02x", (unsigned int)digest[i]);
 
 		return output;
 	}
@@ -59,7 +59,7 @@ namespace MC_Misc
 		MD5_Final(digest, &ctx);
 
 		for (int i = 0; i < 16; ++i)
-			sprintf(&output[i*2], "%02x", (unsigned int)digest[i]);
+			sprintf_s(&output[i*2], sizeof(unsigned int), "%02x", (unsigned int)digest[i]);
 
 		return output;
 	}

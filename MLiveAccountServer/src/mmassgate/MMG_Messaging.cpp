@@ -180,9 +180,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 #ifdef USING_MYSQL_DATABASE
 			MySQLDatabase::ourInstance->AddFriend(aClient->GetProfile()->m_ProfileId, profileId);
 #endif
-			// NOTE:
-			// there doesnt seem to be a response, there is a lot of client side validation, making it unnecessary
-			// if the client behaves weird, use MESSAGING_GET_FRIENDS_RESPONSE
 		}
 		break;
 
@@ -299,8 +296,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			uint messageId;
 			if (!aMessage->ReadUInt(messageId))
 				return false;
-
-			// message has been acked, remove it from queue
 
 #ifdef USING_MYSQL_DATABASE
 			MySQLDatabase::ourInstance->RemoveInstantMessage(aClient->GetProfile()->m_ProfileId, messageId);
@@ -1020,22 +1015,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_SET_STATUS_ONLINE:");
 
-			/*
-			IDA wic.exe sub_7A1360 MMG_Messaging::SetStatusOnline
-			after WriteDelimiter, the client appends a Uint ( 0, some sort of padding? ) to the packet
-			handling this random 0 is necessary otherwise "message from client delimiter 0 type 0"
-			will show up in the debug log.
-			
-			Massgate will crash if these 0's arent handled since the message reader will 
-			treat it as the next delimiter.
-
-			the same thing happens for cases:
-				- MESSAGING_GET_CLIENT_METRICS -UChar, (IDA sub_7A1200 MMG_Messaging::GetClientMetrics)
-				- MESSAGING_STARTUP_SEQUENCE_COMPLETE -2 x UInt, (IDA sub_7A1B00, see EXMASS_Client::ReceiveNotification lines 41 and 42)
-
-			remove the handle padding code in the 3 cases to reproduce the crash
-			*/
-
 			//handle padding
 			uint padZero;
 			if (!aMessage->ReadUInt(padZero))
@@ -1081,7 +1060,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			MN_WriteMessage	responseMessage(4096);
 
-			uint maxResults; // hardcoded to 100
+			uint maxResults;
 			if (!aMessage->ReadUInt(maxResults))
 				return false;
 
@@ -1098,7 +1077,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			uint profileIds[100];
 			memset(profileIds, 0, sizeof(profileIds));
 
-			MySQLDatabase::ourInstance->SearchProfileName(search, &resultCount, profileIds);
+			MySQLDatabase::ourInstance->QueryPlayerSearch(search, maxResults, &resultCount, profileIds);
 
 			DebugLog(L_INFO, "MESSAGING_FIND_PROFILE_RESPONSE:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_PROFILE_RESPONSE);
@@ -1120,7 +1099,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			MN_WriteMessage	responseMessage(4096);
 
-			uint maxResults; // hardcoded to 100
+			uint maxResults;
 			if (!aMessage->ReadUInt(maxResults))
 				return false;
 
@@ -1136,7 +1115,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			uint resultCount=0;
 			MMG_Clan::Description clans[100];
 
-			MySQLDatabase::ourInstance->SearchClanName(search, &resultCount, clans);
+			MySQLDatabase::ourInstance->QueryClanSearch(search, maxResults, &resultCount, clans);
 
 			DebugLog(L_INFO, "MESSAGING_FIND_CLAN_RESPONSE:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_CLAN_RESPONSE);
@@ -1242,8 +1221,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				responseMessage.WriteString("https://my_domain_here.abc/my_image.dds"); // Image url
 			}
 
-			if (!aClient->SendData(&responseMessage))
-				return false;
+			//if (!aClient->SendData(&responseMessage))
+			//	return false;
 		}
 		break;
 
@@ -1419,7 +1398,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 #ifdef USING_MYSQL_DATABASE
 			MySQLDatabase::ourInstance->SaveEditableVariables(aClient->GetProfile()->m_ProfileId, myResponse.motto, myResponse.homepage);
 #endif
-			// no response required
 		}
 		break;
 
@@ -1461,21 +1439,12 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			uchar operation;
 			if (!aMessage->ReadUChar(operation))
 				return false;
-#ifndef USING_MYSQL_DATABASE
-			if (operation == 1)
-				printf("add\n");
-			else
-				printf("remove\n");
-#else
+#ifdef USING_MYSQL_DATABASE
 			if (operation == 1)
 				MySQLDatabase::ourInstance->AddIgnoredProfile(aClient->GetProfile()->m_ProfileId, profileId);
 			else
 				MySQLDatabase::ourInstance->RemoveIgnoredProfile(aClient->GetProfile()->m_ProfileId, profileId);
 #endif
-			// wic.exe IDA sub_BD7C90 (called from WICMASS_ContactsScreenHandler)
-			// NOTE:
-			// there doesnt seem to be a response, there is a lot of client side validation, making it unnecessary
-			// if the client behaves weird, use MESSAGING_IGNORELIST_GET_RSP
 		}
 		break;
 		

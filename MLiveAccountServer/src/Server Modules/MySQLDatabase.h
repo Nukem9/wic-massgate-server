@@ -75,6 +75,8 @@ private:
 		CDKEYS_TABLE,
 		PROFILES_TABLE,
 		PROFILE_GB_TABLE,
+		PLAYER_MATCHSTATS_TABLE,
+		PLAYER_LADDER_TABLE,
 		FRIENDS_TABLE,
 		IGNORED_TABLE,
 		MESSAGES_TABLE,
@@ -192,8 +194,8 @@ public:
 	bool	RemoveIgnoredProfile	(const uint profileId, uint ignoredProfileId);
 	bool	QueryProfileName	(const uint profileId, MMG_Profile *profile);
 	bool	QueryProfileList	(const size_t Count, const uint *profileId, MMG_Profile *profiles);
-	bool	SearchProfileName			(const wchar_t* const name, uint *dstCount, uint *profileIds);
-	bool	SearchClanName				(const wchar_t* const name, uint *dstCount, MMG_Clan::Description *clans);
+	bool	QueryPlayerSearch			(const wchar_t* const name, const uint maxResults, uint *dstCount, uint profileIds[]);
+	bool	QueryClanSearch				(const wchar_t* const name, const uint maxResults, uint *dstCount, MMG_Clan::Description clans[]);
 	bool	QueryEditableVariables	(const uint profileId, wchar_t *dstMotto, wchar_t *dstHomepage);
 	bool	SaveEditableVariables	(const uint profileId, const wchar_t *motto, const wchar_t *homepage);
 	bool	QueryPendingMessages		(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages);
@@ -226,6 +228,9 @@ public:
 	bool	DeleteClanGuestbookEntry	(const uint clanId, const uint messageId, const uchar deleteAllByProfile);
 
 	// MMG_ServerTracker
+	bool	QueryProfileLadderPosition	(const uint profileId, uint *position);
+	bool	QueryPlayerLadderCount		(uint *dstTotalCount);
+	bool	QueryPlayerLadder			(uint *dstFoundItems, MMG_LadderProtocol::LadderRsp *ladder, uint startPos, uint numItems);
 	bool	QueryProfileMedals			(const uint profileId, const size_t Count, MMG_Stats::Medal medals[]);
 	bool	QueryProfileBadges			(const uint profileId, const size_t Count, MMG_Stats::Badge badges[]);
 	bool	QueryProfileMedalsRawData	(const uint profileId, voidptr_t Data, ulong Length);
@@ -235,10 +240,15 @@ public:
 
 	// MMG_TrackableServer
 	bool	VerifyServerKey				(const uint sequenceNum, uint *dstId);
+	bool	InsertPlayerMatchStats		(const uint datematchplayed, const MMG_Stats::PlayerMatchStats playerstats);
+	bool	DeletePlayerLadder			();
+	bool	ResetPlayerLadderAutoInc	();
+	bool	InsertPlayerLadderData		();
+	bool	BuildPlayerLeaderboard		();
 	bool	UpdateProfileMedals			(const uint profileId, const size_t Count, MMG_Stats::Medal medals[]);
 	bool	UpdateProfileBadges			(const uint profileId, const size_t Count, MMG_Stats::Badge badges[]);
 	bool	UpdateProfileMedalsRawData	(const uint profileId, voidptr_t Data, ulong Length);
 	bool	UpdateProfileBadgesRawData	(const uint profileId, voidptr_t Data, ulong Length);
-	bool	UpdatePlayerMatchStats		(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats);
+	bool	UpdateProfileMatchStats		(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats);
 	bool	ProcessMatchStatistics		(const uint Count, MMG_Stats::PlayerMatchStats playermatchstats[]);
 };

@@ -52,7 +52,7 @@ cycletest cycles[] =
 
 bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter)
 {
-	MN_WriteMessage	responseMessage(2048);
+	MN_WriteMessage	responseMessage(4096);
 
 	switch(aDelimiter)
 	{
@@ -182,44 +182,96 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 		{
 			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_LADDER_GET_REQ:");
 
-			uint startPos, numItems;
-			uint profileId, requestId;
-			uint foundItems;
-
-			MMG_LadderProtocol::LadderRsp myResponse;
-
+			uint startPos = 0;
+			uint profileId = 0;
+			uint numItems = 0;
+			uint requestId = 0;
+			
 			if (!aMessage->ReadUInt(startPos)
 				|| !aMessage->ReadUInt(profileId)
 				|| !aMessage->ReadUInt(numItems)
 				|| !aMessage->ReadUInt(requestId))
 				return false;
 
-			//printf("%d %d %d %d \n", startPos, profileId, numItems, requestId);
+			MMG_LadderProtocol::LadderRsp myResponse;
+			myResponse.requestId = requestId;
+			uint foundItems = 0;
 
-			foundItems = 0;
+			if (startPos == 0)
+			{
+				if (numItems == 1)
+				{
+					// open profile page
+					MySQLDatabase::ourInstance->QueryProfileLadderPosition(profileId, &myResponse.startPos);
+					MySQLDatabase::ourInstance->QueryPlayerLadder(&foundItems, &myResponse, myResponse.startPos, numItems);
+				}
+				else
+				{
+					// show leaderboard/my position/jumpto position
+					uint thePosition = 0;
+					MySQLDatabase::ourInstance->QueryProfileLadderPosition(profileId, &thePosition);
 
+					myResponse.startPos = 1 + ((thePosition / 100) * 100);	
+					MySQLDatabase::ourInstance->QueryPlayerLadder(&foundItems, &myResponse, myResponse.startPos, numItems);
+				}
+			}
+			else 
+			{
+				// top 100/next/prev page
+				myResponse.startPos = 1 + ((startPos / 100) * 100);
+				MySQLDatabase::ourInstance->QueryPlayerLadder(&foundItems, &myResponse, myResponse.startPos, numItems);
+			}
+
+			if (foundItems == 0)
+				myResponse.startPos = 0;
+
+			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP:");
 			// write case 1
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
 			responseMessage.WriteUChar(1);
 
-			responseMessage.WriteUInt(0);			//startpos
-			responseMessage.WriteUInt(requestId);	//requestid
-			responseMessage.WriteUInt(0);			//ladder total size
-			responseMessage.WriteUInt(0);			//ladder page size
+			responseMessage.WriteUInt(myResponse.startPos);
+			responseMessage.WriteUInt(myResponse.requestId);
+			responseMessage.WriteUInt(myResponse.ladderSize);
+			responseMessage.WriteUInt(foundItems);
 
 			for (uint i = 0; i < foundItems; i++)
 				responseMessage.WriteUInt(myResponse.ladderItems[i].score);
+			
+			// write case 2
+			// sometimes a packet can be bigger than 4096
+			// todo: this could be better but its ok for now
+			uint chunkSize = 50; // profile count, not packet size
+			uint itemsLeft = foundItems;
 
-			//write case 2
+			if (foundItems > chunkSize)
+			{
+				while (itemsLeft > chunkSize)
+				{
+					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
+					responseMessage.WriteUChar(2);
+
+					responseMessage.WriteUInt(chunkSize);
+
+					for (uint i = (foundItems - itemsLeft); i < (foundItems - itemsLeft) + chunkSize; i++)
+						myResponse.ladderItems[i].profile.ToStream(&responseMessage);
+
+					if (!aClient->SendData(&responseMessage))
+						return false;
+
+					itemsLeft -= chunkSize;
+				}
+			}
+
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
 			responseMessage.WriteUChar(2);
 
-			responseMessage.WriteUInt(foundItems);	//ladder page size
+			responseMessage.WriteUInt(itemsLeft);
 
-			for (uint i = 0; i < foundItems; i++)
+			for (uint i = (foundItems - itemsLeft); i < foundItems; i++)
 				myResponse.ladderItems[i].profile.ToStream(&responseMessage);
 
-			//write case 3
+			// write case 3
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
 			responseMessage.WriteUChar(3);
 
@@ -238,7 +290,7 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			
 			MMG_Stats::PlayerStatsRsp playerStats;
 			MySQLDatabase::ourInstance->QueryProfileStats(profileId, &playerStats);
-			// TODO: playerStats.m_CurrentLadderPosition
+			MySQLDatabase::ourInstance->QueryProfileLadderPosition(profileId, &playerStats.m_CurrentLadderPosition);
 
 			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_STATS_RSP:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_STATS_RSP);
