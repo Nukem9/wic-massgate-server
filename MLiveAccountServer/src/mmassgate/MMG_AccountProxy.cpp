@@ -4,7 +4,7 @@ MMG_AccountProxy::MMG_AccountProxy()
 {
 }
 
-bool MMG_AccountProxy::SetClientOffline(SvClient *aClient)
+/*bool MMG_AccountProxy::SetClientOffline(SvClient *aClient)
 {
 	MMG_AuthToken *myAuthToken = aClient->GetToken();
 
@@ -101,3 +101,4 @@ SvClient* MMG_AccountProxy::GetClientByProfileId(uint profileId)
 	
 	return nullptr;
 }
+*/

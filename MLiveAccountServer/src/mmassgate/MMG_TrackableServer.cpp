@@ -91,7 +91,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				return false;
 
 #ifdef USING_MYSQL_DATABASE
-			SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(profileId);
+			SvClient *player = SvClientManager::ourInstance->FindPlayerByProfileId(profileId);
 
 			// if profileId not logged in, kick profileId
 			if (!player)

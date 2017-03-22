@@ -41,7 +41,7 @@ public:
 
 private:
 	MT_Mutex m_Mutex;
-	std::list<Server> m_ServerList;
+	std::vector<Server> m_ServerList;
 
 public:
 	MMG_TrackableServer();

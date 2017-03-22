@@ -264,6 +264,75 @@ SvClient *SvClientManager::FindClient(sockaddr_in *aAddr)
 	return nullptr;
 }
 
+SvClient *SvClientManager::FindPlayerByProfileId(uint profileId)
+{
+	this->m_Mutex.Lock();
+
+	for(uint i = 0; i < this->m_ClientMaxCount; i++)
+	{
+		SvClient *client = &this->m_Clients[i];
+
+		if (!client->m_Valid || !client->m_LoggedIn || !client->m_IsPlayer)
+			continue;
+
+		if (client->m_Profile && client->m_Profile->m_ProfileId == profileId)
+		{
+			this->m_Mutex.Unlock();
+			return client;
+		}
+	}
+
+	this->m_Mutex.Unlock();
+
+	return nullptr;
+}
+
+bool SvClientManager::AccountInUse(uint accountId)
+{
+	this->m_Mutex.Lock();
+
+	for(uint i = 0; i < this->m_ClientMaxCount; i++)
+	{
+		SvClient *client = &this->m_Clients[i];
+
+		if (!client->m_Valid || !client->m_LoggedIn || !client->m_IsPlayer)
+			continue;
+
+		if (client->m_AuthToken && client->m_AuthToken->m_AccountId == accountId)
+		{
+			this->m_Mutex.Unlock();
+			return true;
+		}
+	}
+
+	this->m_Mutex.Unlock();
+
+	return false;
+}
+
+bool SvClientManager::ProfileInUse(uint profileId)
+{
+	this->m_Mutex.Lock();
+
+	for(uint i = 0; i < this->m_ClientMaxCount; i++)
+	{
+		SvClient *client = &this->m_Clients[i];
+
+		if (!client->m_Valid || !client->m_LoggedIn || !client->m_IsPlayer)
+			continue;
+
+		if (client->m_Profile && client->m_Profile->m_ProfileId == profileId)
+		{
+			this->m_Mutex.Unlock();
+			return true;
+		}
+	}
+
+	this->m_Mutex.Unlock();
+
+	return false;
+}
+
 SvClient *SvClientManager::ConnectClient(SOCKET aSocket, sockaddr_in *aAddr)
 {
 	return this->AddClient(ntohl(aAddr->sin_addr.s_addr), ntohs(aAddr->sin_port), aSocket);
@@ -283,7 +352,7 @@ void SvClientManager::EmergencyDisconnectAll()
 		this->DisconnectClient(&this->m_Clients[i]);
 }
 
-bool SvClientManager::SendDataAll(MN_WriteMessage *aMessage)
+bool SvClientManager::SendMessageToOnlinePlayers(MN_WriteMessage *aMessage)
 {
 	this->m_Mutex.Lock();
 
@@ -292,11 +361,11 @@ bool SvClientManager::SendDataAll(MN_WriteMessage *aMessage)
 	{
 		SvClient *client = &this->m_Clients[i];
 
-		if (!client->m_Valid || !client->IsLoggedIn() || !client->IsPlayer())
+		if (!client->m_Valid || !client->m_LoggedIn || !client->m_IsPlayer)
 			continue;
 		
 		// Send message without clearing data
-		if (!aMessage->SendMe(client->GetSocket(), false))
+		if (!aMessage->SendMe(client->m_Socket, false))
 			continue;
 	}
 

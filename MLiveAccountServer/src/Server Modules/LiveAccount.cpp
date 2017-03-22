@@ -47,12 +47,10 @@ void LiveAccount_ConnectionReceivedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 
 void LiveAccount_DisconnectReceivedCallback(SvClient *aClient)
 {
-	// Tell MMG_AccountProxy
+	// set the client->profile online status
 	if (aClient->IsLoggedIn() && aClient->IsPlayer())
 	{
 		aClient->GetProfile()->m_OnlineStatus = 0;
-		MMG_AccountProxy::ourInstance->SetClientOffline(aClient);
-		MMG_AccountProxy::ourInstance->UpdateClients(aClient->GetProfile());
 	}
 
 	// Tell MMG_TrackableServer

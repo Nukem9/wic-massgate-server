@@ -87,12 +87,15 @@ public:
 	void		SetDataCallback	(pfnDataReceivedCallback aCallback);
 
 	SvClient	*FindClient		(sockaddr_in *aAddr);
+	SvClient	*FindPlayerByProfileId	(uint profileId);
+	bool		AccountInUse	(uint accountId);
+	bool		ProfileInUse	(uint profileId);
 
 	SvClient	*ConnectClient	(SOCKET aSocket, sockaddr_in *aAddr);
 	void		DisconnectClient(SvClient *aClient);
 
 	void		EmergencyDisconnectAll();
-	bool		SendDataAll		(MN_WriteMessage *aMessage);
+	bool		SendMessageToOnlinePlayers(MN_WriteMessage *aMessage);
 
 	uint		GetClientCount	();
 

@@ -390,7 +390,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myStatusCode = AuthFailed_RequestedProfileNotFound;
 					mySuccessFlag = 0;
 				}
-				else if(MMG_AccountProxy::ourInstance->AccountInUse(myAuthToken->m_AccountId))
+				else if(SvClientManager::ourInstance->AccountInUse(myAuthToken->m_AccountId))
 				{
 					myStatusCode = AuthFailed_AccountInUse;
 					mySuccessFlag = 0;
@@ -674,7 +674,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					myStatusCode = AuthFailed_AccountBanned;
 					mySuccessFlag = 0;
 				}
-				else if(MMG_AccountProxy::ourInstance->AccountInUse(myAuthToken->m_AccountId))
+				else if(SvClientManager::ourInstance->AccountInUse(myAuthToken->m_AccountId))
 				{
 					myStatusCode = AuthFailed_AccountInUse;
 					mySuccessFlag = 0;

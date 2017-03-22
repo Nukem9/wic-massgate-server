@@ -99,11 +99,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			// write profiles to stream
 			for (ushort i = 0; i < count; i++)
 			{
-				// determine profiles' online status
-				SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(profileList[i].m_ProfileId);
 
-				if (player)
-					profileList[i].m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
 
 				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 				profileList[i].ToStream(&responseMessage);
@@ -225,12 +221,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			{
 				for (uint i = 0; i < msgCount; i++)
 				{
-					// check the online status of the sender
-					SvClient *sender = MMG_AccountProxy::ourInstance->GetClientByProfileId(myMsgs->m_SenderProfile.m_ProfileId);
-
-					if (sender)
-						myMsgs->m_SenderProfile.m_OnlineStatus = sender->GetProfile()->m_OnlineStatus;
-
 					//DebugLog(L_INFO, "MESSAGING_IM_RECEIVE");
 					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
 					myMsgs[i].ToStream(&responseMessage);
@@ -262,7 +252,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 
 			//check to see if recipient is online
-			SvClient *recipient = MMG_AccountProxy::ourInstance->GetClientByProfileId(myInstantMessage.m_RecipientProfile);
+			SvClient *recipient = SvClientManager::ourInstance->FindPlayerByProfileId(myInstantMessage.m_RecipientProfile);
 
 			if (!recipient)
 			{
@@ -474,7 +464,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 
 			// TODO update friends and acquaintances
-			MMG_AccountProxy::ourInstance->SendPlayerJoinedClan(aClient->GetProfile());
 #endif
 		}
 		break;
@@ -594,7 +583,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 							MySQLDatabase::ourInstance->QueryProfileName(ldrId, &modifiedProfile);
 
 							// if profile/player is online, update the logged in client object, preserve online status
-							SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(ldrId);
+							SvClient *player = SvClientManager::ourInstance->FindPlayerByProfileId(ldrId);
 							if (player)
 							{
 								modifiedProfile.m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
@@ -603,7 +592,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 							}
 
 							// send the profile to all online players
-							MMG_AccountProxy::ourInstance->UpdateClients(&modifiedProfile);
 						}
 						else if (aClient->GetProfile()->m_RankInClan == 1 && memberCount == 1)
 						{
@@ -661,7 +649,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				MySQLDatabase::ourInstance->QueryProfileName(profileId, &modifiedProfile);
 
 				// if profile/player is online, update the logged in client object, preserve online status
-				SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(profileId);
+				SvClient *player = SvClientManager::ourInstance->FindPlayerByProfileId(profileId);
 				if (player)
 				{
 					modifiedProfile.m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
@@ -670,7 +658,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				}
 
 				// send the profile to all online players
-				MMG_AccountProxy::ourInstance->UpdateClients(&modifiedProfile);
 			}
 
 			if (myProfileDirty)
@@ -678,8 +665,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				uint myOnlineStatus = aClient->GetProfile()->m_OnlineStatus;
 				MySQLDatabase::ourInstance->QueryProfileName(aClient->GetProfile()->m_ProfileId, aClient->GetProfile());
 				aClient->GetProfile()->m_OnlineStatus = myOnlineStatus;
-
-				MMG_AccountProxy::ourInstance->UpdateClients(aClient->GetProfile());
 			}
 		}
 		break;
@@ -772,7 +757,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				myStatusCode = myClanStrings::InviteSent;
 
 				// if client is online send them the invite directly
-				SvClient *invitee = MMG_AccountProxy::ourInstance->GetClientByProfileId(profileId);
+				SvClient *invitee = SvClientManager::ourInstance->FindPlayerByProfileId(profileId);
 
 				if (invitee)
 				{
@@ -823,8 +808,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					// reload local client->profile object
 					MySQLDatabase::ourInstance->QueryProfileName(aClient->GetProfile()->m_ProfileId, aClient->GetProfile());
 					aClient->GetProfile()->m_OnlineStatus = 1;
-				
-					MMG_AccountProxy::ourInstance->SendPlayerJoinedClan(aClient->GetProfile());
 				}
 				else //clan was deleted already
 				{
@@ -905,11 +888,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				{
 					MMG_Profile poster;
 					MySQLDatabase::ourInstance->QueryProfileName(*iter, &poster);
-
-					SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(poster.m_ProfileId);
-
-					if (player)
-						poster.m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
 
 					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 					poster.ToStream(&responseMessage);
@@ -993,7 +971,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					MySQLDatabase::ourInstance->AddInstantMessage(aClient->GetProfile()->m_ProfileId, &im);
 
 					// if player is online send them the message instantly
-					SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(im.m_RecipientProfile);
+					SvClient *player = SvClientManager::ourInstance->FindPlayerByProfileId(im.m_RecipientProfile);
 					if (player)
 					{
 						MN_WriteMessage clanMsg(2048);
@@ -1022,9 +1000,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			// not sure if this is right
 			aClient->GetProfile()->m_OnlineStatus = 1;
-			MMG_AccountProxy::ourInstance->SetClientOnline(aClient);
-			MMG_AccountProxy::ourInstance->UpdateClients(aClient->GetProfile());
-
 			// response maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
 		}
 		break;
@@ -1046,8 +1021,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 
 			aClient->GetProfile()->m_OnlineStatus = serverId;
-			MMG_AccountProxy::ourInstance->UpdateClients(aClient->GetProfile());
-
 			// response maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
 		}
 		break;
@@ -1342,11 +1315,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				{
 					MMG_Profile poster;
 					MySQLDatabase::ourInstance->QueryProfileName(*iter, &poster);
-
-					SvClient *player = MMG_AccountProxy::ourInstance->GetClientByProfileId(poster.m_ProfileId);
-
-					if (player)
-						poster.m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
 
 					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 					poster.ToStream(&responseMessage);
