@@ -244,23 +244,20 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			uint chunkSize = 50; // profile count, not packet size
 			uint itemsLeft = foundItems;
 
-			if (foundItems > chunkSize)
+			while (itemsLeft > chunkSize)
 			{
-				while (itemsLeft > chunkSize)
-				{
-					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
-					responseMessage.WriteUChar(2);
+				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
+				responseMessage.WriteUChar(2);
 
-					responseMessage.WriteUInt(chunkSize);
+				responseMessage.WriteUInt(chunkSize);
 
-					for (uint i = (foundItems - itemsLeft); i < (foundItems - itemsLeft) + chunkSize; i++)
-						myResponse.ladderItems[i].profile.ToStream(&responseMessage);
+				for (uint i = (foundItems - itemsLeft); i < (foundItems - itemsLeft) + chunkSize; i++)
+					myResponse.ladderItems[i].profile.ToStream(&responseMessage);
 
-					if (!aClient->SendData(&responseMessage))
-						return false;
+				if (!aClient->SendData(&responseMessage))
+					return false;
 
-					itemsLeft -= chunkSize;
-				}
+				itemsLeft -= chunkSize;
 			}
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);

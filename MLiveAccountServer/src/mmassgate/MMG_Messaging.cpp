@@ -33,8 +33,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			MN_WriteMessage	responseMessage(4096);
 
-			ushort count;
-			if (!aMessage->ReadUShort(count))
+			ushort profileCount;
+			if (!aMessage->ReadUShort(profileCount))
 				return false;
 
 #ifndef USING_MYSQL_DATABASE
@@ -72,53 +72,45 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aClient->SendData(&responseMessage))
 				return false;
 #else
-			// TODO: limit may be 128, (MMG_Messaging::Update)
-			if (count > 128)
-				count = 128;
+			uint profildIds[128];
+			memset(profildIds, 0, sizeof(profildIds));
 
-			uint *profildIds = NULL;
-			MMG_Profile *profileList = NULL;
+			MMG_Profile profileList[128];
 
-			profildIds = (uint*)malloc(count * sizeof(uint));
-			memset(profildIds, 0, count * sizeof(uint));
-
-			profileList = new MMG_Profile[count];
-
-			// read profile ids from message
-			for (ushort i = 0; i < count; i++)
+			for (ushort i = 0; i < profileCount; i++)
 			{
 				if (!aMessage->ReadUInt(profildIds[i]))
 					return false;
 			}
 
-			// query database
-			MySQLDatabase::ourInstance->QueryProfileList(count, profildIds, profileList);
+			MySQLDatabase::ourInstance->QueryProfileList(profileCount, profildIds, profileList);
 
-			DebugLog(L_INFO, "MESSAGING_RESPOND_PROFILENAME: sending %d profile name/s", count);
+			DebugLog(L_INFO, "MESSAGING_RESPOND_PROFILENAME: sending %d profile name/s", profileCount);
 
-			// write profiles to stream
-			for (ushort i = 0; i < count; i++)
+			uint chunkSize = 64; // profile count, not packet size
+			uint itemsLeft = profileCount;
+
+			while (itemsLeft > chunkSize)
 			{
-
-
-				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
-				profileList[i].ToStream(&responseMessage);
-
-				if (responseMessage.GetDataLength() + sizeof(MMG_Profile) >= 4096)
+				for (uint i = (profileCount - itemsLeft); i < (profileCount - itemsLeft) + chunkSize; i++)
 				{
-					if (!aClient->SendData(&responseMessage))
-						break;
+					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+					profileList[i].ToStream(&responseMessage);
 				}
+
+				if (!aClient->SendData(&responseMessage))
+					return false;
+
+				itemsLeft -= chunkSize;
 			}
 
-			delete [] profileList;
-			profileList = NULL;
+			for (uint i = (profileCount - itemsLeft); i < profileCount; i++)
+			{
+				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+				profileList[i].ToStream(&responseMessage);
+			}
 
-			free(profildIds);
-			profildIds = NULL;
-
-			// send packet
-			if (responseMessage.GetDataLength() > 0 && !aClient->SendData(&responseMessage))
+			if (!aClient->SendData(&responseMessage))
 				return false;
 #endif
 		}
