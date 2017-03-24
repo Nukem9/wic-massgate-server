@@ -50,7 +50,8 @@ void LiveAccount_DisconnectReceivedCallback(SvClient *aClient)
 	// set the client->profile online status
 	if (aClient->IsLoggedIn() && aClient->IsPlayer())
 	{
-		aClient->GetProfile()->m_OnlineStatus = 0;
+		MMG_Profile *myProfile = aClient->GetProfile();
+		myProfile->setOnlineStatus(0);
 	}
 
 	// Tell MMG_TrackableServer

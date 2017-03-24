@@ -5,6 +5,7 @@
 //
 SvClient::SvClient()
 {
+	this->m_ProfileStateObserver = nullptr;
 	this->m_Profile		= nullptr;
 	this->m_AuthToken	= nullptr;
 	this->m_Options		= nullptr;
@@ -55,6 +56,10 @@ void SvClient::SetLoginStatus(bool aStatus)
 
 void SvClient::SetIsPlayer(bool aIsPlayer)
 {
+	// only add observer on auth success
+	if (aIsPlayer)
+		this->m_Profile->addObserver(this->m_ProfileStateObserver);
+
 	this->m_IsPlayer = aIsPlayer;
 }
 
@@ -132,6 +137,13 @@ void SvClient::Reset()
 	{
 		delete this->m_Profile;
 		this->m_Profile = nullptr;
+	}
+
+	// todo Profile state observer
+	if (this->m_ProfileStateObserver)
+	{
+		delete this->m_ProfileStateObserver;
+		this->m_ProfileStateObserver = nullptr;
 	}
 
 	// Authorization token structure
@@ -401,6 +413,7 @@ SvClient *SvClientManager::AddClient(uint aIpAddr, uint aPort, SOCKET aSocket)
 
 	if (slot)
 	{
+		slot->m_ProfileStateObserver = new MMG_Messaging::ProfileStateObserver();
 		slot->m_Profile		= new MMG_Profile();
 		slot->m_AuthToken	= new MMG_AuthToken();
 		slot->m_Options		= new MMG_Options();

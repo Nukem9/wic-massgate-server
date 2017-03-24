@@ -10,6 +10,31 @@ MMG_Profile::MMG_Profile()
 	this->m_RankInClan		= 0;
 }
 
+void MMG_Profile::setClanId(uint clanid, uchar rank)
+{
+	this->m_ClanId = clanid;
+	this->m_RankInClan = clanid > 0 ? rank : 0;
+	this->notifyObservers(StateType::ClanId);
+}
+
+void MMG_Profile::setOnlineStatus(uint status)
+{
+	this->m_OnlineStatus = status;
+	this->notifyObservers(StateType::OnlineStatus);
+}
+
+void MMG_Profile::setRank(uchar rank)
+{
+	this->m_Rank = rank;
+	this->notifyObservers(StateType::Rank);
+}
+
+void MMG_Profile::setRankInClan(uchar rank)
+{
+	this->m_RankInClan = rank;
+	this->notifyObservers(StateType::RankInClan);
+}
+
 void MMG_Profile::ToStream(MN_WriteMessage *aMessage)
 {
 	aMessage->WriteString(this->m_Name);

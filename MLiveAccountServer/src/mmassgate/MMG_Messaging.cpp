@@ -19,6 +19,45 @@ bool MMG_Messaging::IM_Settings::FromStream(MN_ReadMessage *aMessage)
 	return true;
 }
 
+void MMG_Messaging::ProfileStateObserver::update(MC_Subject *subject, StateType type)
+{
+	MMG_Profile *profile = (MMG_Profile*)subject;
+
+	switch (type)
+	{
+		case ClanId:
+		{
+			printf("TODO update(ClanId)\n");
+		}
+		break;
+
+		case OnlineStatus:
+		{
+			//printf("TODO update(OnlineStatus)\n");
+			MN_WriteMessage	responseMessage(2048);
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+			profile->ToStream(&responseMessage);
+			SvClientManager::ourInstance->SendMessageToOnlinePlayers(&responseMessage);
+		}
+		break;
+
+		case Rank:
+		{
+			printf("TODO update(Rank)\n");
+		}
+		break;
+
+		case RankInClan:
+		{
+			printf("TODO update(RankInClan)\n");
+		}
+		break;
+
+		default:
+		break;
+	}
+}
+
 MMG_Messaging::MMG_Messaging()
 {
 }
@@ -990,9 +1029,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUInt(padZero))
 				return false;
 
-			// not sure if this is right
-			aClient->GetProfile()->m_OnlineStatus = 1;
-			// response maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
+			MMG_Profile *myProfile = aClient->GetProfile();
+			myProfile->setOnlineStatus(1);
 		}
 		break;
 
@@ -1012,8 +1050,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUInt(padZero))
 				return false;
 
-			aClient->GetProfile()->m_OnlineStatus = serverId;
-			// response maybe MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE
+			aClient->GetProfile()->setOnlineStatus(serverId);
 		}
 		break;
 

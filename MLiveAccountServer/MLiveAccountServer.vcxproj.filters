@@ -317,6 +317,12 @@
     <ClInclude Include="src\misc\crypt_blowfish.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\mcommon2\MC_Observer.h">
+      <Filter>Header Files\mcommon2</Filter>
+    </ClInclude>
+    <ClInclude Include="src\mcommon2\MC_Subject.h">
+      <Filter>Header Files\mcommon2</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Server Modules\Database.cpp">

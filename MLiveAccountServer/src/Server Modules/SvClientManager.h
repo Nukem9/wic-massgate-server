@@ -23,6 +23,7 @@ private:
 	uint				m_IpAddress;
 	uint				m_Port;
 
+	MMG_Messaging::ProfileStateObserver *m_ProfileStateObserver;
 	MMG_Profile			*m_Profile;
 	MMG_AuthToken		*m_AuthToken;
 	MMG_Options			*m_Options;

@@ -1,6 +1,6 @@
 #pragma once
 
-class MMG_Profile : public MMG_IStreamable
+class MMG_Profile : public MMG_IStreamable, public MC_Subject
 {
 public:
 	wchar_t m_Name[WIC_NAME_MAX_LENGTH];
@@ -14,6 +14,11 @@ private:
 
 public:
 	MMG_Profile();
+
+	void setClanId			(uint clanid, uchar rank = 3);
+	void setOnlineStatus	(uint status);
+	void setRank			(uchar rank);
+	void setRankInClan		(uchar rank);
 
 	void ToStream	(MN_WriteMessage *aMessage);
 	bool FromStream	(MN_ReadMessage *aMessage);

@@ -105,7 +105,9 @@
     <ClInclude Include="..\..\MLiveAccountServer\libraries\zlib\zutil.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_Misc.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_MTwister.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_Observer.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_Singleton.h" />
+    <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MC_Subject.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MI_Time.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MP_Pack.h" />
     <ClInclude Include="..\..\MLiveAccountServer\src\mcommon2\MT_Mutex.h" />

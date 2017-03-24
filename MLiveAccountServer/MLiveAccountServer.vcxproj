@@ -163,6 +163,8 @@
     <ClInclude Include="libraries\sqlite\sqlite3.h" />
     <ClInclude Include="libraries\stdafx.h" />
     <ClInclude Include="src\mcommon2\MC_MTwister.h" />
+    <ClInclude Include="src\mcommon2\MC_Observer.h" />
+    <ClInclude Include="src\mcommon2\MC_Subject.h" />
     <ClInclude Include="src\mcommon2\stdafx.h" />
     <ClInclude Include="src\misc\crypt_blowfish.h" />
     <ClInclude Include="src\misc\md5.h" />

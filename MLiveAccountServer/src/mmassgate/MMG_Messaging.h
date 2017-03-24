@@ -20,6 +20,12 @@ public:
 	private:
 	};
 
+	class ProfileStateObserver : public MC_Observer
+	{
+	public:
+		virtual void update(MC_Subject *subject, StateType type);
+	};
+
 private:
 
 public:
