@@ -23,7 +23,7 @@ public:
 	class ProfileStateObserver : public MC_Observer
 	{
 	public:
-		virtual void update(MC_Subject *subject, StateType type);
+		void update(MC_Subject *subject, StateType type);
 	};
 
 private:

@@ -1643,6 +1643,29 @@ bool MySQLDatabase::RetrieveUserProfiles(const uint accountId, ulong *dstProfile
 	return true;
 }
 
+bool MySQLDatabase::UpdateProfileRank(const uint profileId, const uchar rank)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "UPDATE %s SET rank = ? WHERE id = ? LIMIT 1", TABLENAME[PROFILES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[2];
+	memset(params, 0, sizeof(params));
+
+	query.Bind(&params[0], &rank);
+	query.Bind(&params[1], &profileId);
+
+	if(!query.StmtExecute(params))
+		DatabaseLog("UpdateProfileRank() failed:");
+	
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
 bool MySQLDatabase::QueryUserOptions(const uint profileId, uint *options)
 {
 	// test the connection before proceeding, disconnects everyone on fail
@@ -4888,17 +4911,24 @@ bool MySQLDatabase::DeletePlayerLadder()
 	return true;
 }
 
-bool MySQLDatabase::ResetPlayerLadderAutoInc()
+bool MySQLDatabase::InsertPlayerLadderItem(const uint id, const uint profileid, const uint ladderscore)
 {
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	sprintf(SQL, "ALTER TABLE %s AUTO_INCREMENT = 1", TABLENAME[PLAYER_LADDER_TABLE]);
+	sprintf(SQL, "INSERT INTO %s (id, profileid, ladderscore) VALUES (?, ?, ?)", this->TABLENAME[PLAYER_LADDER_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
 
-	if (!query.StmtExecute())
-		DatabaseLog("ResetPlayerLadderAutoInc() failed:");
+	MYSQL_BIND params[3];
+	memset(params, 0, sizeof(params));
+
+	query.Bind(&params[0], &id);
+	query.Bind(&params[1], &profileid);
+	query.Bind(&params[2], &ladderscore);
+
+	if (!query.StmtExecute(params))
+		DatabaseLog("InsertPlayerLadderItem() failed:");
 
 	if (!query.Success())
 		return false;
@@ -4906,31 +4936,46 @@ bool MySQLDatabase::ResetPlayerLadderAutoInc()
 	return true;
 }
 
-bool MySQLDatabase::InsertPlayerLadderData()
+bool MySQLDatabase::GeneratePlayerLadderData(const uint datematchplayed)
 {
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	sprintf(SQL, "INSERT INTO %s (profileid, ladderscore) "
-				 "SELECT a.profileid, CEIL(SUM(IF(a.matchwon = 1, a.scoretotal * 1.5, a.scoretotal))) AS ladderscore "
+	sprintf(SQL, "SELECT a.profileid, CEIL(SUM(IF(a.matchwon = 1, a.scoretotal * 1.5, a.scoretotal))) AS ladderscore "
 				 "FROM (SELECT * FROM %s WHERE datematchplayed > ?) AS a "
 				 "WHERE (SELECT COUNT(*) FROM %s AS b WHERE b.profileid = a.profileid AND b.scoretotal >= a.scoretotal AND b.datematchplayed > ?) <= 20 "
 				 "GROUP BY a.profileid "
-				 "ORDER BY ladderscore DESC", TABLENAME[PLAYER_LADDER_TABLE] , TABLENAME[PLAYER_MATCHSTATS_TABLE], TABLENAME[PLAYER_MATCHSTATS_TABLE]);
+				 "ORDER BY ladderscore DESC", TABLENAME[PLAYER_MATCHSTATS_TABLE], TABLENAME[PLAYER_MATCHSTATS_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
 
-	MYSQL_BIND params[2];
+	MYSQL_BIND params[2], results[2];
 	memset(params, 0, sizeof(params));
+	memset(results, 0, sizeof(results));
 
-	uint local_timestamp = time(NULL);
-	uint datematchplayed = ((local_timestamp / 86400) * 86400) - 1814400;
+	uint id=0, profileid=0, ladderscore=0;
 
 	query.Bind(&params[0], &datematchplayed);
 	query.Bind(&params[1], &datematchplayed);
 
-	if (!query.StmtExecute(params))
-		DatabaseLog("InsertPlayerLadderData() failed:");
+	query.Bind(&results[0], &profileid);
+	query.Bind(&results[1], &ladderscore);
+
+	if (!query.StmtExecute(params, results))
+		DatabaseLog("GeneratePlayerLadderData() failed:");
+	else
+	{
+		ulong count = (ulong)query.StmtNumRows();
+
+		if (count > 0)
+		{
+			while(query.StmtFetch())
+			{
+				if (!InsertPlayerLadderItem(++id, profileid, ladderscore))
+					return false;
+			}
+		}
+	}
 
 	if (!query.Success())
 		return false;
@@ -4938,18 +4983,27 @@ bool MySQLDatabase::InsertPlayerLadderData()
 	return true;
 }
 
-bool MySQLDatabase::BuildPlayerLeaderboard()
+bool MySQLDatabase::BuildPlayerLeaderboard(const uint datematchplayed)
 {
-	if (!DeletePlayerLadder())
-		return false;
+	BeginTransaction();
 
-	if (!ResetPlayerLadderAutoInc())
+	if (!DeletePlayerLadder())
+	{
+		RollbackTransaction();
 		return false;
+	}
 
 	// todo: this needs to be done daily at midnight
+	uint daterange = ((datematchplayed / 86400) * 86400) - 1814400;
+
 	// this will take longer as more matches are played
-	if (!InsertPlayerLadderData())
+	if (!GeneratePlayerLadderData(daterange))
+	{
+		RollbackTransaction();
 		return false;
+	}
+
+	CommitTransaction();
 
 	return true;
 }
@@ -5038,7 +5092,7 @@ bool MySQLDatabase::UpdateProfileBadgesRawData(const uint profileId, voidptr_t D
 	return true;
 }
 
-bool MySQLDatabase::UpdateProfileMatchStats(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats)
+bool MySQLDatabase::UpdateProfileMatchStats(const uint profileId, const uint datematchplayed, const MMG_Stats::PlayerMatchStats *playerstats)
 {
 	char SQL[8192];
 	memset(SQL, 0, sizeof(SQL));
@@ -5340,6 +5394,9 @@ bool MySQLDatabase::UpdateProfileMatchStats(const uint datematchplayed, MMG_Stat
 	// id = profileId
 	query.Bind(&params[i++], &playerstats->m_ProfileId);
 
+	if (profileId != playerstats->m_ProfileId)
+		return false;
+
 	if (!query.StmtExecute(params))
 		DatabaseLog("UpdateProfileMatchStats() failed:");
 
@@ -5349,7 +5406,7 @@ bool MySQLDatabase::UpdateProfileMatchStats(const uint datematchplayed, MMG_Stat
 	return true;
 }
 
-bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMatchStats playermatchstats[])
+bool MySQLDatabase::ProcessMatchStatistics(const uint datematchplayed, const uint Count, const MMG_Stats::PlayerMatchStats playermatchstats[])
 {
 	if (!TestDatabase())
 	{
@@ -5359,39 +5416,29 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 
 	BeginTransaction();
 
-	time_t local_timestamp = time(NULL);
-	uint datePlayed = local_timestamp;
-
 	for (uint i = 0; i < Count; i++)
 	{
-		if (!InsertPlayerMatchStats(datePlayed, playermatchstats[i]))
+		const MMG_Stats::PlayerMatchStats *const matchStats = &playermatchstats[i];
+		const uint profileId = matchStats->m_ProfileId;
+
+		MMG_Stats::Medal medals[19];
+		MMG_Stats::Badge badges[14];
+		MMG_Stats::PlayerStatsRsp playerStats;
+		MMG_Stats::ExtraPlayerStats extraStats;
+		uint medalreadbuffer[256], badgereadbuffer[256];
+		memset(medalreadbuffer, 0, sizeof(medalreadbuffer));
+		memset(badgereadbuffer, 0, sizeof(badgereadbuffer));
+
+		// for leaderboards
+		if (!InsertPlayerMatchStats(datematchplayed, *matchStats))
 		{
 			DatabaseLog("could not save match statistics");
 			RollbackTransaction();
 			return false;
 		}
-	}
 
-	if (!BuildPlayerLeaderboard())
-	{
-		DatabaseLog("could not build player leaderboard");
-		RollbackTransaction();
-		return false;
-	}
-
-	for (uint i = 0; i < Count; i++)
-	{
-		MMG_Stats::Medal medals[19];
-		MMG_Stats::Badge badges[14];
-		MMG_Stats::PlayerStatsRsp playerStats;
-		MMG_Stats::ExtraPlayerStats extraStats;
-		MMG_Stats::PlayerMatchStats *matchStats = &playermatchstats[i];
-		uint profileId = matchStats->m_ProfileId;
-		uint medalreadbuffer[256], badgereadbuffer[256];
-		memset(medalreadbuffer, 0, sizeof(medalreadbuffer));
-		memset(badgereadbuffer, 0, sizeof(badgereadbuffer));
-
-		if (!UpdateProfileMatchStats(datePlayed, matchStats))
+		// for profile page stats
+		if (!UpdateProfileMatchStats(profileId, datematchplayed, matchStats))
 		{
 			DatabaseLog("could not update player statistics");
 			RollbackTransaction();
@@ -5409,16 +5456,16 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		MMG_BitReader<unsigned int> medalreader(medalreadbuffer, sizeof(medalreadbuffer) * 8);
 		MMG_BitReader<unsigned int> badgereader(badgereadbuffer, sizeof(badgereadbuffer) * 8);
 
-		for (uint i = 0; i < 19; i++)
+		for (uint j = 0; j < 19; j++)
 		{
-			medals[i].level = medalreader.ReadBits(2);
-			medals[i].stars = medalreader.ReadBits(2);
+			medals[j].level = medalreader.ReadBits(2);
+			medals[j].stars = medalreader.ReadBits(2);
 		}
 
-		for (uint i = 0; i < 14; i++)
+		for (uint j = 0; j < 14; j++)
 		{
-			badges[i].level = badgereader.ReadBits(2);
-			badges[i].stars = badgereader.ReadBits(2);
+			badges[j].level = badgereader.ReadBits(2);
+			badges[j].stars = badgereader.ReadBits(2);
 		}
 
 		// infantry skill medal
@@ -6642,16 +6689,16 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 		MMG_BitWriter<unsigned int> medalwriter(medalwritebuffer, sizeof(medalwritebuffer) * 8);
 		MMG_BitWriter<unsigned int> badgewriter(badgewritebuffer, sizeof(badgewritebuffer) * 8);
 
-		for (uint i = 0; i < 19; i++)
+		for (uint j = 0; j < 19; j++)
 		{
-			medalwriter.WriteBits(medals[i].level, 2);
-			medalwriter.WriteBits(medals[i].stars, 2);
+			medalwriter.WriteBits(medals[j].level, 2);
+			medalwriter.WriteBits(medals[j].stars, 2);
 		}
 
-		for (uint i = 0; i < 14; i++)
+		for (uint j = 0; j < 14; j++)
 		{
-			badgewriter.WriteBits(badges[i].level, 2);
-			badgewriter.WriteBits(badges[i].stars, 2);
+			badgewriter.WriteBits(badges[j].level, 2);
+			badgewriter.WriteBits(badges[j].stars, 2);
 		}
 
 		if (memcmp(medalreadbuffer, medalwritebuffer, sizeof(medalwritebuffer)))
@@ -6676,6 +6723,71 @@ bool MySQLDatabase::ProcessMatchStatistics(const uint Count, MMG_Stats::PlayerMa
 	}
 
 	CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::CalculatePlayerRanks(const uint Count, const uint profileIds[])
+{
+	for (uint i = 0; i < Count; i++)
+	{
+		uint profileId = profileIds[i];
+		MMG_Profile profile;
+		MMG_Stats::PlayerStatsRsp playerStats;
+		uint ladderPosition = 0;
+		uint ladderCount = 0;
+
+		if (!QueryProfileName(profileId, &profile))
+			return false;
+
+		if (!QueryProfileStats(profileId, &playerStats))
+			return false;
+
+		if (!QueryProfileLadderPosition(profileId, &ladderPosition))
+			return false;
+
+		if (!QueryPlayerLadderCount(&ladderCount))
+			return false;
+
+		uint totalScore = playerStats.m_ScoreTotal;
+		uint perc = 100 - (uint)floor(((float)ladderPosition * 100 / ladderCount) + 0.5f);
+		uchar rank = profile.m_Rank;
+
+		if (rank == 0 && totalScore >= 600)						rank++;
+		if (rank == 1 && totalScore >= 2000)					rank++;
+		if (rank == 2 && totalScore >= 5000)					rank++;
+		if (rank == 3 && totalScore >= 9000)					rank++;
+		if (rank == 4 && totalScore >= 15000)					rank++;
+		if (rank == 5 && totalScore >= 25000)					rank++;
+		if (rank == 6 && totalScore >= 40000)					rank++;
+		if (rank == 7 && totalScore >= 58000)					rank++;
+		if (rank == 8 && totalScore >= 77000)					rank++;
+		if (rank == 9 && totalScore >= 110000 && perc >= 33)	rank++;
+		if (rank == 10 && totalScore >= 145000 && perc >= 55)	rank++;
+		if (rank == 11 && totalScore >= 180000 && perc >= 70)	rank++;
+		if (rank == 12 && totalScore >= 215000 && perc >= 80)	rank++;
+		if (rank == 13 && totalScore >= 260000 && perc >= 87)	rank++;
+		if (rank == 14 && totalScore >= 310000 && perc >= 91)	rank++;
+		if (rank == 15 && totalScore >= 365000 && perc >= 95)	rank++;
+		if (rank == 16 && totalScore >= 430000 && perc >= 98)	rank++;
+		if (rank == 17 && totalScore >= 500000 && perc >= 99)	rank++;
+
+		if (profile.m_Rank != rank)
+		{
+			SvClient *onlinePlayer = SvClientManager::ourInstance->FindPlayerByProfileId(profileId);
+			if (onlinePlayer)
+			{
+				onlinePlayer->GetProfile()->setRank(rank);
+			}
+			else
+			{
+				// sets rank in database and updates all online players with new profile
+				MMG_Messaging::ProfileStateObserver tempObserver;
+				profile.addObserver(&tempObserver);
+				profile.setRank(rank);
+			}
+		}
+	}
 
 	return true;
 }

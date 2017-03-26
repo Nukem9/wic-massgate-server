@@ -143,7 +143,6 @@ public:
 		this->Unload();
 	}
 
-private:
 	bool	EmergencyMassgateDisconnect		();
 
 	bool	ReadConfig			(const char *filename);
@@ -156,7 +155,6 @@ private:
 	void	RollbackTransaction	();
 	void	CommitTransaction	();
 
-public:
 	bool	Initialize			();
 	void	Unload				();
 	bool	HasConnection		();
@@ -181,6 +179,9 @@ public:
 	bool	UpdateMembershipBadges		(const uint accountId, const uint profileId);
 	bool	QueryUserProfile	(const uint accountId, const uint profileId, MMG_Profile *profile);
 	bool	RetrieveUserProfiles		(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles);
+
+	// MMG_Messaging: profile related
+	bool	UpdateProfileRank			(const uint profileId, const uchar rank);
 
 	// MMG_Messaging
 	bool	QueryUserOptions	(const uint profileId, uint *options);
@@ -242,13 +243,14 @@ public:
 	bool	VerifyServerKey				(const uint sequenceNum, uint *dstId);
 	bool	InsertPlayerMatchStats		(const uint datematchplayed, const MMG_Stats::PlayerMatchStats playerstats);
 	bool	DeletePlayerLadder			();
-	bool	ResetPlayerLadderAutoInc	();
-	bool	InsertPlayerLadderData		();
-	bool	BuildPlayerLeaderboard		();
+	bool	InsertPlayerLadderItem		(const uint id, const uint profileid, const uint ladderscore);
+	bool	GeneratePlayerLadderData	(const uint datematchplayed);
+	bool	BuildPlayerLeaderboard		(const uint datematchplayed);
 	bool	UpdateProfileMedals			(const uint profileId, const size_t Count, MMG_Stats::Medal medals[]);
 	bool	UpdateProfileBadges			(const uint profileId, const size_t Count, MMG_Stats::Badge badges[]);
 	bool	UpdateProfileMedalsRawData	(const uint profileId, voidptr_t Data, ulong Length);
 	bool	UpdateProfileBadgesRawData	(const uint profileId, voidptr_t Data, ulong Length);
-	bool	UpdateProfileMatchStats		(const uint datematchplayed, MMG_Stats::PlayerMatchStats *playerstats);
-	bool	ProcessMatchStatistics		(const uint Count, MMG_Stats::PlayerMatchStats playermatchstats[]);
+	bool	UpdateProfileMatchStats		(const uint profileId, const uint datematchplayed, const MMG_Stats::PlayerMatchStats *playerstats);
+	bool	ProcessMatchStatistics		(const uint datematchplayed, const uint Count, const MMG_Stats::PlayerMatchStats playermatchstats[]);
+	bool	CalculatePlayerRanks		(const uint Count, const uint profileIds[]);
 };

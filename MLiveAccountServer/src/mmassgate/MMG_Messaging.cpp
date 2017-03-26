@@ -21,7 +21,20 @@ bool MMG_Messaging::IM_Settings::FromStream(MN_ReadMessage *aMessage)
 
 void MMG_Messaging::ProfileStateObserver::update(MC_Subject *subject, StateType type)
 {
+	MN_WriteMessage	responseMessage(2048);
 	MMG_Profile *profile = (MMG_Profile*)subject;
+
+#ifndef USING_MYSQL_DATABASE
+	responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+	profile->ToStream(&responseMessage);
+#else
+	if (!MySQLDatabase::ourInstance->TestDatabase())
+	{
+		MySQLDatabase::ourInstance->EmergencyMassgateDisconnect();
+		return;
+	}
+
+	MySQLDatabase::ourInstance->BeginTransaction();
 
 	switch (type)
 	{
@@ -33,17 +46,21 @@ void MMG_Messaging::ProfileStateObserver::update(MC_Subject *subject, StateType 
 
 		case OnlineStatus:
 		{
-			//printf("TODO update(OnlineStatus)\n");
-			MN_WriteMessage	responseMessage(2048);
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 			profile->ToStream(&responseMessage);
-			SvClientManager::ourInstance->SendMessageToOnlinePlayers(&responseMessage);
 		}
 		break;
 
 		case Rank:
 		{
-			printf("TODO update(Rank)\n");
+			if (!MySQLDatabase::ourInstance->UpdateProfileRank(profile->m_ProfileId, profile->m_Rank))
+			{
+				MySQLDatabase::ourInstance->RollbackTransaction();
+				return;
+			}
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+			profile->ToStream(&responseMessage);
 		}
 		break;
 
@@ -56,6 +73,10 @@ void MMG_Messaging::ProfileStateObserver::update(MC_Subject *subject, StateType 
 		default:
 		break;
 	}
+
+	MySQLDatabase::ourInstance->CommitTransaction();
+#endif
+	SvClientManager::ourInstance->SendMessageToOnlinePlayers(&responseMessage);
 }
 
 MMG_Messaging::MMG_Messaging()

@@ -189,6 +189,10 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			uint statCount;
 			uint64 mapHash;
 			MMG_Stats::PlayerMatchStats playerStats[100];
+			uint profileIds[100];
+			memset(profileIds, 0, sizeof(profileIds));
+
+			time_t local_timestamp = time(NULL);
 
 			if (!aMessage->ReadUInt(statCount) || !aMessage->ReadUInt64(mapHash))
 				return false;
@@ -197,10 +201,27 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			{
 				if (!playerStats[i].FromStream(aMessage))
 					return false;
+
+				profileIds[i] = playerStats[i].m_ProfileId;
 			}
 
-			if (!MySQLDatabase::ourInstance->ProcessMatchStatistics(statCount, playerStats))
+			if (!MySQLDatabase::ourInstance->ProcessMatchStatistics(local_timestamp, statCount, playerStats))
+			{
+				DebugLog(L_INFO, "Error: ProcessMatchStatistics() failed");
 				return false;
+			}
+
+			if (!MySQLDatabase::ourInstance->BuildPlayerLeaderboard(local_timestamp))
+			{
+				DebugLog(L_INFO, "Error: BuildPlayerLeaderboard() failed");
+				return false;
+			}
+			
+			if (!MySQLDatabase::ourInstance->CalculatePlayerRanks(statCount, profileIds))
+			{
+				DebugLog(L_INFO, "Error: CalculatePlayerRanks() failed");
+				return false;
+			}
 		}
 		break;
 
