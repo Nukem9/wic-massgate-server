@@ -60,6 +60,13 @@
 
 */
 
+// temporary
+struct Acquaintance
+{
+	uint m_ProfileId;
+	uint m_NumTimesPlayed;
+};
+
 #ifndef USING_MYSQL_DATABASE
 //#define USING_MYSQL_DATABASE
 #endif
@@ -79,6 +86,7 @@ private:
 		PLAYER_LADDER_TABLE,
 		FRIENDS_TABLE,
 		IGNORED_TABLE,
+		ACQUAINTANCES_TABLE,
 		MESSAGES_TABLE,
 		ABUSEREPORTS_TABLE,
 		CLANS_TABLE,
@@ -186,11 +194,11 @@ public:
 	// MMG_Messaging
 	bool	QueryUserOptions	(const uint profileId, uint *options);
 	bool	SaveUserOptions		(const uint profileId, const uint options);
-	bool	QueryFriends				(const uint profileId, uint *dstProfileCount, uint *friendIds);
+	bool	QueryFriends				(const uint profileId, uint *dstProfileCount, uint friendIds[]);
 	bool	AddFriend			(const uint profileId, uint friendProfileId);
 	bool	RemoveFriend		(const uint profileId, uint friendProfileId);
-	bool	QueryAcquaintances	(const uint profileId, uint *dstProfileCount, uint *acquaintanceIds[]);
-	bool	QueryIgnoredProfiles		(const uint profileId, uint *dstProfileCount, uint *ignoredIds);
+	bool	QueryAcquaintances			(const uint profileId, uint *dstCount, Acquaintance acquaintances[]);
+	bool	QueryIgnoredProfiles		(const uint profileId, uint *dstProfileCount, uint ignoredIds[]);
 	bool	AddIgnoredProfile		(const uint profileId, uint ignoredProfileId);
 	bool	RemoveIgnoredProfile	(const uint profileId, uint ignoredProfileId);
 	bool	QueryProfileName	(const uint profileId, MMG_Profile *profile);
@@ -253,4 +261,5 @@ public:
 	bool	UpdateProfileMatchStats		(const uint profileId, const uint datematchplayed, const MMG_Stats::PlayerMatchStats *playerstats);
 	bool	ProcessMatchStatistics		(const uint datematchplayed, const uint Count, const MMG_Stats::PlayerMatchStats playermatchstats[]);
 	bool	CalculatePlayerRanks		(const uint Count, const uint profileIds[]);
+	bool	InsertAcquaintances		(const uint datematchplayed, const uint Count, const uint profileIds[]);
 };

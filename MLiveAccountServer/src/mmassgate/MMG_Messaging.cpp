@@ -180,7 +180,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_GET_FRIENDS_AND_ACQUAINTANCES_REQUEST:");
 
-			MN_WriteMessage	responseMessage(2048);
+			MN_WriteMessage	responseMessage(4096);
 
 			/*MMG_Profile *myProfile = aClient->GetProfile();
 
@@ -208,11 +208,66 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			this->SendStartupSequenceComplete(aClient, &responseMessage);
 			*/
 
-			//send acquaintances first, otherwise it screws up the contacts list
-			if (!this->SendAcquaintance(aClient, &responseMessage))
-				return false;
+#ifndef USING_MYSQL_DATABASE
+			DebugLog(L_INFO, "MESSAGING_GET_ACQUAINTANCES_RESPONSE:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_ACQUAINTANCES_RESPONSE);
 
-			if (!this->SendFriend(aClient, &responseMessage))
+			//write uint (num acquaintances)
+			responseMessage.WriteUInt(0);
+
+			//for each acquaintance
+				//write uint (profile id)
+				//write uint number times played
+
+			DebugLog(L_INFO, "MESSAGING_GET_FRIENDS_RESPONSE:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_FRIENDS_RESPONSE);
+
+			//write uint (num friends)
+			responseMessage.WriteUInt(2);
+			responseMessage.WriteUInt(1235);
+			responseMessage.WriteUInt(1236);
+
+			//for each friend
+				//write uint (profile id)
+#else
+			//send acquaintances first, otherwise it screws up the contacts list
+			DebugLog(L_INFO, "MESSAGING_GET_ACQUAINTANCES_RESPONSE:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_ACQUAINTANCES_RESPONSE);
+
+			uint totalCount = 0;
+			Acquaintance acquaintances[512];
+
+			if (!MySQLDatabase::ourInstance->QueryAcquaintances(aClient->GetProfile()->m_ProfileId, &totalCount, acquaintances))
+				responseMessage.WriteUInt(0);
+			else
+			{
+				responseMessage.WriteUInt(totalCount);
+
+				for (uint i=0; i < totalCount; i++)
+				{
+					responseMessage.WriteUInt(acquaintances[i].m_ProfileId);
+					responseMessage.WriteUInt(acquaintances[i].m_NumTimesPlayed);
+				}
+			}
+
+			// send friends
+			DebugLog(L_INFO, "MESSAGING_GET_FRIENDS_RESPONSE:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_FRIENDS_RESPONSE);
+
+			uint friendCount = 0;
+			uint myFriends[100];
+
+			if (!MySQLDatabase::ourInstance->QueryFriends(aClient->GetProfile()->m_ProfileId, &friendCount, myFriends))
+				responseMessage.WriteUInt(0);
+			else
+			{
+				responseMessage.WriteUInt(friendCount);
+
+				for (uint i=0; i < friendCount; i++)
+					responseMessage.WriteUInt(myFriends[i]);
+			}
+#endif
+			if (!aClient->SendData(&responseMessage))
 				return false;
 		}
 		break;
@@ -1485,9 +1540,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			uint ignoredCount = 0;
 			uint myIgnoreList[64];
 
-			bool QueryOK = MySQLDatabase::ourInstance->QueryIgnoredProfiles(aClient->GetProfile()->m_ProfileId, &ignoredCount, myIgnoreList);
-
-			if (!QueryOK)
+			if (!MySQLDatabase::ourInstance->QueryIgnoredProfiles(aClient->GetProfile()->m_ProfileId, &ignoredCount, myIgnoreList))
 				responseMessage.WriteUInt(0);
 			else
 			{
@@ -1525,54 +1578,6 @@ bool MMG_Messaging::SendProfileName(SvClient *aClient, MN_WriteMessage	*aMessage
 	DebugLog(L_INFO, "MESSAGING_RESPOND_PROFILENAME: %ws", aProfile->m_Name);
 	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 	aProfile->ToStream(aMessage);
-
-	return aClient->SendData(aMessage);
-}
-
-bool MMG_Messaging::SendFriend(SvClient *aClient, MN_WriteMessage *aMessage)
-{
-	DebugLog(L_INFO, "MESSAGING_GET_FRIENDS_RESPONSE:");
-	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_FRIENDS_RESPONSE);
-
-#ifndef USING_MYSQL_DATABASE
-	//write uint (num friends)
-	aMessage->WriteUInt(2);
-	aMessage->WriteUInt(1235);
-	aMessage->WriteUInt(1236);
-
-	//for each friend
-		//write uint (profile id)
-#else
-	uint friendCount = 0;
-	uint myFriends[100];
-
-	bool QueryOK = MySQLDatabase::ourInstance->QueryFriends(aClient->GetProfile()->m_ProfileId, &friendCount, myFriends);
-
-	if (!QueryOK)
-		aMessage->WriteUInt(0);
-	else
-	{
-		aMessage->WriteUInt(friendCount);
-
-		for (uint i=0; i < friendCount; i++)
-			aMessage->WriteUInt(myFriends[i]);
-	}
-#endif
-
-	return aClient->SendData(aMessage);
-}
-
-bool MMG_Messaging::SendAcquaintance(SvClient *aClient, MN_WriteMessage *aMessage)
-{
-	DebugLog(L_INFO, "MESSAGING_GET_ACQUAINTANCES_RESPONSE:");
-	aMessage->WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_ACQUAINTANCES_RESPONSE);
-
-	//write uint (num acquaintances)
-	aMessage->WriteUInt(0);
-
-	//for each acquaintance
-		//write uint (profile id)
-		//write uint number times played
 
 	return aClient->SendData(aMessage);
 }

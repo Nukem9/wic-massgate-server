@@ -109,10 +109,11 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 	strncpy(this->TABLENAME[PLAYER_LADDER_TABLE],		strstr(settings[10], "=") + 1, sizeof(this->TABLENAME[PLAYER_LADDER_TABLE]));
 	strncpy(this->TABLENAME[FRIENDS_TABLE],			strstr(settings[11], "=") + 1, sizeof(this->TABLENAME[FRIENDS_TABLE]));
 	strncpy(this->TABLENAME[IGNORED_TABLE],			strstr(settings[12], "=") + 1, sizeof(this->TABLENAME[IGNORED_TABLE]));
-	strncpy(this->TABLENAME[MESSAGES_TABLE],		strstr(settings[13], "=") + 1, sizeof(this->TABLENAME[MESSAGES_TABLE]));
-	strncpy(this->TABLENAME[ABUSEREPORTS_TABLE],	strstr(settings[14], "=") + 1, sizeof(this->TABLENAME[ABUSEREPORTS_TABLE]));
-	strncpy(this->TABLENAME[CLANS_TABLE],			strstr(settings[15], "=") + 1, sizeof(this->TABLENAME[CLANS_TABLE]));
-	strncpy(this->TABLENAME[CLAN_GB_TABLE],			strstr(settings[16], "=") + 1, sizeof(this->TABLENAME[CLAN_GB_TABLE]));
+	strncpy(this->TABLENAME[ACQUAINTANCES_TABLE],	strstr(settings[13], "=") + 1, sizeof(this->TABLENAME[ACQUAINTANCES_TABLE]));
+	strncpy(this->TABLENAME[MESSAGES_TABLE],		strstr(settings[14], "=") + 1, sizeof(this->TABLENAME[MESSAGES_TABLE]));
+	strncpy(this->TABLENAME[ABUSEREPORTS_TABLE],	strstr(settings[15], "=") + 1, sizeof(this->TABLENAME[ABUSEREPORTS_TABLE]));
+	strncpy(this->TABLENAME[CLANS_TABLE],			strstr(settings[16], "=") + 1, sizeof(this->TABLENAME[CLANS_TABLE]));
+	strncpy(this->TABLENAME[CLAN_GB_TABLE],			strstr(settings[17], "=") + 1, sizeof(this->TABLENAME[CLAN_GB_TABLE]));
 
 	return true;
 }
@@ -1775,15 +1776,8 @@ bool MySQLDatabase::SaveUserOptions(const uint profileId, const uint options)
 	return true;
 }
 
-bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, uint *friendIds)
+bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, uint friendIds[])
 {
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
@@ -1812,13 +1806,12 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 	// execute prepared statement
 	if(!query.StmtExecute(param, result))
 	{
-		DatabaseLog("QueryFriends() failed: profileid(%u)", profileId);
+		DatabaseLog("QueryFriends() failed:");
 		*dstProfileCount = 0;
 	}
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
-		DatabaseLog("profile id(%u), %u friends found", profileId, count);
 		*dstProfileCount = 0;
 
 		if (count > 0)
@@ -1857,7 +1850,7 @@ bool MySQLDatabase::AddFriend(const uint profileId, uint friendProfileId)
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "INSERT INTO %s (profileid, friendprofileid) VALUES (?, ?)", TABLENAME[FRIENDS_TABLE]);
+	sprintf(SQL, "INSERT INTO %s (profileid, friendprofileid) VALUES (?, ?) ON DUPLICATE KEY UPDATE profileid = profileid, friendprofileid = friendprofileid", TABLENAME[FRIENDS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -1939,83 +1932,51 @@ bool MySQLDatabase::RemoveFriend(const uint profileId, uint friendProfileId)
 	return true;
 }
 
-bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCount, uint *acquaintanceIds[])
+bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstCount, Acquaintance acquaintances[])
 {
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
-	// TODO:
-	// this function is temporary, must fix when stats are implemented
-	// currently only retrieving profiles that have logged in within the last 7 days
-
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	// build sql query using table names defined in settings file, AND lastlogindate > (UNIX_TIMESTAMP(UTC_TIMESTAMP())
-	sprintf(SQL, "SELECT id FROM %s WHERE id <> ? AND lastlogindate > (UNIX_TIMESTAMP(NOW()) - 604800) LIMIT 64", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "SELECT acquaintanceprofileid, numberoftimesplayed FROM %s WHERE dateplayedwith >= ? AND profileid = ? AND numberoftimesplayed > 10 LIMIT 512", TABLENAME[ACQUAINTANCES_TABLE]);
 
-	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
-
-	// prepared statement binding structures
-	MYSQL_BIND param[1], result[1];
-	
-	// initialize (zero) bind structures
+	MYSQL_BIND param[2], result[2];
 	memset(param, 0, sizeof(param));
 	memset(result, 0, sizeof(result));
 
-	// query specific variables
-	uint id;
+	uint acquaintanceprofileid = 0;
+	uint numberoftimesplayed = 0;
+	uint local_timestamp = time(NULL);
+	uint dateplayedwith = ((local_timestamp / 86400) * 86400) - 1814400;
 
-	// bind parameters to prepared statement
-	query.Bind(&param[0], &profileId);
+	query.Bind(&param[0], &dateplayedwith);
+	query.Bind(&param[1], &profileId);
 
-	// bind results
-	query.Bind(&result[0], &id);
+	query.Bind(&result[0], &acquaintanceprofileid);
+	query.Bind(&result[1], &numberoftimesplayed);
 
-	// execute prepared statement
 	if(!query.StmtExecute(param, result))
 	{
-		DatabaseLog("QueryAcquaintances() failed: profileid(%u)", profileId);
-
-		uint *tmp = new uint[1];
-
-		tmp[0] = 0;
-
-		*acquaintanceIds = tmp;
-		*dstProfileCount = 0;
+		DatabaseLog("QueryAcquaintances() failed:");
+		*dstCount = 0;
 	}
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
-		DatabaseLog("profile id(%u), %u acquaintances found", profileId, count);
+		*dstCount = 0;
 
-		if (count < 1)
+		if (count > 0)
 		{
-			uint *tmp = new uint[1];
-
-			tmp[0] = 0;
-
-			*acquaintanceIds = tmp;
-			*dstProfileCount = 0;
-		}
-		else
-		{
-			uint *tmp = new uint[count];
 			int i = 0;
 
 			while(query.StmtFetch())
 			{
-				tmp[i] = id;
+				acquaintances[i].m_ProfileId = acquaintanceprofileid;
+				acquaintances[i].m_NumTimesPlayed = numberoftimesplayed;
 				i++;
 			}
 
-			*acquaintanceIds = tmp;
-			*dstProfileCount = count;
+			*dstCount = count;
 		}
 	}
 
@@ -2025,15 +1986,8 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstProfileCou
 	return true;
 }
 
-bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileCount, uint *ignoredIds)
+bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileCount, uint ignoredIds[])
 {
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
@@ -2062,13 +2016,12 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 	// execute prepared statement
 	if(!query.StmtExecute(param, result))
 	{
-		DatabaseLog("QueryIgnoredProfiles() failed: profileid(%u)", profileId);
+		DatabaseLog("QueryIgnoredProfiles() failed:");
 		*dstProfileCount = 0;
 	}
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
-		DatabaseLog("profile id(%u), %u ignored profiles found", profileId, count);
 		*dstProfileCount = 0;
 
 		if (count > 0)
@@ -2107,7 +2060,7 @@ bool MySQLDatabase::AddIgnoredProfile(const uint profileId, uint ignoredProfileI
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "INSERT INTO %s (profileid, ignoredprofileid) VALUES (?, ?)", TABLENAME[IGNORED_TABLE]);
+	sprintf(SQL, "INSERT INTO %s (profileid, ignoredprofileid) VALUES (?, ?) ON DUPLICATE KEY UPDATE profileid = profileid, ignoredprofileid = ignoredprofileid", TABLENAME[IGNORED_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -6789,5 +6742,49 @@ bool MySQLDatabase::CalculatePlayerRanks(const uint Count, const uint profileIds
 		}
 	}
 
+	return true;
+}
+
+bool MySQLDatabase::InsertAcquaintances(const uint datematchplayed, const uint Count, const uint profileIds[])
+{
+	BeginTransaction();
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "INSERT INTO %s (dateplayedwith, profileid, acquaintanceprofileid, numberoftimesplayed) VALUES (?, ?, ?, 1) ON DUPLICATE KEY UPDATE dateplayedwith = VALUES(dateplayedwith), numberoftimesplayed = numberoftimesplayed + 1", TABLENAME[ACQUAINTANCES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[3];
+	memset(params, 0, sizeof(params));
+
+	uint profileId = 0;
+	uint acquaintanceId = 0;
+
+	query.Bind(&params[0], &datematchplayed);
+	query.Bind(&params[1], &profileId);
+	query.Bind(&params[2], &acquaintanceId);
+
+	for (uint i = 0; i < Count; i++)
+	{
+		for (uint j = 0; j < Count; j++)
+		{
+			if (profileIds[i] != profileIds[j])
+			{
+
+				profileId = profileIds[i];
+				acquaintanceId = profileIds[j];
+
+				if (!query.StmtExecute(params))
+				{
+					DatabaseLog("ProcessAcquaintances() failed:");
+					RollbackTransaction();
+					return false;
+				}
+			}
+		}
+	}
+
+	CommitTransaction();
 	return true;
 }

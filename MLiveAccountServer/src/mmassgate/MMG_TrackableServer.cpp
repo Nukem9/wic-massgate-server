@@ -222,6 +222,9 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				DebugLog(L_INFO, "Error: CalculatePlayerRanks() failed");
 				return false;
 			}
+
+			if (!MySQLDatabase::ourInstance->InsertAcquaintances(local_timestamp, statCount, profileIds))
+				return false;
 		}
 		break;
 
