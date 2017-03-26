@@ -21,6 +21,8 @@ enum ServerListFilterFlags
 class MMG_ServerFilter : public MMG_IStreamable
 {
 public:
+	uint gameVersion;
+	uint protocolVersion;
 	wchar_t partOfServerName[16];
 	wchar_t partOfMapName[16];
 	uchar requiresPassword;

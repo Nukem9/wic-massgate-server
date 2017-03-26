@@ -533,13 +533,11 @@ void MMG_TrackableServer::DisconnectServer(SvClient *aClient)
 
 bool MMG_TrackableServer::FilterCheck(MMG_ServerFilter *filters, Server *aServer)
 {
-	// todo MAPNAME_FLAG, SERVERNAME_FLAG
-	// still needs work
+	if (filters->gameVersion != aServer->m_Info.m_GameVersion)
+		return false;
 
-	// temp fix for the playnow button only returning ranked servers
-	// remove when ranking works
-	if (filters->HasFlag(PLAYNOW_FLAG))
-		return true;
+	if (filters->protocolVersion != aServer->m_Info.m_ProtocolVersion)
+		return false;
 
 	if (filters->HasFlag(DEDICATED_FLAG))
 	{
@@ -579,9 +577,9 @@ bool MMG_TrackableServer::FilterCheck(MMG_ServerFilter *filters, Server *aServer
 		|| (filters->hasTowMaps && aServer->m_Info.m_HasAssaultMaps))
 		return false;
 
-	//if (filters->HasFlag(POPULATION_FLAG))
+	//if (filters->HasFlag(NOTFULLEMPTY_FLAG))
 	//{
-	//	if (filters->population == 0) { /* no filter, do nothing*/ }
+	//	if (filters->notFullEmpty == 0) { /* no filter, do nothing*/ }
 	//}
 
 	if (filters->HasFlag(NOTFULLEMPTY_FLAG)									// not full
@@ -612,6 +610,7 @@ bool MMG_TrackableServer::FilterCheck(MMG_ServerFilter *filters, Server *aServer
 			return false;
 	}
 
+	// todo
 	//if (this->HasFlag(MAPNAME_FLAG))
 	//if (this->HasFlag(SERVERNAME_FLAG))
 

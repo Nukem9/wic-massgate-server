@@ -106,44 +106,35 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			uint playerOnlineStatus, gameVersion, protocolVersion;
 			if (!aMessage->ReadUInt(playerOnlineStatus) || !aMessage->ReadUInt(gameVersion) || !aMessage->ReadUInt(protocolVersion))
 				return false;
+
+			MMG_ServerFilter filters;
+			filters.gameVersion = gameVersion;
+			filters.protocolVersion = protocolVersion;
 			
-			uint serverCount;
+			uint serverCount, matchedCount;
 			std::vector<MMG_TrackableServerFullInfo> serverFullInfo;
 			std::vector<MMG_TrackableServerBriefInfo> serverBriefInfo;
-			MMG_ServerFilter filters;
 
-			// first get the full lst
 			MMG_TrackableServer::ourInstance->GetServerListInfo(&filters, &serverFullInfo, &serverBriefInfo, &serverCount);
+			matchedCount = serverFullInfo.size();
 
-			// search for the server by server id
-			std::vector<MMG_TrackableServerFullInfo>::iterator full_iter;
-			std::vector<MMG_TrackableServerBriefInfo>::iterator brief_iter;
-
-			full_iter = serverFullInfo.begin();
-			brief_iter = serverBriefInfo.begin();
-
-			// TODO protocolVersion
-			while (full_iter != serverFullInfo.end())
+			for (uint i = 0; i < matchedCount; i++)
 			{
-				if (full_iter->m_ServerId == playerOnlineStatus && full_iter->m_GameVersion == gameVersion)
-					break;
-
-				++full_iter;
-				++brief_iter;
-			}
-			
-			if (full_iter != serverFullInfo.end())
-			{
-				//write short server info to stream
-				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_SHORT_SERVER_INFO);
-				brief_iter->ToStream(&responseMessage);
+				if (serverFullInfo[i].m_ServerId == playerOnlineStatus)
+				{
+					//write short server info to stream
+					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_SHORT_SERVER_INFO);
+					serverBriefInfo[i].ToStream(&responseMessage);
 				
-				//write complete server info to stream
-				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_COMPLETE_SERVER_INFO);
-				full_iter->ToStream(&responseMessage);
+					//write complete server info to stream
+					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_COMPLETE_SERVER_INFO);
+					serverFullInfo[i].ToStream(&responseMessage);
 
-				// Must be zero (protocol verification only)
-				responseMessage.WriteUInt(0);
+					// Must be zero (protocol verification only)
+					responseMessage.WriteUInt(0);
+
+					break;
+				}
 			}
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_NO_MORE_SERVER_INFO);

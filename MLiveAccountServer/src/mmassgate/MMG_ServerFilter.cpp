@@ -2,6 +2,8 @@
 
 MMG_ServerFilter::MMG_ServerFilter()
 {
+	this->gameVersion			= 0;
+	this->protocolVersion		= 0;
 	memset(this->partOfServerName, 0, sizeof(this->partOfServerName));
 	memset(this->partOfMapName, 0, sizeof(this->partOfMapName));
 	this->requiresPassword		= false;
@@ -26,12 +28,10 @@ void MMG_ServerFilter::ToStream(MN_WriteMessage *aMessage)
 
 bool MMG_ServerFilter::FromStream(MN_ReadMessage *aMessage)
 {
-	uint gameVersion;
-	if (!aMessage->ReadUInt(gameVersion))
+	if (!aMessage->ReadUInt(this->gameVersion))
 		return false;
 
-	uint protocolVersion;
-	if (!aMessage->ReadUInt(protocolVersion))
+	if (!aMessage->ReadUInt(this->protocolVersion))
 		return false;
 
 	if (!aMessage->ReadUShort(this->activefilters))
@@ -90,6 +90,8 @@ bool MMG_ServerFilter::HasFlag(ServerListFilterFlags flag)
 
 void MMG_ServerFilter::PrintFilters()
 {
+	DebugLog(L_INFO, "game version = %u, protocol version = %u", this->gameVersion, this->protocolVersion);
+
 	if (this->HasFlag(DEDICATED_FLAG))
 		DebugLog(L_INFO, "dedicated flag set\t\t: %s", this->isDedicated ? "Dedicated" : "Not Dedicated");
 
