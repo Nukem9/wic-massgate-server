@@ -13,13 +13,24 @@ void DebugLogFile(const char *Format, ...)
 		LogfileRegistered = true;
 
 		// Generate a path with programname.exe.log
+		char logFilePath[MAX_PATH];
+		memset(logFilePath, 0, sizeof(logFilePath));
+
 		char currentPath[MAX_PATH];
 		memset(currentPath, 0, sizeof(currentPath));
 
+		// create a date string with format of YYYYMMDD
+		time_t local_timestamp = time(NULL);
+		struct tm timestruct;
+		localtime_s(&timestruct, &local_timestamp);
+
+		char strTheDate[16] = "";
+		strftime(strTheDate, sizeof(strTheDate), "%Y%m%d", &timestruct);
+
 		if (GetModuleFileNameA(GetModuleHandle(nullptr), currentPath, ARRAYSIZE(currentPath) - 4) > 0)
 		{
-			strcat_s(currentPath, ".log");
-			fopen_s(&Logfile, currentPath, "w");
+			sprintf_s(logFilePath, "%s_%s.log", currentPath, strTheDate);
+			fopen_s(&Logfile, logFilePath, "a+");
 		}
 
 		// Close the file handle on exit
