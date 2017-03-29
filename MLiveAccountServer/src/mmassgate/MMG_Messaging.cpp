@@ -1186,8 +1186,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUChar(padZero))
 				return false;
 
-			//DebugLog(L_INFO, "MESSAGING_GET_CLIENT_METRICS:");
-			//responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS);
+			DebugLog(L_INFO, "MESSAGING_GET_CLIENT_METRICS:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_CLIENT_METRICS);
 
 			//char key[16] = "";
 			//char value[96] = "";
@@ -1200,13 +1200,36 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			// key
 			// value
 
-			//responseMessage.WriteUChar(1);
-			//responseMessage.WriteUInt(0);
+			responseMessage.WriteUChar(0);
+			responseMessage.WriteUInt(0);
 			//responseMessage.WriteString(key, ARRAYSIZE(key));
 			//responseMessage.WriteString(value, ARRAYSIZE(value));
 
-			//if (!aClient->SendData(&responseMessage))
-			//	return false;
+			if (!aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_SET_CLIENT_SETTINGS:
+		{
+			DebugLog(L_INFO, "MESSAGING_SET_CLIENT_SETTINGS:");
+
+			uchar metricContext;
+			uint metricCount;
+			
+			if (!aMessage->ReadUChar(metricContext) || !aMessage->ReadUInt(metricCount))
+				return false;
+
+			for (uint i = 0; i < metricCount; i++)
+			{
+				char key[16] = "";
+				char value[96] = "";
+
+				if (!aMessage->ReadString(key, ARRAYSIZE(key)) || !aMessage->ReadString(value, ARRAYSIZE(value)))
+					return false;
+
+				DebugLog(L_INFO, "Metric [%u]: %s -- %s", (uint)metricContext, key, value);
+			}
 		}
 		break;
 
