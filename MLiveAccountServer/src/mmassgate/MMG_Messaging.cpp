@@ -40,12 +40,38 @@ void MMG_Messaging::ProfileStateObserver::update(MC_Subject *subject, StateType 
 	{
 		case ClanId:
 		{
-			printf("TODO update(ClanId)\n");
+			if (!MySQLDatabase::ourInstance->UpdateProfileClanId(profile->m_ProfileId, profile->m_ClanId)
+				|| !MySQLDatabase::ourInstance->UpdateProfileClanRank(profile->m_ProfileId, profile->m_RankInClan))
+			{
+
+				MySQLDatabase::ourInstance->RollbackTransaction();
+				return;
+			}
+
+			MMG_Profile nameBuffer;
+
+			if (!MySQLDatabase::ourInstance->QueryProfileName(profile->m_ProfileId, &nameBuffer))
+			{
+				MySQLDatabase::ourInstance->RollbackTransaction();
+				return;
+			}
+
+			memset(profile->m_Name, 0, sizeof(profile->m_Name));
+			wcsncpy(profile->m_Name, nameBuffer.m_Name, WIC_NAME_MAX_LENGTH);
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PLAYER_JOINED_CLAN);
+			profile->ToStream(&responseMessage);
 		}
 		break;
 
 		case OnlineStatus:
 		{
+			if (!MySQLDatabase::ourInstance->UpdateProfileOnlineStatus(profile->m_ProfileId, profile->m_OnlineStatus))
+			{
+				MySQLDatabase::ourInstance->RollbackTransaction();
+				return;
+			}
+
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
 			profile->ToStream(&responseMessage);
 		}
@@ -66,7 +92,14 @@ void MMG_Messaging::ProfileStateObserver::update(MC_Subject *subject, StateType 
 
 		case RankInClan:
 		{
-			printf("TODO update(RankInClan)\n");
+			if (!MySQLDatabase::ourInstance->UpdateProfileClanRank(profile->m_ProfileId, profile->m_RankInClan))
+			{
+				MySQLDatabase::ourInstance->RollbackTransaction();
+				return;
+			}
+
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+			profile->ToStream(&responseMessage);
 		}
 		break;
 
@@ -539,7 +572,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			else
 			{
 				uint newClanId=0;
-
 				bool CreateClanQueryOk = MySQLDatabase::ourInstance->CreateClan(aClient->GetProfile()->m_ProfileId, clanName, clanTag, displayTag, &newClanId);
 
 				if (CreateClanQueryOk)
@@ -547,13 +579,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					myStatusCode = 1;
 					myClanId = newClanId;
 
-					// update database profile
-					MySQLDatabase::ourInstance->UpdatePlayerClanId(aClient->GetProfile()->m_ProfileId, newClanId);
-					MySQLDatabase::ourInstance->UpdatePlayerClanRank(aClient->GetProfile()->m_ProfileId, 1);
-
-					// update the logged in client object
-					MySQLDatabase::ourInstance->QueryProfileName(aClient->GetProfile()->m_ProfileId, aClient->GetProfile());
-					aClient->GetProfile()->m_OnlineStatus = 1;
+					aClient->GetProfile()->setClanId(newClanId, 1);
 				}
 				else
 				{
@@ -569,8 +595,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			if (!aClient->SendData(&responseMessage))
 				return false;
-
-			// TODO update friends and acquaintances
 #endif
 		}
 		break;
@@ -616,162 +640,112 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUInt(profileId) || !aMessage->ReadUInt(option))
 				return false;
 
-			bool myProfileDirty = false;
-			bool requestedProfileDirty = false;
 			uint memberCount = 0;
 			MMG_Clan::FullInfo myClan;
+			ProfileStateObserver tempObserver;
 			MMG_Profile profile;
+			profile.addObserver(&tempObserver);
+
+			MMG_Profile *myProfile = aClient->GetProfile();
+			MMG_Profile *requestedProfile;
 
 			MySQLDatabase::ourInstance->QueryProfileName(profileId, &profile);
-			MySQLDatabase::ourInstance->QueryClanFullInfo(profile.m_ClanId, &memberCount, &myClan);
+			MySQLDatabase::ourInstance->QueryClanFullInfo(myProfile->m_ClanId, &memberCount, &myClan);
 
-			switch (option)
+			SvClient *onlinePlayer = SvClientManager::ourInstance->FindPlayerByProfileId(profile.m_ProfileId);
+			if (onlinePlayer)
+				requestedProfile = onlinePlayer->GetProfile();
+			else
+				requestedProfile = &profile;
+
+			if (option == 0)
 			{
-				// if client->profileid = profileId then leave, otherwise kick
-				case 0:
+				if (myClan.m_PlayerOfWeek == requestedProfile->m_ProfileId)
+					MySQLDatabase::ourInstance->UpdateClanPlayerOfWeek(myClan.m_ClanId, 0);
+
+				if (requestedProfile->m_RankInClan < 3)
+					MySQLDatabase::ourInstance->DeleteProfileClanInvites(requestedProfile->m_ProfileId, myClan.m_ClanId);
+
+				if (requestedProfile->m_RankInClan < 2)
+					MySQLDatabase::ourInstance->DeleteProfileClanMessages(requestedProfile->m_ProfileId);
+
+				if (myProfile->m_ProfileId == requestedProfile->m_ProfileId)
 				{
-					// if leaving/kicked profile is playerofweek, set potw 0 in clans table
-					if (myClan.m_PlayerOfWeek == profileId)
-						MySQLDatabase::ourInstance->UpdateClanPlayerOfWeek(myClan.m_ClanId, 0);
-
-					if (profile.m_RankInClan < 3)
-						MySQLDatabase::ourInstance->DeleteProfileClanInvites(profileId, myClan.m_ClanId);
-
-					MySQLDatabase::ourInstance->DeleteProfileClanMessages(profileId);
-
-					MySQLDatabase::ourInstance->UpdatePlayerClanId(profileId, 0);
-					MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 0);
-
-					if (aClient->GetProfile()->m_ProfileId == profileId)
+					if (myProfile->m_RankInClan == 1)
 					{
-						// randomly assign new clan leader 
-						if (aClient->GetProfile()->m_RankInClan == 1 && memberCount > 1)
+						if (memberCount > 1)
 						{
-							MMG_Profile p[512];
+							ProfileStateObserver leaderObserver;
+							MMG_Profile clanMembers[512];
 							uint officers[512], grunts[512];
-							int i=0, j=0, k=0;
+							uint i=0, j=0, k=0;
+							uint newLeaderId = 0;
+							uint newLeaderIndex = 0;
 
 							memset(officers, 0, sizeof(officers));
 							memset(grunts, 0, sizeof(grunts));
 
-							MySQLDatabase::ourInstance->QueryProfileList(memberCount, myClan.m_ClanMembers, p);
+							MySQLDatabase::ourInstance->QueryProfileList(memberCount, myClan.m_ClanMembers, clanMembers);
 
 							while (myClan.m_ClanMembers[i] > 0)
 							{
-								if (myClan.m_ClanMembers[i] != profileId)
-								{
-									if (p[i].m_RankInClan == 2)
-										officers[j++] = p[i].m_ProfileId;
+								if (clanMembers[i].m_RankInClan == 2)
+									officers[j++] = myClan.m_ClanMembers[i];
 
-									if (p[i].m_RankInClan == 3)
-										grunts[k++] = p[i].m_ProfileId;
-								}
+								if (clanMembers[i].m_RankInClan == 3)
+									grunts[k++] = myClan.m_ClanMembers[i];
 
 								i++;
 							}
-							
-							int pos = 0;
-							uint ldrId = 0;
 
 							if (j>0)
-							{
-								pos = MC_MTwister().Random(0, j-1);
-								ldrId = officers[pos];
-							}
+								newLeaderId = officers[MC_MTwister().Random(0, j-1)];
 							else
-							{
-								pos = MC_MTwister().Random(0, k-1);
-								ldrId = grunts[pos];
-							}
-							
-							MySQLDatabase::ourInstance->UpdatePlayerClanRank(ldrId, 1);
+								newLeaderId = grunts[MC_MTwister().Random(0, k-1)];
 
-							MMG_Profile modifiedProfile;
-							MySQLDatabase::ourInstance->QueryProfileName(ldrId, &modifiedProfile);
-
-							// if profile/player is online, update the logged in client object, preserve online status
-							SvClient *player = SvClientManager::ourInstance->FindPlayerByProfileId(ldrId);
-							if (player)
+							for (newLeaderIndex = 0; newLeaderIndex < memberCount; newLeaderIndex++)
 							{
-								modifiedProfile.m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
-								MySQLDatabase::ourInstance->QueryProfileName(ldrId, player->GetProfile());
-								player->GetProfile()->m_OnlineStatus = modifiedProfile.m_OnlineStatus;
+								if (myClan.m_ClanMembers[newLeaderIndex] == newLeaderId)
+									break;
 							}
 
-							// send the profile to all online players
+							clanMembers[newLeaderIndex].addObserver(&leaderObserver);
+
+							SvClient *newLeaderOnline = SvClientManager::ourInstance->FindPlayerByProfileId(clanMembers[newLeaderIndex].m_ProfileId);
+							if (newLeaderOnline)
+								newLeaderOnline->GetProfile()->setRankInClan(1);
+							else
+								clanMembers[newLeaderIndex].setRankInClan(1);
 						}
-						else if (aClient->GetProfile()->m_RankInClan == 1 && memberCount == 1)
+						else
 						{
 							MySQLDatabase::ourInstance->DeleteClan(myClan.m_ClanId);
 						}
-
-						myProfileDirty = true;
 					}
-					else
-						requestedProfileDirty = true;
+					
+					myProfile->setClanId(0);
 				}
-				break;
-
-				// assign clan leader
-				case 1:
+				else
 				{
-					// delete any clan message the previous leader sent
-					MySQLDatabase::ourInstance->DeleteProfileClanMessages(aClient->GetProfile()->m_ProfileId);
-
-					// update my profile
-					MySQLDatabase::ourInstance->UpdatePlayerClanRank(aClient->GetProfile()->m_ProfileId, 2);
-					myProfileDirty = true;
-
-					// update new leader profile
-					MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 1);
-					requestedProfileDirty = true;
+					requestedProfile->setClanId(0);
 				}
-				break;
-
-				// promote
-				case 2:
-				{
-					MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 2);
-					requestedProfileDirty = true;
-				}
-				break;
-
-				// demote
-				case 3:
-				{
-					MySQLDatabase::ourInstance->DeleteProfileClanInvites(profileId, myClan.m_ClanId);
-
-					MySQLDatabase::ourInstance->UpdatePlayerClanRank(profileId, 3);
-					requestedProfileDirty = true;
-				}
-				break;
-
-				default:
-					assert(false);
 			}
-
-			if (requestedProfileDirty)
+			else
 			{
-				MMG_Profile modifiedProfile;
-				MySQLDatabase::ourInstance->QueryProfileName(profileId, &modifiedProfile);
-
-				// if profile/player is online, update the logged in client object, preserve online status
-				SvClient *player = SvClientManager::ourInstance->FindPlayerByProfileId(profileId);
-				if (player)
+				if (option == 1 && myProfile->m_RankInClan == 1)
 				{
-					modifiedProfile.m_OnlineStatus = player->GetProfile()->m_OnlineStatus;
-					MySQLDatabase::ourInstance->QueryProfileName(profileId, player->GetProfile());
-					player->GetProfile()->m_OnlineStatus = modifiedProfile.m_OnlineStatus;
+					requestedProfile->setRankInClan(1);
+
+					MySQLDatabase::ourInstance->DeleteProfileClanMessages(myProfile->m_ProfileId);
+					myProfile->setRankInClan(2);
 				}
-
-				// send the profile to all online players
-			}
-
-			if (myProfileDirty)
-			{
-				uint myOnlineStatus = aClient->GetProfile()->m_OnlineStatus;
-				MySQLDatabase::ourInstance->QueryProfileName(aClient->GetProfile()->m_ProfileId, aClient->GetProfile());
-				aClient->GetProfile()->m_OnlineStatus = myOnlineStatus;
+				else
+				{
+					if (option == 3)
+						MySQLDatabase::ourInstance->DeleteProfileClanInvites(requestedProfile->m_ProfileId, myClan.m_ClanId);
+				
+					requestedProfile->setRankInClan(option);
+				}
 			}
 		}
 		break;
@@ -780,7 +754,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 		{
 			DebugLog(L_INFO, "MESSAGING_CLAN_FULL_INFO_REQUEST:");
 
-			MN_WriteMessage	responseMessage(2048);
+			MN_WriteMessage	responseMessage(4096);
 			
 			uint clanId, padZero;
 			if (!aMessage->ReadUInt(clanId) || !aMessage->ReadUInt(padZero))
@@ -833,7 +807,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			MySQLDatabase::ourInstance->QueryProfileName(profileId, &invitedProfile);
 			MySQLDatabase::ourInstance->CheckIfInvitedAlready(aClient->GetProfile()->m_ClanId, profileId, &msgId);
 
-			if (invitedProfile.m_ClanId > 0)
+			if (invitedProfile.m_ProfileId == 0)
+				myStatusCode = myClanStrings::MODIFY_FAIL_MASSGATE;
+			else if (invitedProfile.m_ClanId > 0)
 				myStatusCode = myClanStrings::FAIL_ALREADY_IN_CLAN;
 			else if (msgId > 0)
 				myStatusCode = myClanStrings::FAIL_DUPLICATE;
@@ -848,15 +824,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				MySQLDatabase::ourInstance->QueryClanDescription(aClient->GetProfile()->m_ClanId, &myClan);
 
 				MMG_InstantMessageListener::InstantMessage im;
-
-				wchar_t msgBuffer[WIC_INSTANTMSG_MAX_LENGTH];
-				memset(msgBuffer, 0, sizeof(msgBuffer));
-
-				swprintf(msgBuffer, WIC_INSTANTMSG_MAX_LENGTH, L"|clan|%u|%ws|%ws|", myClan.m_ClanId, aClient->GetProfile()->m_Name, myClan.m_FullName);
-
-				wcsncpy(im.m_Message, msgBuffer, WIC_INSTANTMSG_MAX_LENGTH);
+				im.m_SenderProfile.m_ProfileId = aClient->GetProfile()->m_ProfileId;
 				im.m_RecipientProfile = profileId;
-				im.m_SenderProfile = *aClient->GetProfile(); // todo
+				swprintf(im.m_Message, WIC_INSTANTMSG_MAX_LENGTH, L"|clan|%u|%ws|%ws|", myClan.m_ClanId, aClient->GetProfile()->m_Name, myClan.m_FullName);
 
 				// messageid and writtenat are generated in the AddInstantMessage function
 				MySQLDatabase::ourInstance->AddInstantMessage(aClient->GetProfile()->m_ProfileId, &im);
@@ -901,22 +871,13 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (acceptOrNot)
 			{
 				MMG_Clan::Description theClan;
-
-				// check to see if the clan exists
 				MySQLDatabase::ourInstance->QueryClanDescription(clanId, &theClan);
 
-				// clan found
 				if (theClan.m_ClanId > 0)
 				{
-					// update database profile
-					MySQLDatabase::ourInstance->UpdatePlayerClanId(aClient->GetProfile()->m_ProfileId, clanId);
-					MySQLDatabase::ourInstance->UpdatePlayerClanRank(aClient->GetProfile()->m_ProfileId, 3);
-
-					// reload local client->profile object
-					MySQLDatabase::ourInstance->QueryProfileName(aClient->GetProfile()->m_ProfileId, aClient->GetProfile());
-					aClient->GetProfile()->m_OnlineStatus = 1;
+					aClient->GetProfile()->setClanId(clanId);
 				}
-				else //clan was deleted already
+				else
 				{
 					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE);
 					responseMessage.WriteUChar(myClanStrings::MODIFY_FAIL_MASSGATE);
@@ -925,8 +886,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 						return false;
 				}
 			}
-
-			// TODO clan member list is not updated after joining clan
 		}
 		break;
 
@@ -1057,6 +1016,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			uint memberCount = 0;
 			MMG_Clan::FullInfo myClan;
+			time_t local_timestamp = time(NULL);
 
 			MySQLDatabase::ourInstance->QueryClanFullInfo(aClient->GetProfile()->m_ClanId, &memberCount, &myClan);
 
@@ -1066,14 +1026,10 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				{
 					MMG_InstantMessageListener::InstantMessage im;
 
-					wchar_t msgBuffer[WIC_INSTANTMSG_MAX_LENGTH];
-					memset(msgBuffer, 0, sizeof(msgBuffer));
-
-					swprintf(msgBuffer, WIC_INSTANTMSG_MAX_LENGTH, L"|clms|%ws", myMessage);
-
-					wcsncpy(im.m_Message, msgBuffer, WIC_INSTANTMSG_MAX_LENGTH);
+					im.m_SenderProfile.m_ProfileId = aClient->GetProfile()->m_ProfileId;
 					im.m_RecipientProfile = myClan.m_ClanMembers[i];
-					im.m_SenderProfile = *aClient->GetProfile(); // todo
+					swprintf(im.m_Message, WIC_INSTANTMSG_MAX_LENGTH, L"|clms|%ws", myMessage);
+					im.m_WrittenAt = local_timestamp;
 
 					MySQLDatabase::ourInstance->AddInstantMessage(aClient->GetProfile()->m_ProfileId, &im);
 

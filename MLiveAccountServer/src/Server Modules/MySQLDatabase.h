@@ -54,13 +54,10 @@
 		- CreateUserProfile
 		- DeleteUserProfile
 		- QueryUserProfile
-	- create a global 'logged in' player list/map
-		MMG_AccountProtocol is messy, move account database queries to Query::FromStream
 	- better error message output
 
 */
 
-// temporary
 struct Acquaintance
 {
 	uint m_ProfileId;
@@ -155,6 +152,7 @@ public:
 
 	bool	ReadConfig			(const char *filename);
 	bool	ConnectDatabase		();
+	bool	ResetOnlineStatus	();
 	void	PrintStatus			();
 	bool	TestDatabase		();
 	bool	PingDatabase		();
@@ -189,7 +187,14 @@ public:
 	bool	RetrieveUserProfiles		(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles);
 
 	// MMG_Messaging: profile related
+	bool	AppendClanTag				(MMG_Profile *profile);
+	bool	QueryClanTag				(const uint clanId, wchar_t *shortclanname, char *displaytag);
+	bool	QueryProfileName			(const uint profileId, MMG_Profile *profile);
+	bool	QueryProfileList			(const size_t Count, const uint profileIds[], MMG_Profile profiles[]);
+	bool	UpdateProfileOnlineStatus	(const uint profileId, const uint onlinestatus);
 	bool	UpdateProfileRank			(const uint profileId, const uchar rank);
+	bool	UpdateProfileClanId			(const uint profileId, const uint clanId);
+	bool	UpdateProfileClanRank		(const uint profileId, const uchar rankInClan);
 
 	// MMG_Messaging
 	bool	QueryUserOptions	(const uint profileId, uint *options);
@@ -201,8 +206,6 @@ public:
 	bool	QueryIgnoredProfiles		(const uint profileId, uint *dstProfileCount, uint ignoredIds[]);
 	bool	AddIgnoredProfile		(const uint profileId, uint ignoredProfileId);
 	bool	RemoveIgnoredProfile	(const uint profileId, uint ignoredProfileId);
-	bool	QueryProfileName	(const uint profileId, MMG_Profile *profile);
-	bool	QueryProfileList	(const size_t Count, const uint *profileId, MMG_Profile *profiles);
 	bool	QueryPlayerSearch			(const wchar_t* const name, const uint maxResults, uint *dstCount, uint profileIds[]);
 	bool	QueryClanSearch				(const wchar_t* const name, const uint maxResults, uint *dstCount, MMG_Clan::Description clans[]);
 	bool	QueryEditableVariables	(const uint profileId, wchar_t *dstMotto, wchar_t *dstHomepage);
@@ -220,16 +223,12 @@ public:
 	bool	CheckIfClanNameExists		(const wchar_t* clanname, uint *dstId);
 	bool	CheckIfClanTagExists		(const wchar_t* clantag, uint *dstId);
 	bool	CreateClan					(const uint profileId, const wchar_t* clanname, const wchar_t* clantag, const char* displayTag, uint *dstId);
-	bool	UpdatePlayerClanId			(const uint profileId, const uint clanId);
-	bool	UpdatePlayerClanRank		(const uint profileId, const uchar rankInClan);
 	bool	DeleteProfileClanInvites	(const uint profileId, const uint clanId);
 	bool	DeleteProfileClanMessages	(const uint profileId);
 	bool	UpdateClanPlayerOfWeek		(const uint clanId, const uint profileId);
 	bool	DeleteClan					(const uint clanId);
 	bool	QueryClanFullInfo			(const uint clanId, uint *dstMemberCount, MMG_Clan::FullInfo *fullinfo);
 	bool	QueryClanDescription		(const uint clanId, MMG_Clan::Description *description);
-	bool	QueryClanTag				(const uint clanId, wchar_t *shortclanname, char *displaytag);
-	bool	AppendClanTag				(MMG_Profile *profile);
 	bool	SaveClanEditableVariables	(const uint clanId, const uint profileId, const wchar_t *motto, const wchar_t *motd, const wchar_t *homepage);
 	bool	CheckIfInvitedAlready		(const uint clanId, const uint inviteeProfileId, uint *dstId);
 	bool	QueryClanGuestbook			(const uint clanId, uint *dstEntryCount, MMG_ClanGuestbookProtocol::GetRsp *guestbook);
@@ -261,5 +260,5 @@ public:
 	bool	UpdateProfileMatchStats		(const uint profileId, const uint datematchplayed, const MMG_Stats::PlayerMatchStats *playerstats);
 	bool	ProcessMatchStatistics		(const uint datematchplayed, const uint Count, const MMG_Stats::PlayerMatchStats playermatchstats[]);
 	bool	CalculatePlayerRanks		(const uint Count, const uint profileIds[]);
-	bool	InsertAcquaintances		(const uint datematchplayed, const uint Count, const uint profileIds[]);
+	bool	InsertAcquaintances			(const uint datematchplayed, const uint Count, const uint profileIds[]);
 };
