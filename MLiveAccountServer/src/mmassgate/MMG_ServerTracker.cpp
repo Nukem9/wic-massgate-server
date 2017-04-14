@@ -187,34 +187,28 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			MMG_LadderProtocol::LadderRsp myResponse;
 			myResponse.requestId = requestId;
 			uint foundItems = 0;
+			uint requestPos = 0;
 
 			if (startPos == 0)
 			{
-				if (numItems == 1)
-				{
-					// open profile page
-					MySQLDatabase::ourInstance->QueryProfileLadderPosition(profileId, &myResponse.startPos);
-					MySQLDatabase::ourInstance->QueryPlayerLadder(&foundItems, &myResponse, myResponse.startPos, numItems);
-				}
-				else
-				{
-					// show leaderboard/my position/jumpto position
-					uint thePosition = 0;
-					MySQLDatabase::ourInstance->QueryProfileLadderPosition(profileId, &thePosition);
+				uint thePosition = 0;
+				
+				MySQLDatabase::ourInstance->QueryProfileLadderPosition(profileId, &thePosition);
 
-					myResponse.startPos = 1 + ((thePosition / 100) * 100);	
-					MySQLDatabase::ourInstance->QueryPlayerLadder(&foundItems, &myResponse, myResponse.startPos, numItems);
-				}
+				if (numItems == 1)
+					// open profile page
+					requestPos = thePosition;
+				else
+					// show leaderboard/my position/jumpto position
+					requestPos = 1 + ((thePosition / 100) * 100);
 			}
 			else 
 			{
 				// top 100/next/prev page
-				myResponse.startPos = 1 + ((startPos / 100) * 100);
-				MySQLDatabase::ourInstance->QueryPlayerLadder(&foundItems, &myResponse, myResponse.startPos, numItems);
+				requestPos = 1 + ((startPos / 100) * 100);
 			}
 
-			if (foundItems == 0)
-				myResponse.startPos = 0;
+			MySQLDatabase::ourInstance->QueryPlayerLadder(requestPos, numItems, &foundItems, &myResponse);
 
 			DebugLog(L_INFO, "SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP:");
 			// write case 1
@@ -262,6 +256,68 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			// write case 3
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_PLAYER_LADDER_GET_RSP);
 			responseMessage.WriteUChar(3);
+
+			if (!aClient->SendData(&responseMessage))
+				return false;
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::SERVERTRACKER_USER_FRIENDS_LADDER_GET_REQ:
+		{
+			DebugLog(L_INFO, "SERVERTRACKER_USER_FRIENDS_LADDER_GET_REQ:");
+
+			uint requestId = 0;
+			uint profileCount = 0;
+
+			uint profileIds[512];
+			memset(profileIds, 0, sizeof(profileIds));
+
+			// always requests at least one profileid, the first being the current logged in profile
+			// also includes clan members
+
+			if (!aMessage->ReadUInt(requestId) || !aMessage->ReadUInt(profileCount))
+				return false;
+
+			for (uint i = 0; i < profileCount; i++)
+			{
+				if (!aMessage->ReadUInt(profileIds[i]))
+					return false;
+			}
+
+			LadderEntry friendsLadder[512];
+			memset(friendsLadder, 0, sizeof(friendsLadder));
+
+			uint currentProfile = 0;
+			uint friendCount = 0;
+
+			do
+			{
+				MMG_LadderProtocol::LadderRsp ladder;
+				uint foundItems = 0;
+
+				if (!MySQLDatabase::ourInstance->QueryPlayerLadder(profileIds[currentProfile], &foundItems, &ladder))
+					return false;
+
+				if (foundItems > 0)
+				{
+					friendsLadder[friendCount].m_ProfileId = ladder.ladderItems[0].profile.m_ProfileId;
+					friendsLadder[friendCount].m_Score = ladder.ladderItems[0].score;
+					friendCount++;
+				}
+
+				currentProfile++;
+			} while (currentProfile < profileCount);
+
+			DebugLog(L_INFO, "SERVERTRACKER_USER_FRIENDS_LADDER_GET_RSP:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_USER_FRIENDS_LADDER_GET_RSP);
+			responseMessage.WriteUInt(requestId);
+			responseMessage.WriteUInt(friendCount);
+
+			for (uint i = 0; i < friendCount; i++)
+			{
+				responseMessage.WriteUInt(friendsLadder[i].m_ProfileId);
+				responseMessage.WriteUInt(friendsLadder[i].m_Score);
+			}
 
 			if (!aClient->SendData(&responseMessage))
 				return false;

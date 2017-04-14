@@ -58,6 +58,14 @@
 
 */
 
+// MMG_FriendsLadderProtocol
+struct LadderEntry
+{
+	uint m_ProfileId;
+	uint m_Score;
+};
+
+// MMG_IFriendsListener
 struct Acquaintance
 {
 	uint m_ProfileId;
@@ -238,7 +246,8 @@ public:
 	// MMG_ServerTracker
 	bool	QueryProfileLadderPosition	(const uint profileId, uint *position);
 	bool	QueryPlayerLadderCount		(uint *dstTotalCount);
-	bool	QueryPlayerLadder			(uint *dstFoundItems, MMG_LadderProtocol::LadderRsp *ladder, uint startPos, uint numItems);
+	bool	QueryPlayerLadder			(const uint startPos, const uint maxResults, uint *dstFoundItems, MMG_LadderProtocol::LadderRsp *ladder);
+	bool	QueryPlayerLadder			(const uint profileId, uint *dstFoundItems, MMG_LadderProtocol::LadderRsp *ladder);
 	bool	QueryProfileMedals			(const uint profileId, const size_t Count, MMG_Stats::Medal medals[]);
 	bool	QueryProfileBadges			(const uint profileId, const size_t Count, MMG_Stats::Badge badges[]);
 	bool	QueryProfileMedalsRawData	(const uint profileId, voidptr_t Data, ulong Length);

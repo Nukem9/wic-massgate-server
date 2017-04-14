@@ -4315,10 +4315,8 @@ bool MySQLDatabase::QueryPlayerLadderCount(uint *dstTotalCount)
 	return true;
 }
 
-bool MySQLDatabase::QueryPlayerLadder(uint *dstFoundItems, MMG_LadderProtocol::LadderRsp *ladder, uint startPos, uint numItems)
+bool MySQLDatabase::QueryPlayerLadder(const uint startPos, const uint maxResults, uint *dstFoundItems, MMG_LadderProtocol::LadderRsp *ladder)
 {
-	QueryPlayerLadderCount(&ladder->ladderSize);
-
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
@@ -4331,7 +4329,7 @@ bool MySQLDatabase::QueryPlayerLadder(uint *dstFoundItems, MMG_LadderProtocol::L
 	memset(result, 0, sizeof(result));
 
 	query.Bind(&param[0], &startPos);
-	query.Bind(&param[1], &numItems);
+	query.Bind(&param[1], &maxResults);
 
 	uint profileid;
 	uint ladderscore;
@@ -4343,13 +4341,17 @@ bool MySQLDatabase::QueryPlayerLadder(uint *dstFoundItems, MMG_LadderProtocol::L
 	{
 		DatabaseLog("QueryPlayerLadder() failed:");
 		*dstFoundItems = 0;
+		ladder->startPos = 0;
+		ladder->ladderSize = 0;
 	}
 	else
 	{
 		ulong count = (ulong)query.StmtNumRows();
 		*dstFoundItems = 0;
+		ladder->startPos = 0;
+		ladder->ladderSize = 0;
 
-		if (count > 0)
+		if (startPos > 0 && count > 0)
 		{
 			int i = 0;
 			while (query.StmtFetch())
@@ -4360,10 +4362,26 @@ bool MySQLDatabase::QueryPlayerLadder(uint *dstFoundItems, MMG_LadderProtocol::L
 			}
 
 			*dstFoundItems = count;
+			ladder->startPos = startPos;
 		}
+
+		QueryPlayerLadderCount(&ladder->ladderSize);
 	}
 
 	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::QueryPlayerLadder(const uint profileId, uint *dstFoundItems, MMG_LadderProtocol::LadderRsp *ladder)
+{
+	uint thePosition = 0;
+
+	if (!QueryProfileLadderPosition(profileId, &thePosition))
+		return false;
+
+	if (!QueryPlayerLadder(thePosition, 1, dstFoundItems, ladder))
 		return false;
 
 	return true;
