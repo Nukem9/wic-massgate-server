@@ -133,50 +133,58 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 #ifndef USING_MYSQL_DATABASE
 
 			//handle profiles (count).
-			uint profileId1, profileId2;
-			if (!aMessage->ReadUInt(profileId2) || !aMessage->ReadUInt(profileId1))
+			for (ushort i = 0; i < profileCount; i++)
+			{
+				uint profileId = 0;
+				MMG_Profile myFriend;
+
+				if (!aMessage->ReadUInt(profileId))
 					return false;
 
-			MMG_Profile friends[2];
+				myFriend.m_ProfileId = profileId;
 
-			friends[0].m_ProfileId = profileId1;
-			friends[1].m_ProfileId = profileId2;
+				if (profileId == 1235)
+				{
+					wcscpy_s(myFriend.m_Name, L"tenerefis");
+					myFriend.m_OnlineStatus = 1;
+					myFriend.m_Rank = 18;
+				}
+				else if (profileId == 1236)
+				{
+					wcscpy_s(myFriend.m_Name, L"HouseBee");
+					myFriend.m_Rank = 18;
+				}
+				else
+				{
+					swprintf(myFriend.m_Name, L"Profile_%u", profileId);
+				}
 
-			wcscpy_s(friends[0].m_Name, L"tenerefis");
-			wcscpy_s(friends[1].m_Name, L"HouseBee");
+				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
+				myFriend.ToStream(&responseMessage);
 
-			friends[0].m_OnlineStatus = 1;
+				// if current size will exceed max packet size when adding the next profile, send the packet then keep going
+				if (responseMessage.GetDataLength() + 66 > 4096)
+				{
+					if (!aClient->SendData(&responseMessage))
+						return false;
+				}
+			}
 
-			friends[0].m_Rank = 18;
-			friends[1].m_Rank = 18;
-
-			//friends[0].m_ClanId = 4321;
-			//friends[1].m_ClanId = 4321;
-
-			//friends[0].m_RankInClan = 2;
-			//friends[1].m_RankInClan = 3;
-			
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
-			friends[0].ToStream(&responseMessage);
-
-			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_RESPOND_PROFILENAME);
-			friends[1].ToStream(&responseMessage);
-
-			if (!aClient->SendData(&responseMessage))
+			if (responseMessage.GetDataLength() > 2 && !aClient->SendData(&responseMessage))
 				return false;
 #else
-			uint profildIds[128];
-			memset(profildIds, 0, sizeof(profildIds));
+			uint profileIds[128];
+			memset(profileIds, 0, sizeof(profileIds));
 
 			MMG_Profile profileList[128];
 
 			for (ushort i = 0; i < profileCount; i++)
 			{
-				if (!aMessage->ReadUInt(profildIds[i]))
+				if (!aMessage->ReadUInt(profileIds[i]))
 					return false;
 			}
 
-			MySQLDatabase::ourInstance->QueryProfileList(profileCount, profildIds, profileList);
+			MySQLDatabase::ourInstance->QueryProfileList(profileCount, profileIds, profileList);
 
 			DebugLog(L_INFO, "MESSAGING_RESPOND_PROFILENAME: sending %d profile name/s", profileCount);
 
@@ -246,7 +254,13 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_ACQUAINTANCES_RESPONSE);
 
 			//write uint (num acquaintances)
-			responseMessage.WriteUInt(0);
+			responseMessage.WriteUInt(150);
+
+			for (int i = 0; i < 150; i++)
+			{
+				responseMessage.WriteUInt(1237+i);
+				responseMessage.WriteUInt(5);
+			}
 
 			//for each acquaintance
 				//write uint (profile id)
