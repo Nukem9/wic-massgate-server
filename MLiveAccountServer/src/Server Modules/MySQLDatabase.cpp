@@ -3,6 +3,37 @@
 
 #define DatabaseLog(format, ...) DebugLog(L_INFO, "[Database]: "format, __VA_ARGS__)
 
+MySQLDatabase::MySQLDatabase()
+{
+	memset(this->TABLENAME, 0, sizeof(this->TABLENAME));
+	memset(this->host, 0, sizeof(this->host));
+	memset(this->user, 0, sizeof(this->user));
+	memset(this->pass, 0, sizeof(this->pass));
+	memset(this->db, 0, sizeof(this->db));
+	memset(this->charset_name, 0, sizeof(this->charset_name));
+	memset(this->bind_interface, 0, sizeof(this->bind_interface));
+	this->auto_reconnect = 0;
+
+	this->m_Connection = NULL;
+	this->isConnected = false;
+
+	// set default connection options in case they were left out of config
+	strncpy(this->charset_name, "latin1", 6);		// latin1 default for mysql, translates to cp-1252
+	strncpy(this->bind_interface, "0.0.0.0", 7);	// 0.0.0.0 binds port to all interfaces
+
+	this->sleep_interval_h = 5; // connection timeout for a default mysql install is 28800 seconds (8 hours), so ping every 5 to keep it alive
+	this->sleep_interval_m = this->sleep_interval_h * 60;
+	this->sleep_interval_s = this->sleep_interval_m * 60;
+	this->sleep_interval_ms = this->sleep_interval_s * 1000;
+
+	this->m_PingThreadHandle = NULL;
+}
+
+MySQLDatabase::~MySQLDatabase()
+{
+	this->Unload();
+}
+
 DWORD WINAPI MySQLDatabase::PingThread(LPVOID lpArg)
 {
 	return ((MySQLDatabase*)lpArg)->PingDatabase();
@@ -29,19 +60,28 @@ bool MySQLDatabase::Initialize()
 	DatabaseLog("MySQL client version: %s started", info);
 
 	// read mysql configuration from file
-	if (!this->ReadConfig("settings.ini"))
+	if (!ReadConfig("settings.ini"))
 		return false;
 
-	if (this->ConnectDatabase())
-	{
-		DatabaseLog("Connected to server MySQL %s on '%s'", mysql_get_server_info(this->m_Connection), this->host);
-		//this->PrintStatus();
+	if (!ConnectDatabase())
+		return false;
 
-		ResetOnlineStatus();
+	DatabaseLog("Connected to server MySQL %s on '%s:%d'", mysql_get_server_info(this->m_Connection), this->host, this->m_Connection->port);
 
-		//create a thread to 'ping' the database every 5 hours, preventing timeout.
-		this->m_PingThreadHandle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) PingThread, this, 0, NULL);
-	}
+	if (!ReadDatabaseSchema())
+		return false;
+
+	if (!TestDatabaseTables())
+		return false;
+
+	if (!PrintDatabaseInfo())
+		return false;
+
+	if (!ResetOnlineStatus())
+		return false;
+
+	// create a thread to 'ping' the database every 5 hours, preventing timeout.
+	this->m_PingThreadHandle = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE) PingThread, this, 0, NULL);
 
 	return true;
 }
@@ -68,54 +108,69 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 		return false;
 	}
 
-	const int bufferlen = 64;		// characters read per line
-	const int maxoptions = 64;		// max number of options read from the file
-	int i = 0;
+	int i = 0, j = 0;
 
-	char line[bufferlen];
+	char line[MAX_CONFIG_BUFFER_LENGTH];
 	memset(line, 0, sizeof(line));
 
-	char settings[maxoptions][bufferlen];
+	char settings[MAX_CONFIG_OPTIONS*2][MAX_CONFIG_BUFFER_LENGTH];
 	memset(settings, 0, sizeof(settings));
 
-	while (fgets(line, bufferlen, file))
+	while (fgets(line, MAX_CONFIG_BUFFER_LENGTH, file))
 	{
 		// remove newline
 		if (strchr(line, 10))
 			line[strlen(line)-1] = 0;
 
-		// ignoring standard comment characters and header. 91 = '[', 47 = '/'
-		if (!strchr(line, 91) && !strchr(line, 47) && strlen(line))
+		// ignoring standard comment characters. 91 = '[', 47 = '/'
+		if (!strchr(line, 47) && strlen(line))
 		{
 			strncpy(settings[i], line, sizeof(settings[i]));
 			i++;
 		}
 
 		// reset the line buffer
-		memset(line, 0, bufferlen);
+		memset(line, 0, MAX_CONFIG_BUFFER_LENGTH);
 	}
 
 	fclose(file);
 
-	strncpy(this->host,	settings[0], sizeof(this->host));
-	strncpy(this->user,	settings[1], sizeof(this->user));
-	strncpy(this->pass,	settings[2], sizeof(this->pass));
-	strncpy(this->db,	settings[3], sizeof(this->db));
+	while (j < i)
+	{
+		if (strstr(settings[j], "[hostname]") && !strchr(settings[j+1], 91))
+			strncpy(this->host,	settings[++j], sizeof(this->host));
 
-	strncpy(this->TABLENAME[SERVERKEYS_TABLE],		strstr(settings[4], "=") + 1, sizeof(this->TABLENAME[SERVERKEYS_TABLE]));
-	strncpy(this->TABLENAME[ACCOUNTS_TABLE],		strstr(settings[5], "=") + 1, sizeof(this->TABLENAME[ACCOUNTS_TABLE]));
-	strncpy(this->TABLENAME[CDKEYS_TABLE],			strstr(settings[6], "=") + 1, sizeof(this->TABLENAME[CDKEYS_TABLE]));
-	strncpy(this->TABLENAME[PROFILES_TABLE],		strstr(settings[7], "=") + 1, sizeof(this->TABLENAME[PROFILES_TABLE]));
-	strncpy(this->TABLENAME[PROFILE_GB_TABLE],		strstr(settings[8], "=") + 1, sizeof(this->TABLENAME[PROFILE_GB_TABLE]));
-	strncpy(this->TABLENAME[PLAYER_MATCHSTATS_TABLE],strstr(settings[9], "=") + 1, sizeof(this->TABLENAME[PLAYER_MATCHSTATS_TABLE]));
-	strncpy(this->TABLENAME[PLAYER_LADDER_TABLE],		strstr(settings[10], "=") + 1, sizeof(this->TABLENAME[PLAYER_LADDER_TABLE]));
-	strncpy(this->TABLENAME[FRIENDS_TABLE],			strstr(settings[11], "=") + 1, sizeof(this->TABLENAME[FRIENDS_TABLE]));
-	strncpy(this->TABLENAME[IGNORED_TABLE],			strstr(settings[12], "=") + 1, sizeof(this->TABLENAME[IGNORED_TABLE]));
-	strncpy(this->TABLENAME[ACQUAINTANCES_TABLE],	strstr(settings[13], "=") + 1, sizeof(this->TABLENAME[ACQUAINTANCES_TABLE]));
-	strncpy(this->TABLENAME[MESSAGES_TABLE],		strstr(settings[14], "=") + 1, sizeof(this->TABLENAME[MESSAGES_TABLE]));
-	strncpy(this->TABLENAME[ABUSEREPORTS_TABLE],	strstr(settings[15], "=") + 1, sizeof(this->TABLENAME[ABUSEREPORTS_TABLE]));
-	strncpy(this->TABLENAME[CLANS_TABLE],			strstr(settings[16], "=") + 1, sizeof(this->TABLENAME[CLANS_TABLE]));
-	strncpy(this->TABLENAME[CLAN_GB_TABLE],			strstr(settings[17], "=") + 1, sizeof(this->TABLENAME[CLAN_GB_TABLE]));
+		if (strstr(settings[j], "[username]") && !strchr(settings[j+1], 91))
+			strncpy(this->user,	settings[++j], sizeof(this->user));
+		
+		if (strstr(settings[j], "[password]") && !strchr(settings[j+1], 91))
+			strncpy(this->pass,	settings[++j], sizeof(this->pass));
+		
+		if (strstr(settings[j], "[database]") && !strchr(settings[j+1], 91))
+			strncpy(this->db,	settings[++j], sizeof(this->db));
+
+		if (strstr(settings[j], "[charset]") && !strchr(settings[j+1], 91))
+		{
+			memset(this->charset_name, 0, sizeof(this->charset_name));
+			strncpy(this->charset_name,	settings[++j], sizeof(this->charset_name));
+		}
+
+		if (strstr(settings[j], "[bind_interface]") && !strchr(settings[j+1], 91))
+		{
+			memset(this->bind_interface, 0, sizeof(this->bind_interface));
+			strncpy(this->bind_interface, settings[++j], sizeof(this->bind_interface));
+		}
+
+		if (strstr(settings[j], "[auto_reconnect]") && !strchr(settings[j+1], 91))
+		{
+			if (strstr(settings[++j], "true"))
+				this->auto_reconnect = 1;
+			else
+				this->auto_reconnect = 0;
+		}
+
+		j++;
+	}
 
 	return true;
 }
@@ -126,9 +181,9 @@ bool MySQLDatabase::ConnectDatabase()
 	this->m_Connection = mysql_init(NULL);
 
 	//set the connection options
-	mysql_options(this->m_Connection, MYSQL_OPT_RECONNECT, &this->reconnect);
-	//mysql_options(this->m_Connection, MYSQL_OPT_BIND, this->bind_interface);
 	mysql_options(this->m_Connection, MYSQL_SET_CHARSET_NAME, this->charset_name);
+	mysql_options(this->m_Connection, MYSQL_OPT_BIND, this->bind_interface);
+	mysql_options(this->m_Connection, MYSQL_OPT_RECONNECT, &this->auto_reconnect);
 	mysql_options(this->m_Connection, MYSQL_INIT_COMMAND, "SET autocommit=1");
 
 	// attempt connection to the database
@@ -148,20 +203,24 @@ bool MySQLDatabase::ConnectDatabase()
 	return true;
 }
 
-bool MySQLDatabase::ResetOnlineStatus()
+bool MySQLDatabase::ReadDatabaseSchema()
 {
-	char SQL[4096];
-	memset(SQL, 0, sizeof(SQL));
-
-	sprintf(SQL, "UPDATE %s SET onlinestatus = 0", TABLENAME[PROFILES_TABLE]);
-
-	MySQLQuery query(this->m_Connection, SQL);
-
-	if(!query.StmtExecute())
-		DatabaseLog("ResetOnlineStatus() failed:");
-	
-	if (!query.Success())
+	if (!HasConnection())
 		return false;
+
+	MYSQL_RES *res = mysql_list_tables(this->m_Connection, NULL);
+	int num_fields = mysql_num_fields(res);
+	int i = 0;
+
+	MYSQL_ROW row;
+	while (row = mysql_fetch_row(res))
+	{
+		for (int j = 0; j < num_fields; j++)
+			strncpy(this->TABLENAME[i], row[j], strlen(row[j]));
+		i++;
+	}
+
+	mysql_free_result(res);
 
 	return true;
 }
@@ -171,10 +230,34 @@ bool MySQLDatabase::HasConnection()
 	return (this->m_Connection != NULL) && this->isConnected;
 }
 
-void MySQLDatabase::PrintStatus()
+bool MySQLDatabase::TestDatabaseTables()
 {
-	if (!this->HasConnection())
-		return;
+	if (!HasConnection())
+		return false;
+
+	for (int i = 0; i < TOTAL_TABLES; i++)
+	{
+		char SQL[4096];
+		memset(SQL, 0, sizeof(SQL));
+
+		sprintf(SQL, "SELECT 1 FROM %s LIMIT 1", TABLENAME[i]);
+
+		MySQLQuery query(this->m_Connection, SQL);
+
+		if(!query.StmtExecute())
+			DatabaseLog("TestDatabaseTables() failed:");
+	
+		if (!query.Success())
+			return false;
+	}
+
+	return true;
+}
+
+bool MySQLDatabase::PrintDatabaseInfo()
+{
+	if (!HasConnection())
+		return false;
 
 	//connection type
 	const char *info = mysql_get_host_info(this->m_Connection);
@@ -182,7 +265,7 @@ void MySQLDatabase::PrintStatus()
 	const char *find = "via ";
 	size_t pos = (size_t)(strstr(info, find) - info) + strlen(find);
 
-	const char *hostname = this->host;
+	const char *hostname = this->m_Connection->host;
 	const char *type = info+pos;
 
 	// server version
@@ -194,18 +277,47 @@ void MySQLDatabase::PrintStatus()
 	MY_CHARSET_INFO charsetinfo;
 	mysql_get_character_set_info(this->m_Connection, &charsetinfo);
 
-	printf("\n");
-	printf("Connection Status\n");
-	printf("-----------------------------------\n");
-	printf("Hostname:         %s\n", hostname);
-	printf("Type:             %s\n", type);
-	printf("Version:          MySQL %s\n", version);
-	printf("Current Charset:  %s\n", charsetname);
-	printf("-----------------------------------\n");
-	printf("Default Client Charset\n");
-	printf("Charset:          %s\n", charsetinfo.name);
-	printf("Collation:        %s\n", charsetinfo.csname);
-	printf("-----------------------------------\n");
+	DatabaseLog("Client Charset:   %s", charsetinfo.name);
+	DatabaseLog("Collation:        %s", charsetinfo.csname);
+	DatabaseLog("");
+	DatabaseLog("Server Info");
+	DatabaseLog("-----------------------------------");
+	DatabaseLog("Hostname:         %s:%d", hostname, this->m_Connection->port);
+	DatabaseLog("Version:          MySQL %s", this->m_Connection->server_version);
+	DatabaseLog("Type:             %s", type);
+	DatabaseLog("Current Charset:  %s", charsetname);
+	DatabaseLog("User:             %s", this->m_Connection->user);
+	DatabaseLog("Database:         %s", this->m_Connection->db);
+	DatabaseLog("");
+	DatabaseLog("Tables in %s", this->m_Connection->db);
+
+	for (int i = 0; i < TOTAL_TABLES; i++)
+		DatabaseLog("%s", this->TABLENAME[i]);
+
+	DatabaseLog("-----------------------------------");
+
+	return true;
+}
+
+bool MySQLDatabase::ResetOnlineStatus()
+{
+	if (!HasConnection())
+		return false;
+
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "UPDATE %s SET onlinestatus = 0 WHERE onlinestatus <> 0", TABLENAME[PROFILES_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+
+	if(!query.StmtExecute())
+		DatabaseLog("ResetOnlineStatus() failed:");
+	
+	if (!query.Success())
+		return false;
+
+	return true;
 }
 
 bool MySQLDatabase::TestDatabase()

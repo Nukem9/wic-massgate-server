@@ -418,6 +418,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 						// if current password hash is md5 based, update to blowfish
 						if (!strncmp(myPasswordHash, "$H$", 3))
 						{
+							memset(myPasswordHash, 0, sizeof(myPasswordHash));
 							hasher.HashPassword(myPasswordHash, myPasswordMD5);
 							MySQLDatabase::ourInstance->UpdatePassword(myAuthToken->m_AccountId, myPasswordHash);
 						}
@@ -702,6 +703,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 						// if current password hash is md5 based, update to blowfish
 						if (!strncmp(myPasswordHash, "$H$", 3))
 						{
+							memset(myPasswordHash, 0, sizeof(myPasswordHash));
 							hasher.HashPassword(myPasswordHash, myPasswordMD5);
 							MySQLDatabase::ourInstance->UpdatePassword(myAuthToken->m_AccountId, myPasswordHash);
 						}

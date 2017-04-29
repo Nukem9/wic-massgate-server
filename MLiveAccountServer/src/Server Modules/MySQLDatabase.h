@@ -76,50 +76,48 @@ struct Acquaintance
 //#define USING_MYSQL_DATABASE
 #endif
 
+const unsigned int MAX_CONFIG_OPTIONS		= 16;
+const unsigned int MAX_CONFIG_BUFFER_LENGTH	= 64;
+
 CLASS_SINGLE(MySQLDatabase)
 {
 private:
 
 	enum
 	{
-		SERVERKEYS_TABLE,
+		ABUSEREPORTS_TABLE,
 		ACCOUNTS_TABLE,
+		ACQUAINTANCES_TABLE,
 		CDKEYS_TABLE,
-		PROFILES_TABLE,
-		PROFILE_GB_TABLE,
-		PLAYER_MATCHSTATS_TABLE,
-		PLAYER_LADDER_TABLE,
+		CLAN_GB_TABLE,
+		CLANS_TABLE,
 		FRIENDS_TABLE,
 		IGNORED_TABLE,
-		ACQUAINTANCES_TABLE,
 		MESSAGES_TABLE,
-		ABUSEREPORTS_TABLE,
-		CLANS_TABLE,
-		CLAN_GB_TABLE,
+		PLAYER_LADDER_TABLE,
+		PLAYER_MATCHSTATS_TABLE,
+		PROFILE_GB_TABLE,
+		PROFILES_TABLE,
+		SERVERKEYS_TABLE,
 
 		TOTAL_TABLES
 	};
 
-	char TABLENAME[TOTAL_TABLES][64];
+	char TABLENAME[TOTAL_TABLES][MAX_CONFIG_BUFFER_LENGTH];
+	char host[MAX_CONFIG_BUFFER_LENGTH];
+	char user[MAX_CONFIG_BUFFER_LENGTH];
+	char pass[MAX_CONFIG_BUFFER_LENGTH];
+	char db[MAX_CONFIG_BUFFER_LENGTH];
+	char charset_name[MAX_CONFIG_BUFFER_LENGTH];
+	char bind_interface[MAX_CONFIG_BUFFER_LENGTH];
+	my_bool auto_reconnect;
 
-	//mysql connection settings
-	char host[512];
-	char user[512];
-	char pass[512];
-	char db[512];
-
-	// mysql connection object
 	MYSQL *m_Connection;
 	bool isConnected;
 
-	// mysql connection options
-	my_bool reconnect;
-	char *bind_interface;
-	char *charset_name;
-
 	unsigned long sleep_interval_h;
 	unsigned long sleep_interval_m;
-	unsigned long sleep_interval_s;		//connection timeout for a default mysql install is 28800 seconds (8 hours)
+	unsigned long sleep_interval_s;
 	unsigned long sleep_interval_ms;
 
 	HANDLE m_PingThreadHandle;
@@ -127,52 +125,28 @@ private:
 	static DWORD WINAPI PingThread(LPVOID lpArg);
 
 public:
-	MySQLDatabase()
-	{
-		memset(this->TABLENAME, 0, sizeof(this->TABLENAME));
-		memset(this->host, 0, sizeof(this->host));
-		memset(this->user, 0, sizeof(this->user));
-		memset(this->pass, 0, sizeof(this->pass));
-		memset(this->db, 0, sizeof(this->db));
+	MySQLDatabase();
+	~MySQLDatabase();
 
-		this->m_Connection = NULL;
-		this->isConnected = false;
-
-		// mysql connection options
-		this->reconnect = 1;
-		this->bind_interface = "localhost";
-		this->charset_name = "latin1";
-
-		this->sleep_interval_h = 5;
-		this->sleep_interval_m = this->sleep_interval_h * 60;
-		this->sleep_interval_s = this->sleep_interval_m * 60;
-		this->sleep_interval_ms = this->sleep_interval_s * 1000;
-
-		this->m_PingThreadHandle = NULL;
-	}
-
-	~MySQLDatabase()
-	{
-		this->Unload();
-	}
-
+	bool	HasConnection		();
+	bool	PingDatabase		();
 	bool	EmergencyMassgateDisconnect		();
 
+	bool	Initialize			();
+	void	Unload				();
 	bool	ReadConfig			(const char *filename);
-	bool	ConnectDatabase		();
-	bool	ResetOnlineStatus	();
-	void	PrintStatus			();
-	bool	TestDatabase		();
-	bool	PingDatabase		();
 
+	bool	ConnectDatabase		();
+	bool	ReadDatabaseSchema	();
+	bool	TestDatabaseTables	();
+	bool	PrintDatabaseInfo	();
+	bool	ResetOnlineStatus	();
+
+	bool	TestDatabase		();
 	void	BeginTransaction	();
 	void	RollbackTransaction	();
 	void	CommitTransaction	();
 
-	bool	Initialize			();
-	void	Unload				();
-	bool	HasConnection		();
-	
 	// MMG_AccountProtocol
 	bool	CheckIfEmailExists	(const char *email, uint *dstId);
 	bool	CheckIfCDKeyExists			(const uint sequenceNum, uint *dstId);
