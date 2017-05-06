@@ -283,6 +283,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			uint totalCount = 0;
 			Acquaintance acquaintances[512];
+			memset(acquaintances, 0, sizeof(acquaintances));
 
 			if (!MySQLDatabase::ourInstance->QueryAcquaintances(aClient->GetProfile()->m_ProfileId, &totalCount, acquaintances))
 				responseMessage.WriteUInt(0);
@@ -303,6 +304,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			uint friendCount = 0;
 			uint myFriends[100];
+			memset(myFriends, 0, sizeof(myFriends));
 
 			if (!MySQLDatabase::ourInstance->QueryFriends(aClient->GetProfile()->m_ProfileId, &friendCount, myFriends))
 				responseMessage.WriteUInt(0);
@@ -1532,6 +1534,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 #else
 			uint ignoredCount = 0;
 			uint myIgnoreList[64];
+			memset(myIgnoreList, 0, sizeof(myIgnoreList));
 
 			if (!MySQLDatabase::ourInstance->QueryIgnoredProfiles(aClient->GetProfile()->m_ProfileId, &ignoredCount, myIgnoreList))
 				responseMessage.WriteUInt(0);

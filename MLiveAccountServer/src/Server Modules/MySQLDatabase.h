@@ -76,6 +76,8 @@ struct Acquaintance
 //#define USING_MYSQL_DATABASE
 #endif
 
+#define ROUND_TIME(time_as_int) (time_as_int / 86400) * 86400;
+
 const unsigned int MAX_CONFIG_OPTIONS		= 16;
 const unsigned int MAX_CONFIG_BUFFER_LENGTH	= 64;
 

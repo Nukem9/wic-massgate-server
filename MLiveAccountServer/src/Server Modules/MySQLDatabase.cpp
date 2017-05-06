@@ -529,7 +529,7 @@ bool MySQLDatabase::InsertUserAccount(const char *email, const char *password, c
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	sprintf(SQL, "INSERT INTO %s (email, password, country, realcountry, emailgamerelated, acceptsemail, membersince, ispreorder, numfriendsrecruited, activeprofileid, isbanned) VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, 0, 0)", TABLENAME[ACCOUNTS_TABLE]);
+	sprintf(SQL, "INSERT INTO %s (email, password, country, realcountry, emailgamerelated, acceptsemail, membersince) VALUES (?, ?, ?, ?, ?, ?, ?)", TABLENAME[ACCOUNTS_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
 	MYSQL_BIND params[7];
@@ -950,7 +950,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	memset(SQL1, 0, sizeof(SQL1));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL1, "INSERT INTO %s (accountid, name, onlinestatus, rank, clanid, rankinclan, isdeleted, commoptions, membersince, lastlogindate, motto, homepage, medaldata, badgedata, lastmatchplayed, scoretotal, scoreasinfantry, highscoreasinfantry, scoreassupport, highscoreassupport, scoreasarmor, highscoreasarmor, scoreasair, highscoreasair, scorebydamagingenemies, scorebyusingtacticalaid, scorebycapturingcommandpoints, scorebyrepairing, scorebyfortifying, scorelostbykillingfriendly, highestscore, timetotalmatchlength, timeplayedasusa, timeplayedasussr, timeplayedasnato, timeplayedasinfantry, timeplayedassupport, timeplayedasarmor, timeplayedasair, numberofmatches, numberofmatcheswon, numberofmatcheslost, numberofassaultmatches, numberofassaultmatcheswon, currentassaultwinstreak, numberofdominationmatches, numberofdominationmatcheswon, currentdominationwinstreak, numberoftugofwarmatches, numberoftugofwarmatcheswon, currenttugofwarwinstreak, currentwinningstreak, bestwinningstreak, numberofmatcheswonbytotaldomination, currentdominationperfectstreak, numberofperfectdefendsinassaultmatch, currentassaultperfectstreak, numberofperfectpushesintugofwarmatch, currenttugofwarperfectstreak, numberofunitskilled, numberofunitslost, numberofcommandpointcaptures, numberofreinforcementpointsspent, numberoftacticalaidpointsspent, numberofnukesdeployed, currentnukesdeployedstreak, numberoftacticalaidcriticalhits, numberoftimesbestplayer, currentbestplayerstreak, numberoftimesbestinfantry, currentbestinfantrystreak, numberoftimesbestsupport, currentbestsupportstreak, numberoftimesbestair, currentbestairstreak, numberoftimesbestarmor, currentbestarmorstreak) VALUES (?, ?, 0, 0, 0, 0, 0, 992, ?, 0, '', '', ?, ?, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL1, "INSERT INTO %s (accountid, name, membersince, medaldata, badgedata) VALUES (?, ?, ?, ?, ?)", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query1(this->m_Connection, SQL1);
@@ -1457,8 +1457,8 @@ bool MySQLDatabase::UpdateMembershipBadges(const uint accountId, const uint prof
 		badges[i].stars = reader.ReadBits(2);
 	}
 
-	uint todaysdate = (time(NULL) / 86400) * 86400;
-	uint signupdate = (membersince / 86400) * 86400;
+	uint todaysdate = ROUND_TIME(time(NULL));
+	uint signupdate = ROUND_TIME(membersince);
 
 	double days = difftime(todaysdate, signupdate) / 86400;
 
@@ -2141,7 +2141,7 @@ bool MySQLDatabase::QueryFriends(const uint profileId, uint *dstProfileCount, ui
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT friendprofileid FROM %s WHERE profileid = ? ORDER BY id ASC LIMIT 100", TABLENAME[FRIENDS_TABLE]);
+	sprintf(SQL, "SELECT friendprofileid FROM %s WHERE profileid = ? ORDER BY friendprofileid ASC LIMIT 100", TABLENAME[FRIENDS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -2297,7 +2297,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstCount, Acq
 	memset(SQL, 0, sizeof(SQL));
 
 	// AND numberoftimesplayed >= 10
-	sprintf(SQL, "SELECT acquaintanceprofileid, numberoftimesplayed FROM %s WHERE dateplayedwith >= ? - 1814400 AND profileid = ? LIMIT 512", TABLENAME[ACQUAINTANCES_TABLE]);
+	sprintf(SQL, "SELECT acquaintanceprofileid, numberoftimesplayed FROM %s WHERE dateplayedwith >= ? - 1814400 AND profileid = ? ORDER BY acquaintanceprofileid ASC LIMIT 512", TABLENAME[ACQUAINTANCES_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
 	MYSQL_BIND param[2], result[2];
@@ -2307,7 +2307,7 @@ bool MySQLDatabase::QueryAcquaintances(const uint profileId, uint *dstCount, Acq
 	uint acquaintanceprofileid = 0;
 	uint numberoftimesplayed = 0;
 	uint local_timestamp = time(NULL);
-	uint dateplayedwith = ((local_timestamp / 86400) * 86400);
+	uint dateplayedwith = ROUND_TIME(local_timestamp);
 
 	query.Bind(&param[0], &dateplayedwith);
 	query.Bind(&param[1], &profileId);
@@ -2352,7 +2352,7 @@ bool MySQLDatabase::QueryIgnoredProfiles(const uint profileId, uint *dstProfileC
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT ignoredprofileid FROM %s WHERE profileid = ? ORDER BY id ASC LIMIT 64", TABLENAME[IGNORED_TABLE]);
+	sprintf(SQL, "SELECT ignoredprofileid FROM %s WHERE profileid = ? ORDER BY ignoredprofileid ASC LIMIT 64", TABLENAME[IGNORED_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -2966,7 +2966,7 @@ bool MySQLDatabase::AddAbuseReport(const uint profileId, const MMG_Profile sende
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "INSERT INTO %s (senderaccountid, senderprofileid, sendername, reportedaccountid, reportedprofileid, reportedname, report, datereported, actiontaken, comments) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, '')", TABLENAME[ABUSEREPORTS_TABLE]);
+	sprintf(SQL, "INSERT INTO %s (senderaccountid, senderprofileid, sendername, reportedaccountid, reportedprofileid, reportedname, report, datereported) VALUES (?, ?, ?, ?, ?, ?, ?, ?)", TABLENAME[ABUSEREPORTS_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
@@ -3468,7 +3468,7 @@ bool MySQLDatabase::CreateClan(const uint profileId, const wchar_t* clanname, co
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	sprintf(SQL, "INSERT INTO %s (clanname, clantag, shortclanname, displaytag, playeroftheweekid, motto, motd, homepage) VALUES (?, ?, ?, ?, 0, '', '', '')", TABLENAME[CLANS_TABLE]);
+	sprintf(SQL, "INSERT INTO %s (clanname, clantag, shortclanname, displaytag) VALUES (?, ?, ?, ?)", TABLENAME[CLANS_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
 	MYSQL_BIND params[4];
@@ -4920,8 +4920,11 @@ bool MySQLDatabase::GeneratePlayerLadderData(const uint datematchplayed)
 		{
 			while(query.StmtFetch())
 			{
-				if (!InsertPlayerLadderItem(++id, profileid, ladderscore))
-					return false;
+				if (ladderscore > 0)
+				{
+					if (!InsertPlayerLadderItem(++id, profileid, ladderscore))
+						return false;
+				}
 			}
 		}
 	}
@@ -4943,7 +4946,7 @@ bool MySQLDatabase::BuildPlayerLeaderboard(const uint datematchplayed)
 	}
 
 	// todo: this needs to be done daily at midnight
-	uint daterange = ((datematchplayed / 86400) * 86400);
+	uint daterange = ROUND_TIME(datematchplayed);
 
 	// this will take longer as more matches are played
 	if (!GeneratePlayerLadderData(daterange))
