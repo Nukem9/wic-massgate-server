@@ -91,6 +91,7 @@ private:
 		ACCOUNTS_TABLE,
 		ACQUAINTANCES_TABLE,
 		CDKEYS_TABLE,
+		CDKEYSPRIVATE_TABLE,
 		CLAN_GB_TABLE,
 		CLANS_TABLE,
 		FRIENDS_TABLE,
@@ -152,9 +153,12 @@ public:
 	// MMG_AccountProtocol
 	bool	CheckIfEmailExists	(const char *email, uint *dstId);
 	bool	CheckIfCDKeyExists			(const uint sequenceNum, uint *dstId);
+	bool	CheckIfPrivateCDKeyUser		(const uint sequencenum, uint *id, char *email, uchar *validated);
+	bool	AuthPrivateCDKey			(const uint sequencenum, const char *email, uint *id, uint *accountid);
+	bool	UpdatePrivateCDKeyAccountID	(const uint sequencenum, const char *email, const uint accountid);
 	bool	InsertUserAccount			(const char *email, const char *password, const char *country, const char *realcountry, const uchar *emailgamerelated, const uchar *acceptsemail, uint *accountInsertId);
 	bool	InsertUserCDKeyInfo			(const uint accountId, const uint sequenceNum, const ulong cipherKeys[]);
-	bool	CreateUserAccount			(const char *email, const char *password, const char *country, const char *realcountry, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[]);
+	bool	CreateUserAccount			(const bool isPrivateKeyUser, const char *email, const char *password, const char *country, const char *realcountry, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[]);
 	bool	QueryUserAccount			(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
 	bool	QueryUserCDKeyId			(const uint accountId, MMG_AuthToken *authToken);
 	bool	AuthUserAccount				(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);

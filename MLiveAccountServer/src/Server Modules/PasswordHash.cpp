@@ -130,18 +130,17 @@ void PasswordHash::crypt_blowfish(char *dst, char *password, char *setting)
 	_crypt_blowfish_rn(password, setting, dst, CRYPT_OUTPUT_SIZE);
 }
 
-int PasswordHash::hash_equals(const void *stored_hash, const void *user_hash, const size_t size) 
+int PasswordHash::hash_equals(const void *stored_hash, const void *user_hash, const size_t size)
 {
-  const unsigned char *_a = (const unsigned char *) stored_hash;
-  const unsigned char *_b = (const unsigned char *) user_hash;
-  unsigned char result = 0;
-  size_t i;
+	const unsigned char *_a = (const unsigned char *) stored_hash;
+	const unsigned char *_b = (const unsigned char *) user_hash;
+	unsigned char result = 0;
+	size_t i;
 
-  for (i = 0; i < size; i++) {
-    result |= _a[i] ^ _b[i];
-  }
+	for (i = 0; i < size; i++)
+		result |= _a[i] ^ _b[i];
 
-  return result;
+	return result;
 }
 
 void PasswordHash::HashPassword(char *dst, char *input)

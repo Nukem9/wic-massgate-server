@@ -516,64 +516,124 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				DebugLog(L_INFO, "ACCOUNT_CREATE_ACCOUNT_RSP:");
 				responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_CREATE_ACCOUNT_RSP;
 #ifdef USING_MYSQL_DATABASE
-				uint myAccountId=0, myCdkeyId=0;
+				bool isPrivateKeyUser = false;
 
+				uint myAccountId = 0;
+				uint myCdkeyId = 0;
+				
 				uint myStatusCode = 0;
 				uint mySuccessFlag = 0;
 
 				bool CheckEmailQueryOK = MySQLDatabase::ourInstance->CheckIfEmailExists(myQuery.m_Create.m_Email, &myAccountId);
 				bool CheckCDKeyQueryOK = MySQLDatabase::ourInstance->CheckIfCDKeyExists(myQuery.m_EncryptionKeySequenceNumber, &myCdkeyId);
 
-				if (myAccountId > 0 && CheckEmailQueryOK)			//account exists with that email
+				if (myAccountId > 0 && CheckEmailQueryOK)
 				{
 					myStatusCode = CreateFailed_EmailExists;
 					mySuccessFlag = 0;
 				}
-				else if(myCdkeyId > 0 && CheckCDKeyQueryOK)		//an account has already been created with this cdkey
+				else if (myCdkeyId > 0 && CheckCDKeyQueryOK)
 				{
 					myStatusCode = CreateFailed_CdKeyExhausted;
 					mySuccessFlag = 0;
 				}
-				else if(!CheckEmailQueryOK || !CheckCDKeyQueryOK)
+				else if (!CheckEmailQueryOK || !CheckCDKeyQueryOK)
 				{
 					myStatusCode = CreateFailed_General; //ServerError
 					mySuccessFlag = 0;
 				}
-				else							//should be ok to create account
+				else
 				{
-					char realcountry[WIC_COUNTRY_MAX_LENGTH];
-					memset(realcountry, 0, sizeof(realcountry));
+					uint checkId = 0;
+					uchar checkValidated = 0;
 
-					strcpy_s(realcountry, GeoIP::ClientLocateIP(aClient->GetIPAddress()));
+					char checkEmail[WIC_EMAIL_MAX_LENGTH];
+					memset(checkEmail, 0, sizeof(checkEmail));
 
-					PasswordHash hasher(8, false);
+					bool CheckPrivateCDKeyQueryOk = MySQLDatabase::ourInstance->CheckIfPrivateCDKeyUser(myQuery.m_EncryptionKeySequenceNumber, &checkId, checkEmail, &checkValidated);
 
-					char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
-					memset(myPasswordHash, 0, sizeof(myPasswordHash));
-
-					char myPasswordMD5[64];
-					memset(myPasswordMD5, 0, sizeof(myPasswordMD5));
-
-					MC_Misc::MD5String(myQuery.m_Create.m_Password, myPasswordMD5);
-					hasher.HashPassword(myPasswordHash, myPasswordMD5);
-
-					bool CreateQueryOK = MySQLDatabase::ourInstance->CreateUserAccount(myQuery.m_Create.m_Email, myPasswordHash, 
-						myQuery.m_Create.m_Country, realcountry, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
-
-					if(CreateQueryOK)			//create user account succeeded
+					if (checkId > 0 && CheckPrivateCDKeyQueryOk)
 					{
-						myStatusCode = CreateSuccess;
+						// private
+						isPrivateKeyUser = true;
+
+						// todo: extra checks, cipherkeys, ip address etc
+						if (strncmp(myQuery.m_Create.m_Email, checkEmail, WIC_EMAIL_MAX_LENGTH) || checkValidated == 0)
+						{
+							myStatusCode = CreateFailed_General;
+							mySuccessFlag = 0;
+						}
+						else
+						{
+							uint myPrivateCDKeyId = 0;
+							uint checkAccountId = 0;
+
+							bool AuthPrivateCDKeyQueryOk = MySQLDatabase::ourInstance->AuthPrivateCDKey(myQuery.m_EncryptionKeySequenceNumber, myQuery.m_Create.m_Email, &myPrivateCDKeyId, &checkAccountId);
+
+							if (myPrivateCDKeyId == 0 && AuthPrivateCDKeyQueryOk)
+							{
+								myStatusCode = CreateFailed_General;
+								mySuccessFlag = 0;
+							}
+							else if (checkAccountId > 0 && AuthPrivateCDKeyQueryOk)
+							{
+								myStatusCode = CreateFailed_CdKeyExhausted;
+								mySuccessFlag = 0;
+							}
+							else if (!AuthPrivateCDKeyQueryOk)
+							{
+								myStatusCode = CreateFailed_General;
+								mySuccessFlag = 0;
+							}
+							else
+							{
+								myStatusCode = ActionStatusCodes::Creating;
+								mySuccessFlag = 1;
+							}
+						}
+					}
+					else
+					{
+						// purchased key from before the shutdown
+						myStatusCode = ActionStatusCodes::Creating;
 						mySuccessFlag = 1;
 					}
-					else //!CreateQueryOK		// something went wrong executing the query
+
+					if (myStatusCode == ActionStatusCodes::Creating && mySuccessFlag == 1)
 					{
-						myStatusCode = CreateFailed_General; //ServerError
-						mySuccessFlag = 0;
+						char realcountry[WIC_COUNTRY_MAX_LENGTH];
+						memset(realcountry, 0, sizeof(realcountry));
+
+						strcpy_s(realcountry, GeoIP::ClientLocateIP(aClient->GetIPAddress()));
+
+						PasswordHash hasher(8, false);
+
+						char myPasswordHash[WIC_PASSWORDHASH_MAX_LENGTH];
+						memset(myPasswordHash, 0, sizeof(myPasswordHash));
+
+						char myPasswordMD5[64];
+						memset(myPasswordMD5, 0, sizeof(myPasswordMD5));
+
+						MC_Misc::MD5String(myQuery.m_Create.m_Password, myPasswordMD5);
+						hasher.HashPassword(myPasswordHash, myPasswordMD5);
+
+						bool CreateQueryOK = MySQLDatabase::ourInstance->CreateUserAccount(isPrivateKeyUser, myQuery.m_Create.m_Email, myPasswordHash, myQuery.m_Create.m_Country, realcountry, &myQuery.m_Create.m_EmailMeGameRelated, &myQuery.m_Create.m_AcceptsEmail, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
+
+						if (CreateQueryOK)
+						{
+							myStatusCode = CreateSuccess;
+							mySuccessFlag = 1;
+						}
+						else
+						{
+							myStatusCode = CreateFailed_General; //ServerError
+							mySuccessFlag = 0;
+						}
 					}
 				}
 
 				cryptMessage.WriteUChar(myStatusCode);
-				cryptMessage.WriteUChar(mySuccessFlag);					// mySuccessFlag
+				cryptMessage.WriteUChar(mySuccessFlag);
 #endif
 			}
 			break;

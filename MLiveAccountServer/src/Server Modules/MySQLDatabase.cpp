@@ -102,7 +102,7 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 	FILE *file;
 	file = fopen(filename, "r");
 
-	if(!file)
+	if (!file)
 	{
 		DatabaseLog("could not open configuration file '%s'", filename);
 		return false;
@@ -138,21 +138,21 @@ bool MySQLDatabase::ReadConfig(const char *filename)
 	while (j < i)
 	{
 		if (strstr(settings[j], "[hostname]") && !strchr(settings[j+1], 91))
-			strncpy(this->host,	settings[++j], sizeof(this->host));
+			strncpy(this->host, settings[++j], sizeof(this->host));
 
 		if (strstr(settings[j], "[username]") && !strchr(settings[j+1], 91))
-			strncpy(this->user,	settings[++j], sizeof(this->user));
+			strncpy(this->user, settings[++j], sizeof(this->user));
 		
 		if (strstr(settings[j], "[password]") && !strchr(settings[j+1], 91))
-			strncpy(this->pass,	settings[++j], sizeof(this->pass));
+			strncpy(this->pass, settings[++j], sizeof(this->pass));
 		
 		if (strstr(settings[j], "[database]") && !strchr(settings[j+1], 91))
-			strncpy(this->db,	settings[++j], sizeof(this->db));
+			strncpy(this->db, settings[++j], sizeof(this->db));
 
 		if (strstr(settings[j], "[charset]") && !strchr(settings[j+1], 91))
 		{
 			memset(this->charset_name, 0, sizeof(this->charset_name));
-			strncpy(this->charset_name,	settings[++j], sizeof(this->charset_name));
+			strncpy(this->charset_name, settings[++j], sizeof(this->charset_name));
 		}
 
 		if (strstr(settings[j], "[bind_interface]") && !strchr(settings[j+1], 91))
@@ -524,6 +524,124 @@ bool MySQLDatabase::CheckIfCDKeyExists(const uint sequenceNum, uint *dstId)
 	return true;
 }
 
+bool MySQLDatabase::CheckIfPrivateCDKeyUser(const uint sequencenum, uint *id, char *email, uchar *validated)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT id, email, validated FROM %s WHERE sequencenum = ? LIMIT 1", TABLENAME[CDKEYSPRIVATE_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], result[3];
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	query.Bind(&param[0], &sequencenum);
+
+	query.Bind(&result[0], id);
+	query.Bind(&result[1], email, WIC_EMAIL_MAX_LENGTH);
+	query.Bind(&result[2], validated);
+
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("CheckIfPrivateCDKeyUser() failed:");
+		*id = 0;
+		email = "";
+		*validated = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			DatabaseLog("private sequence number not found");
+			*id = 0;
+			email = "";
+			*validated = 0;
+		}
+		else
+		{
+			DatabaseLog("private sequence number found");
+			//*dstId = id;
+			//strncpy(dstEmail, email, strlen(email));
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::AuthPrivateCDKey(const uint sequencenum, const char *email, uint *id, uint *accountid)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT id, accountid FROM %s WHERE email = ? AND validated = 1 AND sequencenum = ? LIMIT 1", TABLENAME[CDKEYSPRIVATE_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[2], result[2];
+	memset(params, 0, sizeof(params));
+	memset(result, 0, sizeof(result));
+
+	query.Bind(&params[0], email, strlen(email));
+	query.Bind(&params[1], &sequencenum);
+
+	query.Bind(&result[0], id);
+	query.Bind(&result[1], accountid);
+
+	if(!query.StmtExecute(params, result))
+	{
+		DatabaseLog("AuthPrivateCDKey() failed:");
+		*id = 0;
+		*accountid = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			*id = 0;
+			*accountid = 0;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::UpdatePrivateCDKeyAccountID(const uint sequencenum, const char *email, const uint accountid)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	// activates a "private" cd key by assigning the new account to the privatekey
+	// validation is done via email when requesting a key
+
+	// if cdkeys.accountid and privatekeys.accountid are the same, but email tied to that key
+	// in accounts table is different to privatekeys.email, then something fishy is going on.
+	// the same goes if both emails are the same, but the sequence numbers are different.
+
+	sprintf(SQL, "UPDATE %s SET accountid = ? WHERE email = ? AND sequencenum = ? LIMIT 1", TABLENAME[CDKEYSPRIVATE_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[3];
+	memset(params, 0, sizeof(params));
+
+	query.Bind(&params[0], &accountid);
+	query.Bind(&params[1], email, strlen(email));
+	query.Bind(&params[2], &sequencenum);
+
+	if(!query.StmtExecute(params))
+		DatabaseLog("UpdatePrivateCDKeyAccountID() failed:");
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
 bool MySQLDatabase::InsertUserAccount(const char *email, const char *password, const char *country, const char *realcountry, const uchar *emailgamerelated, const uchar *acceptsemail, uint *accountInsertId)
 {
 	char SQL[4096];
@@ -592,11 +710,11 @@ bool MySQLDatabase::InsertUserCDKeyInfo(const uint accountId, const uint sequenc
 	return true;
 }
 
-bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, const char *country, const char *realcountry, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[])
+bool MySQLDatabase::CreateUserAccount(const bool isPrivateKeyUser, const char *email, const char *password, const char *country, const char *realcountry, const uchar *emailgamerelated, const uchar *acceptsemail, const uint sequenceNum, const ulong cipherKeys[])
 {
-	if (!this->TestDatabase())
+	if (!TestDatabase())
 	{
-		this->EmergencyMassgateDisconnect();
+		EmergencyMassgateDisconnect();
 		return false;
 	}
 
@@ -608,6 +726,16 @@ bool MySQLDatabase::CreateUserAccount(const char *email, const char *password, c
 	{
 		RollbackTransaction();
 		return false;
+	}
+
+	// if private key user, attach the new account to privatekeys.accountid
+	if (isPrivateKeyUser)
+	{
+		if (!UpdatePrivateCDKeyAccountID(sequenceNum, email, accountInsertId))
+		{
+			RollbackTransaction();
+			return false;
+		}
 	}
 
 	if (!InsertUserCDKeyInfo(accountInsertId, sequenceNum, cipherKeys))
@@ -2508,7 +2636,7 @@ bool MySQLDatabase::QueryPlayerSearch(const wchar_t* const name, const uint maxR
 	memset(SQL, 0, sizeof(SQL));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL, "SELECT id FROM %s WHERE isdeleted = 0 AND name LIKE CONCAT('%%',?,'%%') ORDER BY name ASC, id ASC LIMIT ?", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL, "SELECT id FROM %s WHERE name LIKE CONCAT('%%',?,'%%') AND isdeleted = 0 ORDER BY name ASC, id ASC LIMIT ?", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
