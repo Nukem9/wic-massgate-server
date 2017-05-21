@@ -162,14 +162,22 @@ public:
 	bool	QueryUserAccount			(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
 	bool	QueryUserCDKeyId			(const uint accountId, MMG_AuthToken *authToken);
 	bool	AuthUserAccount				(const char *email, char *dstPassword, uchar *dstIsBanned, MMG_AuthToken *authToken);
-	bool	UpdateRealCountry			(const uint accountId, const char *realcountry);
+	bool	UpdateRealCountry			(const uint accountId, const ulong ipaddress);
 	bool	UpdateCDKeyInfo				(const uint accountId, const uint sequenceNum, const ulong cipherKeys[]);
 	bool	UpdatePassword				(const uint accountId, const char *password);
 	bool	CheckIfProfileExists	(const wchar_t* name, uint *dstId);
 	bool	CreateUserProfile	(const uint accountId, const wchar_t* name, const char* email);
 	bool	DeleteUserProfile	(const uint accountId, const uint profileId, const char* email);
 	bool	QueryProfileCreationDate	(const uint profileId, uint *membersince);
-	bool	QueryPreorderNumRecruited	(const uint accountId, uchar *isPreorder, uint *numFriendsRecruited);
+	bool	QueryPreorderStatus			(const uint accountId, uchar *isPreorder);
+	bool	QueryAskRecruitedQuestion	(const uint accountId, uchar *askrecruitedquestion);
+	bool	QueryNumFriendsRecruited	(const uint accountId, uint *numFriendsRecruited);
+	bool	QueryActiveProfileId		(const uint accountId, uint *activeprofileid);
+	bool	UpdateNumFriendsRecruited	(const uint accountId, const uint numfriendsrecruited);
+	bool	IncNumFriendsRecruited		(const uint accountId);
+	bool	AddValidRecruiterMessage	(const uint accountId, const uint profileId);
+	bool	UpdateAskRecruitedQuestion	(const uint accountId, const uchar askrecruitedquestion);
+	bool	AddRecruitedQuestionMessage	(const uint accountId, const uint profileId);
 	bool	UpdateMembershipBadges		(const uint accountId, const uint profileId);
 	bool	QueryUserProfile	(const uint accountId, const uint profileId, MMG_Profile *profile);
 	bool	RetrieveUserProfiles		(const uint accountId, ulong *dstProfileCount, MMG_Profile *profiles);
@@ -185,6 +193,7 @@ public:
 	bool	UpdateProfileClanRank		(const uint profileId, const uchar rankInClan);
 
 	// MMG_Messaging
+	bool	AddSystemMessage			(const uint profileId, const wchar_t *message);
 	bool	QueryUserOptions	(const uint profileId, uint *options);
 	bool	SaveUserOptions		(const uint profileId, const uint options);
 	bool	QueryFriends				(const uint profileId, uint *dstProfileCount, uint friendIds[]);
@@ -199,8 +208,9 @@ public:
 	bool	QueryEditableVariables	(const uint profileId, wchar_t *dstMotto, wchar_t *dstHomepage);
 	bool	SaveEditableVariables	(const uint profileId, const wchar_t *motto, const wchar_t *homepage);
 	bool	QueryPendingMessages		(const uint profileId, uint *dstMessageCount, MMG_InstantMessageListener::InstantMessage *messages);
-	bool	AddInstantMessage		(const uint profileId, MMG_InstantMessageListener::InstantMessage *message);
-	bool	RemoveInstantMessage	(const uint profileId, const uint messageId);
+	bool	InsertInstantMessage		(MMG_InstantMessageListener::InstantMessage *message);
+	bool	AddInstantMessage			(const uint profileId, MMG_InstantMessageListener::InstantMessage *message);
+	bool	DeleteInstantMessage		(const uint profileId, const uint messageId);
 	bool	AddAbuseReport				(const uint profileId, const MMG_Profile senderProfile, const uint flaggedProfileId, const wchar_t *report);
 	bool	QueryProfileAccountId		(const uint profileId, uint *dstAccountId);
 	bool	QueryProfileGuestbook		(const uint profileId, uint *dstEntryCount, MMG_ProfileGuestBookProtocol::GetRsp *guestbook);

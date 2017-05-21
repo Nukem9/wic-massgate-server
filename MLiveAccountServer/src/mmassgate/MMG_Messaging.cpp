@@ -444,7 +444,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 
 #ifdef USING_MYSQL_DATABASE
-			MySQLDatabase::ourInstance->RemoveInstantMessage(aClient->GetProfile()->m_ProfileId, messageId);
+			MySQLDatabase::ourInstance->DeleteInstantMessage(aClient->GetProfile()->m_ProfileId, messageId);
 #endif
 		}
 		break;
@@ -1133,7 +1133,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_PROFILE_RESPONSE);
 			responseMessage.WriteUInt(resultCount);
 
-			for(uint i = 0; i < resultCount; i++)
+			for (uint i = 0; i < resultCount; i++)
 				responseMessage.WriteUInt(profileIds[i]);
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_PROFILE_SEARCH_COMPLETE);
@@ -1558,6 +1558,68 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			MN_WriteMessage	responseMessage(2048);
 
 			this->SendClanWarsFilterWeights(aClient, &responseMessage);
+		}
+		break;
+
+		case MMG_ProtocolDelimiters::MESSAGING_SET_RECRUITING_FRIEND_REQ:
+		{
+			DebugLog(L_INFO, "MESSAGING_SET_RECRUITING_FRIEND_REQ:");
+
+			MN_WriteMessage	responseMessage(2048);
+
+			char email[WIC_EMAIL_MAX_LENGTH] = "";
+
+			if (!aMessage->ReadString(email, ARRAYSIZE(email)))
+				return false;
+
+#ifndef USING_MYSQL_DATABASE
+			DebugLog(L_INFO, "MESSAGING_SET_RECRUITING_FRIEND_RSP:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_SET_RECRUITING_FRIEND_RSP);
+			responseMessage.WriteUChar(0);
+#else
+			MMG_AuthToken *myAuthToken = aClient->GetToken();
+			uint myAccountId = myAuthToken->m_AccountId;
+			MySQLDatabase *db = MySQLDatabase::ourInstance;
+
+			uint accountId = 0;
+			uint activeProfileId = 0;
+			uchar myStatusCode = 0;
+
+			db->CheckIfEmailExists(email, &accountId);
+
+			if (accountId > 0 && accountId != myAccountId)
+			{
+				db->QueryActiveProfileId(accountId, &activeProfileId);
+
+				// if the recruiter has no profile, dont bother sending them the message, just increment numfriendsrecruited
+				if (activeProfileId > 0)
+				{
+					db->BeginTransaction();
+
+					if (!db->IncNumFriendsRecruited(accountId))
+					{
+						db->RollbackTransaction();
+						return false;
+					}
+						
+					if (!db->AddValidRecruiterMessage(accountId, activeProfileId))
+					{
+						db->RollbackTransaction();
+						return false;
+					}
+
+					db->CommitTransaction();
+				}
+
+				myStatusCode = 1;
+			}
+
+			DebugLog(L_INFO, "MESSAGING_SET_RECRUITING_FRIEND_RSP:");
+			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_SET_RECRUITING_FRIEND_RSP);
+			responseMessage.WriteUChar(myStatusCode);
+#endif
+			if (!aClient->SendData(&responseMessage))
+				return false;
 		}
 		break;
 

@@ -406,11 +406,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					if (myAuthToken->m_AccountId > 0)
 					{
 						// update geoip info
-						char country[WIC_COUNTRY_MAX_LENGTH];
-						memset(country, 0, sizeof(country));
-
-						strcpy_s(country, GeoIP::ClientLocateIP(aClient->GetIPAddress()));
-						MySQLDatabase::ourInstance->UpdateRealCountry(myAuthToken->m_AccountId, country);
+						MySQLDatabase::ourInstance->UpdateRealCountry(myAuthToken->m_AccountId, aClient->GetIPAddress());
 
 						// update missing sequence number & cipherkeys for handmade accounts
 						MySQLDatabase::ourInstance->UpdateCDKeyInfo(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);
@@ -751,11 +747,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					if (myAuthToken->m_AccountId > 0)
 					{
 						// update geoip info
-						char country[WIC_COUNTRY_MAX_LENGTH];
-						memset(country, 0, sizeof(country));
-
-						strcpy_s(country, GeoIP::ClientLocateIP(aClient->GetIPAddress()));
-						MySQLDatabase::ourInstance->UpdateRealCountry(myAuthToken->m_AccountId, country);
+						MySQLDatabase::ourInstance->UpdateRealCountry(myAuthToken->m_AccountId, aClient->GetIPAddress());
 
 						// update missing sequence number & cipherkeys for handmade accounts
 						MySQLDatabase::ourInstance->UpdateCDKeyInfo(myAuthToken->m_AccountId, myQuery.m_EncryptionKeySequenceNumber, myQuery.m_CipherKeys);

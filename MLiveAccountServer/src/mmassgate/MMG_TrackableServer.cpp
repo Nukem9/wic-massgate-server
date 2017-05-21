@@ -193,9 +193,12 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			memset(profileIds, 0, sizeof(profileIds));
 
 			time_t local_timestamp = time(NULL);
+			uint datematchplayed = (uint)local_timestamp;
 
 			if (!aMessage->ReadUInt(statCount) || !aMessage->ReadUInt64(mapHash))
 				return false;
+
+			DebugLog(L_INFO, "Number of player statistics to read from packet: %u", statCount);
 
 			for (uint i = 0; i < statCount; i++)
 			{
@@ -205,17 +208,23 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				profileIds[i] = playerStats[i].m_ProfileId;
 			}
 
-			if (!MySQLDatabase::ourInstance->ProcessMatchStatistics(local_timestamp, statCount, playerStats))
+			DebugLog(L_INFO, "Read Packet: OK");
+
+			if (!MySQLDatabase::ourInstance->ProcessMatchStatistics(datematchplayed, statCount, playerStats))
 			{
 				DebugLog(L_INFO, "Error: ProcessMatchStatistics() failed");
 				return false;
 			}
 
-			if (!MySQLDatabase::ourInstance->BuildPlayerLeaderboard(local_timestamp))
+			DebugLog(L_INFO, "Save Match Statisitcs: OK");
+
+			if (!MySQLDatabase::ourInstance->BuildPlayerLeaderboard(datematchplayed))
 			{
 				DebugLog(L_INFO, "Error: BuildPlayerLeaderboard() failed");
 				return false;
 			}
+
+			DebugLog(L_INFO, "Build Player Leaderboard: OK");
 			
 			if (!MySQLDatabase::ourInstance->CalculatePlayerRanks(statCount, profileIds))
 			{
@@ -223,8 +232,14 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				return false;
 			}
 
-			if (!MySQLDatabase::ourInstance->InsertAcquaintances(local_timestamp, statCount, profileIds))
+			DebugLog(L_INFO, "Calculate Player Ranks: OK");
+
+			if (!MySQLDatabase::ourInstance->InsertAcquaintances(datematchplayed, statCount, profileIds))
 				return false;
+
+			DebugLog(L_INFO, "Process Acquaintances: OK");
+			
+			DebugLog(L_INFO, "SERVERTRACKER_SERVER_REPORT_PLAYER_STATS: Completed Successfully");
 		}
 		break;
 

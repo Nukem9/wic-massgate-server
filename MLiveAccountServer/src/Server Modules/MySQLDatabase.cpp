@@ -647,7 +647,7 @@ bool MySQLDatabase::InsertUserAccount(const char *email, const char *password, c
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	sprintf(SQL, "INSERT INTO %s (email, password, country, realcountry, emailgamerelated, acceptsemail, membersince) VALUES (?, ?, ?, ?, ?, ?, ?)", TABLENAME[ACCOUNTS_TABLE]);
+	sprintf(SQL, "INSERT INTO %s (email, password, country, realcountry, emailgamerelated, acceptsemail, membersince, askrecruitedquestion) VALUES (?, ?, ?, ?, ?, ?, ?, 1)", TABLENAME[ACCOUNTS_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
 	MYSQL_BIND params[7];
@@ -878,7 +878,7 @@ bool MySQLDatabase::AuthUserAccount(const char *email, char *dstPassword, uchar 
 	return true;
 }
 
-bool MySQLDatabase::UpdateRealCountry(const uint accountId, const char *realcountry)
+bool MySQLDatabase::UpdateRealCountry(const uint accountId, const ulong ipaddress)
 {
 	if (!this->TestDatabase())
 	{
@@ -891,14 +891,20 @@ bool MySQLDatabase::UpdateRealCountry(const uint accountId, const char *realcoun
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	sprintf(SQL, "UPDATE %s SET realcountry = IF (realcountry = '', ?, realcountry) WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+	sprintf(SQL, "UPDATE %s SET realcountry = IF (realcountry = '', ?, realcountry), ipaddress = ? WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
-	MYSQL_BIND param[2];
+	MYSQL_BIND param[3];
 	memset(param, 0, sizeof(param));
 
+	char realcountry[WIC_COUNTRY_MAX_LENGTH];
+	memset(realcountry, 0, sizeof(realcountry));
+
+	strcpy_s(realcountry, GeoIP::ClientLocateIP(ipaddress));
+
 	query.Bind(&param[0], realcountry, strlen(realcountry));
-	query.Bind(&param[1], &accountId);
+	query.Bind(&param[1], &ipaddress);
+	query.Bind(&param[2], &accountId);
 
 	if(!query.StmtExecute(param))
 		DatabaseLog("UpdateRealCountry() failed:");
@@ -1078,7 +1084,7 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	memset(SQL1, 0, sizeof(SQL1));
 
 	// build sql query using table names defined in settings file
-	sprintf(SQL1, "INSERT INTO %s (accountid, name, membersince, medaldata, badgedata) VALUES (?, ?, ?, ?, ?)", TABLENAME[PROFILES_TABLE]);
+	sprintf(SQL1, "INSERT INTO %s (accountid, name, commoptions, membersince, medaldata, badgedata) VALUES (?, ?, 992, ?, ?, ?)", TABLENAME[PROFILES_TABLE]);
 
 	// prepared statement wrapper object
 	MySQLQuery query1(this->m_Connection, SQL1);
@@ -1096,42 +1102,6 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 	uint medalbuffer[256], badgebuffer[256];
 	memset(medalbuffer, 0, sizeof(medalbuffer));
 	memset(badgebuffer, 0, sizeof(badgebuffer));
-
-	{
-		MMG_Stats::Badge preorderBadge, recruitBadge;
-		uchar isPreorder = 0;
-		uint numFriendsRecruited = 0;
-
-		if (!QueryPreorderNumRecruited(accountId, &isPreorder, &numFriendsRecruited))
-		{
-			RollbackTransaction();
-			return false;
-		}
-
-		preorderBadge.level = isPreorder > 0 ? 1 : 0;
-		preorderBadge.stars = isPreorder > 1 ? 1 : 0;
-		preorderBadge.stars = isPreorder > 2 ? 2 : preorderBadge.stars;
-		preorderBadge.stars = isPreorder > 3 ? 3 : preorderBadge.stars;
-
-		recruitBadge.level = numFriendsRecruited > 0 ? 1 : 0;
-		recruitBadge.level = numFriendsRecruited > 4 ? 2 : recruitBadge.level;
-		recruitBadge.level = numFriendsRecruited > 9 ? 3 : recruitBadge.level;
-		recruitBadge.stars = 0;
-
-		MMG_BitWriter<unsigned int> writer(badgebuffer, sizeof(badgebuffer) * 8);
-
-		for (int i = 0; i < 12; i++)
-		{
-			writer.WriteBits(0, 2);
-			writer.WriteBits(0, 2);
-		}
-
-		writer.WriteBits(preorderBadge.level, 2);
-		writer.WriteBits(preorderBadge.stars, 2);
-
-		writer.WriteBits(recruitBadge.level, 2);
-		writer.WriteBits(recruitBadge.stars, 2);
-	}
 
 	// bind parameters to prepared statement
 	query1.Bind(&params1[0], &accountId);
@@ -1238,6 +1208,29 @@ bool MySQLDatabase::CreateUserProfile(const uint accountId, const wchar_t* name,
 			this->RollbackTransaction();
 			return false;
 		}
+	}
+
+	uchar askRecruitedQuestion = 0;
+
+	if (!QueryAskRecruitedQuestion(accountId, &askRecruitedQuestion))
+	{
+		RollbackTransaction();
+		return false;
+	}
+
+	if (askRecruitedQuestion > 0)
+	{
+		if (!AddRecruitedQuestionMessage(accountId, profile_insert_id))
+		{
+			RollbackTransaction();
+			return false;
+		}
+	}
+
+	if (!UpdateMembershipBadges(accountId, profile_insert_id))
+	{
+		RollbackTransaction();
+		return false;
 	}
 
 	// commit the transaction
@@ -1520,40 +1513,231 @@ bool MySQLDatabase::QueryProfileCreationDate(const uint profileId, uint *members
 	return true;
 }
 
-bool MySQLDatabase::QueryPreorderNumRecruited(const uint accountId, uchar *isPreorder, uint *numFriendsRecruited)
+bool MySQLDatabase::QueryPreorderStatus(const uint accountId, uchar *isPreorder)
 {
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	sprintf(SQL, "SELECT ispreorder, numfriendsrecruited FROM %s WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+	sprintf(SQL, "SELECT ispreorder FROM %s WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
 
 	MySQLQuery query(this->m_Connection, SQL);
-	MYSQL_BIND param[1], results[2];
+	MYSQL_BIND param[1], result[1];
 	memset(param, 0, sizeof(param));
-	memset(results, 0, sizeof(results));
+	memset(result, 0, sizeof(result));
 
 	query.Bind(&param[0], &accountId);
 
-	query.Bind(&results[0], isPreorder);
-	query.Bind(&results[1], numFriendsRecruited);
+	query.Bind(&result[0], isPreorder);
 
-	if(!query.StmtExecute(param, results))
+	if(!query.StmtExecute(param, result))
 	{
-		DatabaseLog("QueryPreorderNumRecruited() failed:");
+		DatabaseLog("QueryPreorderStatus() failed:");
 		*isPreorder = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			DatabaseLog("QueryPreorderStatus() account not found");
+			*isPreorder = 0;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::QueryAskRecruitedQuestion(const uint accountId, uchar *askrecruitedquestion)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT askrecruitedquestion FROM %s WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], result[1];
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	query.Bind(&param[0], &accountId);
+
+	query.Bind(&result[0], askrecruitedquestion);
+
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("QueryAskRecruitedQuestion() failed:");
+		*askrecruitedquestion = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			DatabaseLog("QueryAskRecruitedQuestion() account not found");
+			*askrecruitedquestion = 0;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::QueryNumFriendsRecruited(const uint accountId, uint *numFriendsRecruited)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT numfriendsrecruited FROM %s WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], result[1];
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	query.Bind(&param[0], &accountId);
+
+	query.Bind(&result[0], numFriendsRecruited);
+
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("QueryNumFriendsRecruited() failed:");
 		*numFriendsRecruited = 0;
 	}
 	else
 	{
 		if (!query.StmtFetch())
 		{
-			DatabaseLog("QueryPreorderNumRecruited() account not found");
-			*isPreorder = 0;
+			DatabaseLog("QueryNumFriendsRecruited() account not found");
 			*numFriendsRecruited = 0;
 		}
 	}
 
 	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::QueryActiveProfileId(const uint accountId, uint *activeprofileid)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "SELECT activeprofileid FROM %s WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND param[1], result[1];
+	memset(param, 0, sizeof(param));
+	memset(result, 0, sizeof(result));
+
+	query.Bind(&param[0], &accountId);
+
+	query.Bind(&result[0], activeprofileid);
+
+	if(!query.StmtExecute(param, result))
+	{
+		DatabaseLog("QueryActiveProfileId() failed:");
+		*activeprofileid = 0;
+	}
+	else
+	{
+		if (!query.StmtFetch())
+		{
+			DatabaseLog("QueryActiveProfileId() account not found");
+			*activeprofileid = 0;
+		}
+	}
+
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::UpdateNumFriendsRecruited(const uint accountId, const uint numfriendsrecruited)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "UPDATE %s SET numfriendsrecruited = ? WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[2];
+	memset(params, 0, sizeof(params));
+
+	query.Bind(&params[0], &numfriendsrecruited);
+	query.Bind(&params[1], &accountId);
+
+	if(!query.StmtExecute(params))
+		DatabaseLog("UpdateNumFriendsRecruited() failed:");
+	
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::IncNumFriendsRecruited(const uint accountId)
+{
+	uint numFriendsRecruited = 0;
+
+	if (!QueryNumFriendsRecruited(accountId, &numFriendsRecruited))
+		return false;
+
+	numFriendsRecruited++;
+
+	if (!UpdateNumFriendsRecruited(accountId, numFriendsRecruited))
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::AddValidRecruiterMessage(const uint accountId, const uint profileId)
+{
+	if (accountId == 0)
+		return false;
+
+	if (!AddSystemMessage(profileId, L"gs|yrq"))
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::UpdateAskRecruitedQuestion(const uint accountId, const uchar askrecruitedquestion)
+{
+	char SQL[4096];
+	memset(SQL, 0, sizeof(SQL));
+
+	sprintf(SQL, "UPDATE %s SET askrecruitedquestion = ? WHERE id = ? LIMIT 1", TABLENAME[ACCOUNTS_TABLE]);
+
+	MySQLQuery query(this->m_Connection, SQL);
+	MYSQL_BIND params[2];
+	memset(params, 0, sizeof(params));
+
+	query.Bind(&params[0], &askrecruitedquestion);
+	query.Bind(&params[1], &accountId);
+
+	if(!query.StmtExecute(params))
+		DatabaseLog("UpdateAskRecruitedQuestion() failed:");
+	
+	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::AddRecruitedQuestionMessage(const uint accountId, const uint profileId)
+{
+	if (accountId == 0)
+		return false;
+
+	if (!AddSystemMessage(profileId, L"gs|rq"))
+		return false;
+
+	if (!UpdateAskRecruitedQuestion(accountId, 0))
 		return false;
 
 	return true;
@@ -1574,7 +1758,10 @@ bool MySQLDatabase::UpdateMembershipBadges(const uint accountId, const uint prof
 	if (!QueryProfileCreationDate(profileId, &membersince))
 		return false;
 
-	if (!QueryPreorderNumRecruited(accountId, &isPreorder, &numFriendsRecruited))
+	if (!QueryPreorderStatus(accountId, &isPreorder))
+		return false;
+
+	if (!QueryNumFriendsRecruited(accountId, &numFriendsRecruited))
 		return false;
 
 	MMG_BitReader<unsigned int> reader(readbuffer, sizeof(readbuffer) * 8);
@@ -1586,9 +1773,9 @@ bool MySQLDatabase::UpdateMembershipBadges(const uint accountId, const uint prof
 	}
 
 	uint todaysdate = ROUND_TIME(time(NULL));
-	uint signupdate = ROUND_TIME(membersince);
+	membersince = ROUND_TIME(membersince);
 
-	double days = difftime(todaysdate, signupdate) / 86400;
+	double days = difftime(todaysdate, membersince) / 86400;
 
 	if (badges[7].level < 3)
 	{
@@ -1616,8 +1803,8 @@ bool MySQLDatabase::UpdateMembershipBadges(const uint accountId, const uint prof
 	if (badges[13].level < 3)
 	{
 		badges[13].level = numFriendsRecruited > 0 ? 1 : 0;
-		badges[13].level = numFriendsRecruited > 4 ? 2 : badges[13].level;
-		badges[13].level = numFriendsRecruited > 9 ? 3 : badges[13].level;
+		badges[13].level = numFriendsRecruited > 5 ? 2 : badges[13].level;
+		badges[13].level = numFriendsRecruited > 15 ? 3 : badges[13].level;
 		badges[13].stars = 0;
 	}
 
@@ -2157,6 +2344,24 @@ bool MySQLDatabase::UpdateProfileClanRank(const uint profileId, const uchar rank
 		DatabaseLog("UpdateProfileClanRank() failed:");
 
 	if (!query.Success())
+		return false;
+
+	return true;
+}
+
+bool MySQLDatabase::AddSystemMessage(const uint profileId, const wchar_t *message)
+{
+	MMG_InstantMessageListener::InstantMessage instantMessage;
+
+	if (profileId == 0)
+		return false;
+
+	instantMessage.m_WrittenAt = 0;
+	instantMessage.m_SenderProfile.m_ProfileId = 1;
+	instantMessage.m_RecipientProfile = profileId;
+	swprintf_s(instantMessage.m_Message, WIC_INSTANTMSG_MAX_LENGTH, L"%ws%ws", L"|sysm|", message);
+
+	if (!InsertInstantMessage(&instantMessage))
 		return false;
 
 	return true;
@@ -2958,50 +3163,31 @@ bool MySQLDatabase::QueryPendingMessages(const uint profileId, uint *dstMessageC
 	return true;
 }
 
-bool MySQLDatabase::AddInstantMessage(const uint profileId, MMG_InstantMessageListener::InstantMessage *message)
+bool MySQLDatabase::InsertInstantMessage(MMG_InstantMessageListener::InstantMessage *message)
 {
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
-	{
-		this->EmergencyMassgateDisconnect();
-		return false;
-	}
-
-	// begin an sql transaction
-	this->BeginTransaction();
-
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	// build sql query using table names defined in settings file
 	sprintf(SQL, "INSERT INTO %s (writtenat, senderprofileid, recipientprofileid, message) VALUES (?, ?, ?, ?)", TABLENAME[MESSAGES_TABLE]);
 
-	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
-
-	// prepared statement binding structures
 	MYSQL_BIND params[4];
-
-	// initialize (zero) bind structures
 	memset(params, 0, sizeof(params));
 
-	time_t local_timestamp = time(NULL);
-	//struct tm* gtime = gmtime(&local_timestamp);
-	//time_t utc_timestamp = mktime(gtime);
-
 	if (message->m_WrittenAt == 0)
+	{
+		time_t local_timestamp = time(NULL);
 		message->m_WrittenAt = local_timestamp;
+	}
 
-	// bind parameters to prepared statement
 	query.Bind(&params[0], &message->m_WrittenAt);
 	query.Bind(&params[1], &message->m_SenderProfile.m_ProfileId);
 	query.Bind(&params[2], &message->m_RecipientProfile);
 	query.Bind(&params[3], message->m_Message, wcslen(message->m_Message));
 
-	// execute prepared statement
 	if (!query.StmtExecute(params))
 	{
-		DatabaseLog("AddInstantMessage() failed: profileid(%u)", profileId);
+		DatabaseLog("InsertInstantMessage() failed:");
 		message->m_MessageId = 0;
 	}
 	else
@@ -3011,62 +3197,65 @@ bool MySQLDatabase::AddInstantMessage(const uint profileId, MMG_InstantMessageLi
 	}
 
 	if (!query.Success())
-	{
-		this->RollbackTransaction();
 		return false;
-	}
-
-	// commit the transaction
-	this->CommitTransaction();
 
 	return true;
 }
 
-bool MySQLDatabase::RemoveInstantMessage(const uint profileId, uint messageId)
+bool MySQLDatabase::AddInstantMessage(const uint profileId, MMG_InstantMessageListener::InstantMessage *message)
 {
-	// test the connection before proceeding, disconnects everyone on fail
-	if (!this->TestDatabase())
+	if (!TestDatabase())
 	{
-		this->EmergencyMassgateDisconnect();
+		EmergencyMassgateDisconnect();
 		return false;
 	}
 
-	// begin an sql transaction
-	this->BeginTransaction();
+	BeginTransaction();
+
+	if (!InsertInstantMessage(message))
+	{
+		DatabaseLog("AddInstantMessage() failed: profileid(%u)", profileId);
+		RollbackTransaction();
+		return false;
+	}
+
+	CommitTransaction();
+
+	return true;
+}
+
+bool MySQLDatabase::DeleteInstantMessage(const uint profileId, uint messageId)
+{
+	if (!TestDatabase())
+	{
+		EmergencyMassgateDisconnect();
+		return false;
+	}
+
+	BeginTransaction();
 
 	char SQL[4096];
 	memset(SQL, 0, sizeof(SQL));
 
-	// build sql query using table names defined in settings file
 	sprintf(SQL, "DELETE FROM %s WHERE id = ? AND recipientprofileid = ?", TABLENAME[MESSAGES_TABLE]);
 
-	// prepared statement wrapper object
 	MySQLQuery query(this->m_Connection, SQL);
-
-	// prepared statement binding structures
 	MYSQL_BIND param[2];
-
-	// initialize (zero) bind structures
 	memset(param, 0, sizeof(param));
 
-	// bind parameters to prepared statement
 	query.Bind(&param[0], &messageId);
 	query.Bind(&param[1], &profileId);
 
-	// execute prepared statement
 	if (!query.StmtExecute(param))
-		DatabaseLog("RemoveInstantMessage() failed: profileid(%u)", profileId);
-	//else
-	//	DatabaseLog("message id(%u) acked", messageId);
+		DatabaseLog("DeleteInstantMessage() failed: profileid(%u)", profileId);
 
 	if (!query.Success())
 	{
-		this->RollbackTransaction();
+		RollbackTransaction();
 		return false;
 	}
 
-	// commit the transaction
-	this->CommitTransaction();
+	CommitTransaction();
 
 	return true;
 }
@@ -5018,7 +5207,7 @@ bool MySQLDatabase::GeneratePlayerLadderData(const uint datematchplayed)
 	memset(SQL, 0, sizeof(SQL));
 
 	sprintf(SQL, "SELECT a.profileid, CEIL(SUM(IF(a.matchwon = 1, a.scoretotal * 1.5, a.scoretotal))) AS ladderscore "
-				 "FROM (SELECT * FROM %s WHERE datematchplayed >= ? - 1814400) AS a "
+				 "FROM (SELECT * FROM %s WHERE scoretotal > 0 AND datematchplayed >= ? - 1814400) AS a "
 				 "WHERE (SELECT COUNT(id) FROM %s AS b WHERE b.profileid = a.profileid AND b.scoretotal >= a.scoretotal AND b.datematchplayed >= ? - 1814400 AND a.datematchplayed >= ? - 1814400) <= 20 "
 				 "GROUP BY a.profileid "
 				 "ORDER BY ladderscore DESC", TABLENAME[PLAYER_MATCHSTATS_TABLE], TABLENAME[PLAYER_MATCHSTATS_TABLE]);
@@ -5048,11 +5237,8 @@ bool MySQLDatabase::GeneratePlayerLadderData(const uint datematchplayed)
 		{
 			while(query.StmtFetch())
 			{
-				if (ladderscore > 0)
-				{
-					if (!InsertPlayerLadderItem(++id, profileid, ladderscore))
-						return false;
-				}
+				if (!InsertPlayerLadderItem(++id, profileid, ladderscore))
+					return false;
 			}
 		}
 	}
