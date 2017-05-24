@@ -407,31 +407,8 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadUInt(padZero))
 				return false;
 
-			//check to see if recipient is online
-			SvClient *recipient = SvClientManager::ourInstance->FindPlayerByProfileId(myInstantMessage.m_RecipientProfile);
-
-			if (!recipient)
-			{
-				// intended recipient is offline
-#ifdef USING_MYSQL_DATABASE
-				MySQLDatabase::ourInstance->AddInstantMessage(aClient->GetProfile()->m_ProfileId, &myInstantMessage);
-#endif
-			}
-			else
-			{
-				MN_WriteMessage	responseMessage(2048);
-
-				// if recipient does not ack, the message is lost, un-read messages are NOT saved client side
-#ifdef USING_MYSQL_DATABASE
-				MySQLDatabase::ourInstance->AddInstantMessage(aClient->GetProfile()->m_ProfileId, &myInstantMessage);
-#endif
-				//DebugLog(L_INFO, "MESSAGING_IM_RECEIVE");
-				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
-				myInstantMessage.ToStream(&responseMessage);
-
-				if (!recipient->SendData(&responseMessage))
-					return false;
-			}
+			if (!SendInstantMessage(&myInstantMessage))
+				return false;
 		}
 		break;
 
@@ -815,7 +792,6 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				return false;
 
 			uchar myStatusCode;
-			MMG_Clan::Description myClan;
 
 			MMG_Profile invitedProfile;
 			uint msgId = 0;
@@ -837,31 +813,20 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			//	myStatusCode = myClanStrings::INVITE_FAIL_PLAYER_IGNORE_MESSAGES;
 			else
 			{
-				MySQLDatabase::ourInstance->QueryClanDescription(aClient->GetProfile()->m_ClanId, &myClan);
+				MMG_Profile *myProfile = aClient->GetProfile();
+				MMG_Clan::Description myClan;
+
+				MySQLDatabase::ourInstance->QueryClanDescription(myProfile->m_ClanId, &myClan);
 
 				MMG_InstantMessageListener::InstantMessage im;
-				im.m_SenderProfile.m_ProfileId = aClient->GetProfile()->m_ProfileId;
+				im.m_SenderProfile.m_ProfileId = myProfile->m_ProfileId;
 				im.m_RecipientProfile = profileId;
-				swprintf(im.m_Message, WIC_INSTANTMSG_MAX_LENGTH, L"|clan|%u|%ws|%ws|", myClan.m_ClanId, aClient->GetProfile()->m_Name, myClan.m_FullName);
+				swprintf(im.m_Message, WIC_INSTANTMSG_MAX_LENGTH, L"|clan|%u|%ws|%ws|", myClan.m_ClanId, myProfile->m_Name, myClan.m_FullName);
 
-				// messageid and writtenat are generated in the AddInstantMessage function
-				MySQLDatabase::ourInstance->AddInstantMessage(aClient->GetProfile()->m_ProfileId, &im);
-				
 				myStatusCode = myClanStrings::InviteSent;
 
-				// if client is online send them the invite directly
-				SvClient *invitee = SvClientManager::ourInstance->FindPlayerByProfileId(profileId);
-
-				if (invitee)
-				{
-					MN_WriteMessage inviteMsg(2048);
-
-					inviteMsg.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
-					im.ToStream(&inviteMsg);
-
-					if (!invitee->SendData(&inviteMsg))
-						return false;
-				}
+				if (!SendInstantMessage(&im))
+					return false;
 			}
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_MASSGATE_GENERIC_STATUS_RESPONSE);
@@ -1030,37 +995,25 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			if (!aMessage->ReadString(myMessage, ARRAYSIZE(myMessage)))
 				return false;
 
-			uint memberCount = 0;
+			MMG_Profile *myProfile = aClient->GetProfile();
 			MMG_Clan::FullInfo myClan;
+			uint memberCount = 0;
 			time_t local_timestamp = time(NULL);
 
-			MySQLDatabase::ourInstance->QueryClanFullInfo(aClient->GetProfile()->m_ClanId, &memberCount, &myClan);
+			MySQLDatabase::ourInstance->QueryClanFullInfo(myProfile->m_ClanId, &memberCount, &myClan);
 
 			for (uint i = 0; i < memberCount; i++)
 			{
-				if (myClan.m_ClanMembers[i] > 0 && myClan.m_ClanMembers[i] != aClient->GetProfile()->m_ProfileId)
+				if (myClan.m_ClanMembers[i] > 0 && myClan.m_ClanMembers[i] != myProfile->m_ProfileId)
 				{
 					MMG_InstantMessageListener::InstantMessage im;
-
-					im.m_SenderProfile.m_ProfileId = aClient->GetProfile()->m_ProfileId;
+					im.m_WrittenAt = (uint)local_timestamp;
+					im.m_SenderProfile.m_ProfileId = myProfile->m_ProfileId;
 					im.m_RecipientProfile = myClan.m_ClanMembers[i];
 					swprintf(im.m_Message, WIC_INSTANTMSG_MAX_LENGTH, L"|clms|%ws", myMessage);
-					im.m_WrittenAt = local_timestamp;
 
-					MySQLDatabase::ourInstance->AddInstantMessage(aClient->GetProfile()->m_ProfileId, &im);
-
-					// if player is online send them the message instantly
-					SvClient *player = SvClientManager::ourInstance->FindPlayerByProfileId(im.m_RecipientProfile);
-					if (player)
-					{
-						MN_WriteMessage clanMsg(2048);
-
-						clanMsg.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
-						im.ToStream(&clanMsg);
-
-						if (!player->SendData(&clanMsg))
-							continue;
-					}
+					if (!SendInstantMessage(&im))
+						continue;
 				}
 			}
 		}
@@ -1638,6 +1591,32 @@ bool MMG_Messaging::SendProfileName(SvClient *aClient, MN_WriteMessage	*aMessage
 	aProfile->ToStream(aMessage);
 
 	return aClient->SendData(aMessage);
+}
+
+bool MMG_Messaging::SendInstantMessage(MMG_InstantMessageListener::InstantMessage *message)
+{
+	assert(message->m_SenderProfile.m_ProfileId > 0);
+	assert(message->m_RecipientProfile > 0);
+	assert(wcslen(message->m_Message) < WIC_INSTANTMSG_MAX_LENGTH);
+
+	MN_WriteMessage	responseMessage(2048);
+
+	// if recipient does not ack, the message is lost, un-read messages are not saved client side
+	MySQLDatabase::ourInstance->AddInstantMessage(message->m_SenderProfile.m_ProfileId, message);
+
+	// if player is online send them the message instantly
+	SvClient *player = SvClientManager::ourInstance->FindPlayerByProfileId(message->m_RecipientProfile);
+	if (player)
+	{
+		//DebugLog(L_INFO, "MESSAGING_IM_RECEIVE");
+		responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
+		message->ToStream(&responseMessage);
+
+		if (!player->SendData(&responseMessage))
+			return false;
+	}
+
+	return true;
 }
 
 bool MMG_Messaging::SendCommOptions(SvClient *aClient, MN_WriteMessage *aMessage)

@@ -33,6 +33,7 @@ public:
 
 	bool HandleMessage				(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter);
 	bool SendProfileName			(SvClient *aClient, MN_WriteMessage *aMessage, MMG_Profile *aProfile);
+	bool SendInstantMessage			(MMG_InstantMessageListener::InstantMessage *message);
 	bool SendCommOptions			(SvClient *aClient, MN_WriteMessage *aMessage);
 	bool SendIMSettings				(SvClient *aClient, MN_WriteMessage *aMessage);
 	bool SendPingsPerSecond			(SvClient *aClient, MN_WriteMessage *aMessage);
