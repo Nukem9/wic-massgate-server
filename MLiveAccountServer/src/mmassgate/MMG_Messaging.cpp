@@ -388,7 +388,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					}
 				}
 
-				if (responseMessage.GetDataLength() > 0 && !aClient->SendData(&responseMessage))
+				if (responseMessage.GetDataLength() > 2 && !aClient->SendData(&responseMessage))
 					return false;
 			}
 		}
@@ -941,6 +941,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				}
 			}
 
+			if (responseMessage.GetDataLength() > 2 && !aClient->SendData(&responseMessage))
+				return false;
+
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_CLAN_GUESTBOOK_GET_RSP);
 			responseMessage.WriteUInt(requestId);
 			responseMessage.WriteUInt(entryCount);
@@ -1137,7 +1140,7 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_FIND_CLAN_SEARCH_COMPLETE);
 
-			if (responseMessage.GetDataLength() > 0 && !aClient->SendData(&responseMessage))
+			if (responseMessage.GetDataLength() > 2 && !aClient->SendData(&responseMessage))
 				return false;
 		}
 		break;
@@ -1373,6 +1376,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					poster.ToStream(&responseMessage);
 				}
 			}
+
+			if (responseMessage.GetDataLength() > 2 && !aClient->SendData(&responseMessage))
+				return false;
 
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_PROFILE_GUESTBOOK_GET_RSP);
 			responseMessage.WriteUInt(requestId);
