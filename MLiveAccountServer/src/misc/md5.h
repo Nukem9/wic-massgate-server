@@ -28,8 +28,6 @@
 #elif !defined(_MD5_H)
 #define _MD5_H
 
-#define MD5_DIGEST_LENGTH 16
-
 #ifdef __cplusplus
 extern "C" {
 #endif

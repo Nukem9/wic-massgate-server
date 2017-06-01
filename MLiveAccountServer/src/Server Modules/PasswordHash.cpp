@@ -3,17 +3,13 @@
 
 void PasswordHash::get_random_bytes(char *dst, int count)
 {
-	MD5_CTX ctx, ctx2;
-	unsigned char digest[16], digest2[16];
-
-	char md5str1[64], md5str2[64];
-	memset(md5str1, 0, sizeof(md5str1));
-	memset(md5str2, 0, sizeof(md5str2));
+	MD5_CTX ctx;
+	unsigned char digest[MD5_DIGEST_LENGTH] = "";
+	char md5str[CRYPT_BUFFER_SIZE] = "";
 
 	for (int j = 0; j < count; j += 16)
 	{
-		char random_string[32];
-		memset(random_string, 0, sizeof(random_string));
+		char random_string[CRYPT_BUFFER_SIZE] = "";
 		sprintf(random_string, "%u%u", twister.Random(), this->random_state);
 
 		MD5_Init(&ctx);
@@ -21,66 +17,68 @@ void PasswordHash::get_random_bytes(char *dst, int count)
 		MD5_Final(digest, &ctx);
 
 		for (int i = 0; i < 16; ++i)
-			sprintf(&md5str1[i*2], "%02x", (unsigned int)digest[i]);
+			sprintf(&md5str[i*2], "%02x", (unsigned int)digest[i]);
 
-		MD5_Init(&ctx2);
-		MD5_Update(&ctx2, md5str1, strlen(md5str1));
-		MD5_Final(digest2, &ctx2);
+		MD5_Init(&ctx);
+		MD5_Update(&ctx, md5str, strlen(md5str));
+		MD5_Final(digest, &ctx);
 
 		for (int i = 0; i < 16; ++i)
-			sprintf(&md5str2[i*2], "%02x", (unsigned int)digest2[i]);
+			sprintf(&md5str[i*2], "%02x", (unsigned int)digest[i]);
 	}
 
-	memcpy(dst, md5str2, count);
+	memcpy(dst, md5str, count);
 }
 
-void PasswordHash::encode64(char *dst, char *src, int count)
+void PasswordHash::encode64(char *dst, unsigned char *src, int count)
 {
 	int i, value;
 
 	i = 0;
 	do {
 		value = (unsigned char)src[i++];
-		*dst++ = this->itoa64[value & 0x3f];
+		*dst++ = itoa64[value & 0x3f];
 		if (i < count)
 			value |= (unsigned char)src[i] << 8;
-		*dst++ = this->itoa64[(value >> 6) & 0x3f];
+		*dst++ = itoa64[(value >> 6) & 0x3f];
 		if (i++ >= count)
 			break;
 		if (i < count)
 			value |= (unsigned char)src[i] << 16;
-		*dst++ = this->itoa64[(value >> 12) & 0x3f];
+		*dst++ = itoa64[(value >> 12) & 0x3f];
 		if (i++ >= count)
 			break;
-		*dst++ = this->itoa64[(value >> 18) & 0x3f];
+		*dst++ = itoa64[(value >> 18) & 0x3f];
 	} while (i < count);
+
+	*dst = 0;
 }
 
-void PasswordHash::gensalt_private(char* output, char *input)
+void PasswordHash::gensalt_private(char *dst, char *src)
 {
-	memcpy(output, "$H$", 3);
-	memcpy(output+3, &itoa64[min(iteration_count_log2 + (PHP_VERSION >= 5 ? 5 : 3), 30)], 1);
-	encode64(output+4, input, 6);
+	memcpy(dst, "$H$", 3);
+	memcpy(dst+3, &itoa64[min(iteration_count_log2 + (PHP_VERSION >= 5 ? 5 : 3), 30)], 1);
+	encode64(dst+4, (unsigned char*)src, 6);
 }
 
 void PasswordHash::crypt_private(char *dst, char *password, char *setting)
 {
 	MD5_CTX ctx;
-	char hash[MD5_DIGEST_LENGTH];
+	unsigned char hash[MD5_DIGEST_LENGTH];
 	char *p, *salt;
 	int count_log2, length, count;
 
-	strncpy(dst, "*0", 2);
+	strcpy(dst, "*0");
 	if (!strncmp(setting, dst, 2))
 		dst[1] = '1';
 
 	if (strncmp(setting, "$H$", 3))
 		return;
 
-	p = strchr(this->itoa64, setting[3]);
+	p = strchr(itoa64, setting[3]);
 	if (!p)
 		return;
-	count_log2 = p - this->itoa64;
+	count_log2 = p - itoa64;
 	if (count_log2 < 7 || count_log2 > 30)
 		return;
 
@@ -93,36 +91,36 @@ void PasswordHash::crypt_private(char *dst, char *password, char *setting)
 	MD5_Init(&ctx);
 	MD5_Update(&ctx, salt, 8);
 	MD5_Update(&ctx, password, length);
-	MD5_Final((unsigned char*)hash, &ctx);
+	MD5_Final(hash, &ctx);
 
 	count = 1 << count_log2;
 	do {
 		MD5_Init(&ctx);
 		MD5_Update(&ctx, hash, MD5_DIGEST_LENGTH);
 		MD5_Update(&ctx, password, length);
-		MD5_Final((unsigned char*)hash, &ctx);
+		MD5_Final(hash, &ctx);
 	} while (--count);
 
 	memcpy(dst, setting, 12);
 	encode64(&dst[12], hash, MD5_DIGEST_LENGTH);
 }
 
-void PasswordHash::gensalt_extended(char *output, char *input)
+void PasswordHash::gensalt_extended(char *dst, char *src)
 {
 	int count_log2 = min(this->iteration_count_log2 + 8, 24);
 	int count = (1 << count_log2) - 1;
 
-	*output++ = '_';
-	*output++ = this->itoa64[count & 0x3f];
-	*output++ = this->itoa64[(count >> 6) & 0x3f];
-	*output++ = this->itoa64[(count >> 12) & 0x3f];
-	*output++ = this->itoa64[(count >> 18) & 0x3f];
-	encode64(output++, input, 3);
+	*dst++ = '_';
+	*dst++ = itoa64[count & 0x3f];
+	*dst++ = itoa64[(count >> 6) & 0x3f];
+	*dst++ = itoa64[(count >> 12) & 0x3f];
+	*dst++ = itoa64[(count >> 18) & 0x3f];
+	encode64(dst++, (unsigned char*)src, 3);
 }
 
-void PasswordHash::gensalt_blowfish(char *output, char *input)
+void PasswordHash::gensalt_blowfish(char *dst, char *src)
 {
-	_crypt_gensalt_blowfish_rn("$2y$", this->iteration_count_log2, input, strlen(input), output, CRYPT_GENSALT_OUTPUT_SIZE);
+	_crypt_gensalt_blowfish_rn("$2y$", this->iteration_count_log2, src, strlen(src), dst, CRYPT_GENSALT_OUTPUT_SIZE);
 }
 
 void PasswordHash::crypt_blowfish(char *dst, char *password, char *setting)
@@ -143,9 +141,9 @@ int PasswordHash::hash_equals(const void *stored_hash, const void *user_hash, co
 	return result;
 }
 
-void PasswordHash::HashPassword(char *dst, char *input)
+void PasswordHash::HashPassword(char *dst, char *password)
 {
-	char random[32];
+	char random[CRYPT_BUFFER_SIZE];
 	memset(random, 0, sizeof(random));
 
 	char salt[CRYPT_GENSALT_OUTPUT_SIZE];
@@ -155,7 +153,7 @@ void PasswordHash::HashPassword(char *dst, char *input)
 	{
 		get_random_bytes(random, 16);
 		gensalt_blowfish(salt, random);
-		crypt_blowfish(dst, input, salt);
+		crypt_blowfish(dst, password, salt);
 
 		if (strlen(dst) == 60)
 			return;
@@ -177,7 +175,7 @@ void PasswordHash::HashPassword(char *dst, char *input)
 	{
 		get_random_bytes(random, 6);
 		gensalt_private(salt, random);
-		crypt_private(dst, input, salt);
+		crypt_private(dst, password, salt);
 
 		if (strlen(dst) == 34)
 			return;
@@ -191,10 +189,10 @@ bool PasswordHash::CheckPassword(char *password, char *stored_hash)
 	char hash[CRYPT_OUTPUT_SIZE];
 	memset(hash, 0, sizeof(hash));
 
-	this->crypt_private(hash, password, stored_hash);
+	crypt_private(hash, password, stored_hash);
 
 	if (hash[0] == '*')
-		this->crypt_blowfish(hash, password, stored_hash);
+		crypt_blowfish(hash, password, stored_hash);
 
 	return hash_equals(stored_hash, hash, CRYPT_OUTPUT_SIZE) == 0;
 }
