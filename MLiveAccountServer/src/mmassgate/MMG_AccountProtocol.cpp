@@ -552,40 +552,32 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 					{
 						// private
 						isPrivateKeyUser = true;
+						
+						uint myPrivateCDKeyId = 0;
+						uint checkAccountId = 0;
 
-						// todo: extra checks, cipherkeys, ip address etc
-						if (strncmp(myQuery.m_Create.m_Email, checkEmail, WIC_EMAIL_MAX_LENGTH) || checkValidated == 0)
+						// todo: extra checks, ip address, cipherkeys? etc
+						bool AuthPrivateCDKeyQueryOk = MySQLDatabase::ourInstance->AuthPrivateCDKey(myQuery.m_EncryptionKeySequenceNumber, myQuery.m_Create.m_Email, &myPrivateCDKeyId, &checkAccountId);
+
+						if (myPrivateCDKeyId == 0 && AuthPrivateCDKeyQueryOk)
+						{
+							myStatusCode = CreateFailed_General;
+							mySuccessFlag = 0;
+						}
+						else if (checkAccountId > 0 && AuthPrivateCDKeyQueryOk)
+						{
+							myStatusCode = CreateFailed_CdKeyExhausted;
+							mySuccessFlag = 0;
+						}
+						else if (!AuthPrivateCDKeyQueryOk)
 						{
 							myStatusCode = CreateFailed_General;
 							mySuccessFlag = 0;
 						}
 						else
 						{
-							uint myPrivateCDKeyId = 0;
-							uint checkAccountId = 0;
-
-							bool AuthPrivateCDKeyQueryOk = MySQLDatabase::ourInstance->AuthPrivateCDKey(myQuery.m_EncryptionKeySequenceNumber, myQuery.m_Create.m_Email, &myPrivateCDKeyId, &checkAccountId);
-
-							if (myPrivateCDKeyId == 0 && AuthPrivateCDKeyQueryOk)
-							{
-								myStatusCode = CreateFailed_General;
-								mySuccessFlag = 0;
-							}
-							else if (checkAccountId > 0 && AuthPrivateCDKeyQueryOk)
-							{
-								myStatusCode = CreateFailed_CdKeyExhausted;
-								mySuccessFlag = 0;
-							}
-							else if (!AuthPrivateCDKeyQueryOk)
-							{
-								myStatusCode = CreateFailed_General;
-								mySuccessFlag = 0;
-							}
-							else
-							{
-								myStatusCode = ActionStatusCodes::Creating;
-								mySuccessFlag = 1;
-							}
+							myStatusCode = ActionStatusCodes::Creating;
+							mySuccessFlag = 1;
 						}
 					}
 					else
