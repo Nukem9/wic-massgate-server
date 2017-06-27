@@ -107,6 +107,9 @@ bool LiveAccount_ConsumeMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG
 	//
 	auto myType = MMG_ProtocolDelimiters::GetType(aDelimiter);
 
+	if (myType == MMG_ProtocolDelimiters::DELIM_UNKNOWN)
+		return false;
+
 	LiveAccLog("Message from client: delimiter %i - type: %i", aDelimiter, myType);
 
 	//
@@ -145,6 +148,12 @@ bool LiveAccount_ConsumeMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG
 	// Server Tracker (Server list queries)
 	case MMG_ProtocolDelimiters::DELIM_SERVERTRACKER_USER:
 	{
+		if (!aClient->IsLoggedIn())
+		{
+			LiveAccLog("MMG_ServerTracker: User not logged in");
+			return false;
+		}
+
 		if (!MMG_ServerTracker::ourInstance->HandleMessage(aClient, aMessage, aDelimiter))
 		{
 			LiveAccLog("MMG_ServerTracker: Failed HandleMessage()");
@@ -167,6 +176,12 @@ bool LiveAccount_ConsumeMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG
 	// Chat
 	case MMG_ProtocolDelimiters::DELIM_CHAT:
 	{
+		if (!aClient->IsLoggedIn())
+		{
+			LiveAccLog("MMG_Chat: User not logged in");
+			return false;
+		}
+
 		if (!MMG_Chat::ourInstance->HandleMessage(aClient, aMessage, aDelimiter))
 		{
 			LiveAccLog("MMG_Chat: Failed HandleMessage()");

@@ -216,7 +216,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				return false;
 			}
 
-			DebugLog(L_INFO, "Save Match Statisitcs: OK");
+			DebugLog(L_INFO, "Save Match Statistics: OK");
 
 			if (!MySQLDatabase::ourInstance->BuildPlayerLeaderboard(datematchplayed))
 			{

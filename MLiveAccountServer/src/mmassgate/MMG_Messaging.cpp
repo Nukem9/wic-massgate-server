@@ -298,6 +298,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 				}
 			}
 
+			if (!aClient->SendData(&responseMessage))
+				return false;
+			
 			// send friends
 			DebugLog(L_INFO, "MESSAGING_GET_FRIENDS_RESPONSE:");
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_GET_FRIENDS_RESPONSE);
@@ -381,15 +384,9 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_IM_RECEIVE);
 					myMsgs[i].ToStream(&responseMessage);
 
-					if (responseMessage.GetDataLength() + sizeof(MMG_InstantMessageListener::InstantMessage) >= 4096)
-					{
-						if (!aClient->SendData(&responseMessage))
-							break;
-					}
+					if (!aClient->SendData(&responseMessage))
+						return false;
 				}
-
-				if (responseMessage.GetDataLength() > 2 && !aClient->SendData(&responseMessage))
-					return false;
 			}
 		}
 		break;

@@ -169,7 +169,7 @@ bool MN_ReadMessage::BuildMessage(voidptr_t aData, sizeptr_t aDataLen)
 		sizeptr_t usedBytes;
 		this->m_DataLen = MP_Pack::UnpackZip((voidptr_t)((uintptr_t)aData + addSize), (voidptr_t)this->m_PacketData, packetLen, this->m_PacketMaxSize, &usedBytes);
 
-		if (!this->m_DataLen || usedBytes != packetLen)
+		if (!this->m_DataLen || this->m_DataLen > this->m_PacketMaxSize || usedBytes != packetLen)
 			return false;
 	}
 	else
