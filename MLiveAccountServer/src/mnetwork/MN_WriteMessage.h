@@ -11,21 +11,10 @@ public:
 	{
 		this->m_WritePtr	= this->m_PacketData + sizeof(ushort);
 		this->m_WritePos	= 0;
-		this->m_DataLen		= 2;
+		this->m_DataLen		= sizeof(ushort);
 	}
 
-	template<typename T> __declspec(noinline) void Write(T aValue)
-	{
-		// Check if the buffer can fit the data
-		this->CheckWriteSize(sizeof(T));
-
-		// Write the data
-		*(T *)this->m_WritePtr = aValue;
-
-		// Increment pointer
-		this->IncWritePos(sizeof(T));
-	}
-
+	void TypeCheck		(ushort aType);
 	void WriteDelimiter	(ushort aDelimiter);
 	void WriteBool      (bool aBool);
 	void WriteUChar		(uchar aUChar);
@@ -41,13 +30,27 @@ public:
 	void WriteString	(wchar_t *aBuffer);
 	void WriteString	(wchar_t *aBuffer, sizeptr_t aStringSize);
 
-	bool SendMe			(SOCKET sock);
-	bool SendMe			(SOCKET sock, bool aClearData);
+	bool SendMe			(SOCKET aSocket);
+	bool SendMe			(SOCKET aSocket, bool aClearData);
 
 	voidptr_t GetDataStream	();
 	sizeptr_t GetDataLength	();
 
 private:
+	template<typename T>
+	__declspec(noinline) void Write(T aValue)
+	{
+		if (!this->CheckWriteSize(sizeof(T)))
+		{
+			// We're out of space for aValue - just ignore any further writes
+			DebugLog(L_WARN, "%s: BUFFER OVERRUN", __FUNCTION__);
+			return;
+		}
+
+		*(T *)this->m_WritePtr = aValue;
+		this->IncWritePos(sizeof(T));
+	}
+
 	void IncWritePos	(sizeptr_t aSize);
-	void CheckWriteSize	(sizeptr_t aSize);
+	bool CheckWriteSize	(sizeptr_t aSize);
 };

@@ -37,7 +37,9 @@ private:
 		if (!this->CheckReadSize(sizeof(T)))
 		{
 			// This is bad; we're out of data to read. Someone should've
-			// checked the read size BEFORE calling this Read<T>().
+			// checked the read size BEFORE calling Read<T>().
+			DebugLog(L_ERROR, "%s: BUFFER OVERRUN", __FUNCTION__);
+
 			RaiseException(0, EXCEPTION_NONCONTINUABLE, 0, nullptr);
 			return T();
 		}

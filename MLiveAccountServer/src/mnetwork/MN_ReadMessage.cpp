@@ -222,10 +222,11 @@ bool MN_ReadMessage::DeriveMessage()
 bool MN_ReadMessage::CheckReadSize(sizeptr_t aSize)
 {
 	// Note that m_ReadPos is 0-based and must always be less than m_DataLen
-	assert((this->m_ReadPos + aSize) < this->m_DataLen && "Packet read would exceed data length.");
-
 	if ((this->m_ReadPos + aSize) >= this->m_DataLen)
+	{
+		assert(false && "Packet read would exceed data length.");
 		return false;
+	}
 
 	return true;
 }
