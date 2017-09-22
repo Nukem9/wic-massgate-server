@@ -8,6 +8,7 @@ public:
 
 private:
 	// Limits
+	const static sizeptr_t MESSAGE_MIN_LENGTH = sizeof(ushort);
 	const static sizeptr_t MESSAGE_MAX_LENGTH = 0x3FFF;
 	
 	// Packet flags
@@ -16,9 +17,7 @@ private:
 
 	uintptr_t	m_PacketData;
 	sizeptr_t	m_PacketMaxSize;
-
 	sizeptr_t	m_DataLen;
-
 	bool		m_TypeChecks;
 
 public:

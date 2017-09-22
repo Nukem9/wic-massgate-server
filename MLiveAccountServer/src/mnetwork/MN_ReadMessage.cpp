@@ -83,16 +83,12 @@ bool MN_ReadMessage::ReadRawData(voidptr_t aBuffer, sizeptr_t aBufferSize, sizep
 	if (aTotalSize)
 		*aTotalSize = dataLength;
 
-	if (aBuffer)
-		this->IncReadPos(dataLength);
-
+	this->IncReadPos(dataLength);
 	return true;
 }
 
 bool MN_ReadMessage::ReadString(char *aBuffer, sizeptr_t aStringSize)
 {
-	assert(aBuffer && aStringSize > 0);
-
 	if (!this->CheckReadSize(sizeof(ushort)))
 		return false;
 
@@ -111,6 +107,7 @@ bool MN_ReadMessage::ReadString(char *aBuffer, sizeptr_t aStringSize)
 			return false;
 
 		memcpy(aBuffer, (voidptr_t)this->m_ReadPtr, dataLength);
+		aBuffer[aStringSize - 1] = '\0';
 	}
 
 	this->IncReadPos(dataLength);
@@ -119,8 +116,6 @@ bool MN_ReadMessage::ReadString(char *aBuffer, sizeptr_t aStringSize)
 
 bool MN_ReadMessage::ReadString(wchar_t *aBuffer, sizeptr_t aStringSize)
 {
-	assert(aBuffer && aStringSize > 0);
-
 	if (!this->CheckReadSize(sizeof(ushort)))
 		return false;
 
@@ -139,6 +134,7 @@ bool MN_ReadMessage::ReadString(wchar_t *aBuffer, sizeptr_t aStringSize)
 			return false;
 
 		memcpy(aBuffer, (voidptr_t)this->m_ReadPtr, dataLength);
+		aBuffer[aStringSize - 1] = L'\0';
 	}
 
 	this->IncReadPos(dataLength);
@@ -148,28 +144,36 @@ bool MN_ReadMessage::ReadString(wchar_t *aBuffer, sizeptr_t aStringSize)
 bool MN_ReadMessage::BuildMessage(voidptr_t aData, sizeptr_t aDataLen)
 {
 	assert(this->m_PacketData && this->m_DataLen == 0);
+	assert(aDataLen >= MESSAGE_MIN_LENGTH);
+	assert(aDataLen <= MESSAGE_MAX_LENGTH);
 	assert(aData && aDataLen <= this->m_PacketMaxSize);
-	assert(aDataLen >= sizeof(ushort));
+
+	if (!aData || aDataLen < MESSAGE_MIN_LENGTH)
+		return false;
 
 	ushort packetFlags	= *(ushort *)aData;
 	ushort packetLen	= packetFlags & 0x3FFF;
 	uint addSize		= sizeof(ushort);
 
 	// Check the length
-	if (packetLen > MESSAGE_MAX_LENGTH)
+	if (packetLen > this->m_PacketMaxSize)
 		return false;
 
 	// Determine if type checks should be enabled
 	if (packetFlags & MESSAGE_FLAG_TYPECHECKS)
 		this->m_TypeChecks = true;
 
-	// Decompress if needed
+	// Decompress using ZLIB (optional)
 	if (packetFlags & MESSAGE_FLAG_COMPRESSED)
 	{
 		sizeptr_t usedBytes;
 		this->m_DataLen = MP_Pack::UnpackZip((voidptr_t)((uintptr_t)aData + addSize), (voidptr_t)this->m_PacketData, packetLen, this->m_PacketMaxSize, &usedBytes);
 
-		if (!this->m_DataLen || this->m_DataLen > this->m_PacketMaxSize || usedBytes != packetLen)
+		assert(usedBytes == packetLen);
+		assert(this->m_DataLen > 0);
+		assert(this->m_DataLen < this->m_PacketMaxSize);
+
+		if (this->m_DataLen <= 0 || usedBytes != packetLen)
 			return false;
 	}
 	else
@@ -177,7 +181,7 @@ bool MN_ReadMessage::BuildMessage(voidptr_t aData, sizeptr_t aDataLen)
 		// Copy the raw packet data
 		memcpy((voidptr_t)this->m_PacketData, (voidptr_t)((uintptr_t)aData + addSize), packetLen);
 
-		// Set the maximum read length
+		// Size of the data we can read now
 		this->m_DataLen = packetLen;
 	}
 
@@ -207,7 +211,6 @@ bool MN_ReadMessage::DeriveMessage()
 		// Zero extra data at the end
 		memset((voidptr_t)(this->m_PacketData + remainder), 0, this->m_PacketMaxSize - remainder);
 
-		// Set the maximum read length
 		this->m_DataLen = remainder;
 	}
 
@@ -218,9 +221,10 @@ bool MN_ReadMessage::DeriveMessage()
 
 bool MN_ReadMessage::CheckReadSize(sizeptr_t aSize)
 {
-	assert((this->m_ReadPos + aSize) <= this->m_DataLen && "Packet read would exceed data length.");
+	// Note that m_ReadPos is 0-based and must always be less than m_DataLen
+	assert((this->m_ReadPos + aSize) < this->m_DataLen && "Packet read would exceed data length.");
 
-	if ((this->m_ReadPos + aSize) > this->m_DataLen)
+	if ((this->m_ReadPos + aSize) >= this->m_DataLen)
 		return false;
 
 	return true;

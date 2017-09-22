@@ -13,20 +13,6 @@ public:
 		this->m_ReadPos = 0;
 	}
 
-	template<typename T> __declspec(noinline) T Read()
-	{
-		// Check if the read is past the end
-		this->CheckReadSize(sizeof(T));
-
-		// Read the value stored
-		T val = *(T *)this->m_ReadPtr;
-
-		// Increment the read position
-		this->IncReadPos(sizeof(T));
-
-		return val;
-	}
-
 	bool TypeCheck		(ushort aType);
 	bool ReadDelimiter	(ushort &aDelimiter);
 	bool ReadBool		(bool &aBool);
@@ -45,6 +31,26 @@ public:
 	bool DeriveMessage	();
 
 private:
+	template<typename T>
+	__declspec(noinline) T Read()
+	{
+		if (!this->CheckReadSize(sizeof(T)))
+		{
+			// This is bad; we're out of data to read. Someone should've
+			// checked the read size BEFORE calling this Read<T>().
+			RaiseException(0, EXCEPTION_NONCONTINUABLE, 0, nullptr);
+			return T();
+		}
+
+		// Read the value stored
+		T val = *(T *)this->m_ReadPtr;
+
+		// Increment the read position
+		this->IncReadPos(sizeof(T));
+
+		return val;
+	}
+
 	template<typename T>
 	bool ReadChecked(ushort aType, T &aValue)
 	{
