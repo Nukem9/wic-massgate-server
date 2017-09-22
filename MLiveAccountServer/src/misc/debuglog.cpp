@@ -48,6 +48,8 @@ void DebugLogFile(const char *Format, ...)
 		va_start(va, Format);
 		vfprintf(Logfile, Format, va);
 		va_end(va);
+
+		fflush(Logfile);
 	}
 }
 
@@ -68,11 +70,11 @@ void DebugLog(LogLevel Level, const char *Format, ...)
 		case L_ERROR:DEBUG_OUT(stderr, "[!] %s\n", buffer); break;
 	}
 
-	fflush(stdout);
-	fflush(stderr);
-
 	if (Level == L_ERROR)
 	{
+		fflush(stdout);
+		fflush(stderr);
+
 		printf("Unable to recover from error. Press enter to exit.\n");
 		getchar();
 
