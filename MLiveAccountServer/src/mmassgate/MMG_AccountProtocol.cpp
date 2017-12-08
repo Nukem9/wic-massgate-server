@@ -258,7 +258,7 @@ bool MMG_AccountProtocol::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 	{
 		// Invalid game version
 		// This takes priority over maintenance due to potential protocol differences
-		DebugLog(L_INFO, "ACCOUNT_PATCH_INFORMATION: Client has an old version");
+		DebugLog(L_INFO, "ACCOUNT_PATCH_INFORMATION: Client has an old version [%d vs %d]", myQuery.m_Protocol, MassgateProtocolVersion);
 		responseDelimiter = MMG_ProtocolDelimiters::ACCOUNT_PATCH_INFORMATION;
 
 		this->WritePatchInformation(&cryptMessage, &myQuery);

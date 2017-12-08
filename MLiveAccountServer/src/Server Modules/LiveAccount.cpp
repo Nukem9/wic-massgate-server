@@ -32,8 +32,7 @@ void LiveAccount_Shutdown()
 
 void LiveAccount_ConnectionReceivedCallback(SOCKET aSocket, sockaddr_in *aAddr)
 {
-	// Find client by IP address
-	auto myClient = SvClientManager::ourInstance->FindClient(aAddr);
+	SvClient *myClient = SvClientManager::ourInstance->FindClient(aAddr);
 
 	// IP wasn't found, add it
 	if (!myClient)
@@ -66,13 +65,10 @@ void LiveAccount_DisconnectReceivedCallback(SvClient *aClient)
 void LiveAccount_DataReceivedCallback(SvClient *aClient, voidptr_t aData, sizeptr_t aDataLen)
 {	
 #ifdef USING_MYSQL_DATABASE
-	// check for database
+	// Check for bad database connection & set maintenance mode
 	if (!MySQLDatabase::ourInstance->HasConnection())
 	{
-		// set maintenance mode
-		printf("\n");
-		DebugLog(L_WARN, "[CRITICAL] Check the MySQL server.");
-		printf("\n");
+		DebugLog(L_WARN, "\n[CRITICAL] Check the MySQL server.\n");
 		MMG_AccountProtocol::ourInstance->m_MaintenanceMode = true;
 	}
 #endif
@@ -105,17 +101,17 @@ bool LiveAccount_ConsumeMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG
 	//
 	// Log delimiter types to console
 	//
-	auto myType = MMG_ProtocolDelimiters::GetType(aDelimiter);
+	auto delimType = MMG_ProtocolDelimiters::GetType(aDelimiter);
 
-	if (myType == MMG_ProtocolDelimiters::DELIM_UNKNOWN)
+	if (delimType == MMG_ProtocolDelimiters::DELIM_UNKNOWN)
 		return false;
 
-	LiveAccLog("Message from client: delimiter %i - type: %i", aDelimiter, myType);
+	LiveAccLog("Message from client: Delimiter %i - Type: %i", aDelimiter, delimType);
 
 	//
 	// Handle all delimiter types
 	//
-	switch (myType)
+	switch (delimType)
 	{
 	// Account
 	case MMG_ProtocolDelimiters::DELIM_ACCOUNT:

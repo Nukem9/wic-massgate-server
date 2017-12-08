@@ -25,7 +25,7 @@ void DebugLogFile(const char *Format, ...)
 		localtime_s(&timestruct, &local_timestamp);
 
 		char strTheDate[16] = "";
-		strftime(strTheDate, sizeof(strTheDate), "%Y%m%d", &timestruct);
+		strftime(strTheDate, sizeof(strTheDate), "%Y%m%d_%H%M%S", &timestruct);
 
 		if (GetModuleFileNameA(GetModuleHandle(nullptr), currentPath, ARRAYSIZE(currentPath) - 4) > 0)
 		{

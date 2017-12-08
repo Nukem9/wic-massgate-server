@@ -498,7 +498,7 @@ DWORD WINAPI SvClientManager::MainThread(LPVOID lpArg)
 					// Drop client asap
 					socketError = true;
 				}
-				else 
+				else
 				{
 					if (myManager->m_DataReceivedCallback)
 						myManager->m_DataReceivedCallback(client, recvBuffer, result);
