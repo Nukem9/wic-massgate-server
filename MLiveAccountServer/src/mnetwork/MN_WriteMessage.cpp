@@ -161,7 +161,7 @@ sizeptr_t MN_WriteMessage::GetDataLength()
 bool MN_WriteMessage::CheckWriteSize(sizeptr_t aSize)
 {
 	// Note that m_ReadPos is 0-based and must always be less than m_DataLen
-	if ((this->m_DataLen + aSize) >= this->m_PacketMaxSize)
+	if ((this->m_DataLen + aSize) > this->m_PacketMaxSize)
 	{
 		assert(false && "Packet write exceeded bounds. Increase packet allocation size.");
 		return false;
