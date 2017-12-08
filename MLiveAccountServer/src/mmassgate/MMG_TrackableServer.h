@@ -40,7 +40,7 @@ public:
 	};
 
 private:
-	MT_Mutex m_Mutex;
+	std::recursive_mutex m_Mutex;
 	std::vector<Server> m_ServerList;
 
 public:
@@ -55,6 +55,5 @@ private:
 	bool AuthServer(SvClient *aClient, uint aKeySequence, ushort aProtocolVersion);
 	bool ConnectServer(Server *aServer, uint aSourceIp, MMG_ServerStartupVariables *aStartupVars);
 	bool UpdateServer(Server *aServer, MMG_TrackableServerHeartbeat *aHeartbeat);
-
 	bool FilterCheck(MMG_ServerFilter *filters, Server *aServer);
 };

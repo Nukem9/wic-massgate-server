@@ -6,15 +6,13 @@ MMG_TrackableServer::MMG_TrackableServer() : m_Mutex(), m_ServerList()
 
 bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, MMG_ProtocolDelimiters::Delimiter aDelimiter)
 {
-	MN_WriteMessage	responseMessage(2048);
+	MN_WriteMessage	responseMessage(4096);
 
 	//
 	// All dedicated sever packets require an authenticated connection, except
 	// for the initial auth delimiter
 	//
-	auto server = FindServer(aClient);
-
-	if (!server &&
+	if (!FindServer(aClient) &&
 		aDelimiter != MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_AUTH_DS_CONNECTION)
 	{
 		// Unauthed messages ignored
@@ -28,23 +26,28 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 		case MMG_ProtocolDelimiters::MESSAGING_DS_PING:
 		{
 			DebugLog(L_INFO, "MESSAGING_DS_PING:");
+
 			ushort protocolVersion;// MassgateProtocolVersion
 			uint publicServerId;   // Server ID sent on SERVERTRACKER_SERVER_STARTED
 
-			if (!aMessage->ReadUShort(protocolVersion))
-				return false;
-
-			if (!aMessage->ReadUInt(publicServerId))
+			if (!aMessage->ReadUShort(protocolVersion) ||
+				!aMessage->ReadUInt(publicServerId))
 				return false;
 
 			//if (aProtocolVersion != MassgateProtocolVersion)
 			//	return false;
 
-			if (publicServerId != server->m_PublicId)
+			std::lock_guard<std::recursive_mutex> guard(m_Mutex);
 			{
-				DisconnectServer(aClient);
-				return false;
+				auto server = FindServer(aClient);
+
+				if (!server || publicServerId != server->m_PublicId)
+				{
+					DisconnectServer(aClient);
+					return false;
+				}
 			}
+			guard.~lock_guard();
 
 			// Pong!
 			responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::MESSAGING_DS_PONG);
@@ -61,7 +64,8 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			uchar metricContext;
 			uint metricCount;
 
-			if (!aMessage->ReadUChar(metricContext) || !aMessage->ReadUInt(metricCount))
+			if (!aMessage->ReadUChar(metricContext) ||
+				!aMessage->ReadUInt(metricCount))
 				return false;
 
 			for (uint i = 0; i < metricCount; i++)
@@ -87,13 +91,14 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			uint profileId;
 			uint antiSpoofToken;
 
-			if (!aMessage->ReadUInt(profileId) || !aMessage->ReadUInt(antiSpoofToken))
+			if (!aMessage->ReadUInt(profileId) ||
+				!aMessage->ReadUInt(antiSpoofToken))
 				return false;
 
 #ifdef USING_MYSQL_DATABASE
 			SvClient *player = SvClientManager::ourInstance->FindPlayerByProfileId(profileId);
 
-			// if profileId not logged in, kick profileId
+			// If profileId not logged in, kick profileId
 			if (!player)
 			{
 				DebugLog(L_INFO, "MESSAGING_DS_KICK_PLAYER:");
@@ -105,7 +110,7 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			}
 			else
 			{
-				//if antispooftoken does not match the generated token from ACCOUNT_AUTH_ACCOUNT_REQ, then kick profileId
+				// If antispooftoken does not match the generated token from ACCOUNT_AUTH_ACCOUNT_REQ, then kick profileId
 				MMG_AuthToken *authtoken = player->GetToken();
 
 				// TODO
@@ -138,18 +143,20 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			ushort protocolVersion;// MassgateProtocolVersion
 			uint keySequenceNumber;// See EncryptionKeySequenceNumber in MMG_AccountProtocol
 			
-			if (!aMessage->ReadUShort(protocolVersion))
-				return false;
-			
-			if (!aMessage->ReadUInt(keySequenceNumber))
+			if (!aMessage->ReadUShort(protocolVersion) ||
+				!aMessage->ReadUInt(keySequenceNumber))
 				return false;
 
 			// Drop immediately if key not valid
-			if (!AuthServer(aClient, keySequenceNumber, protocolVersion))
+			std::lock_guard<std::recursive_mutex> guard(m_Mutex);
 			{
-				DebugLog(L_INFO, "Failed to authenticate server");
-				return false;
+				if (!AuthServer(aClient, keySequenceNumber, protocolVersion))
+				{
+					DebugLog(L_INFO, "Failed to authenticate server");
+					return false;
+				}
 			}
+			guard.~lock_guard();
 
 			// If a valid sequence was supplied, ask for the "encrypted" quiz answer. This is set to 0
 			// if no cdkey is used (unranked).
@@ -195,7 +202,8 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			time_t local_timestamp = time(NULL);
 			uint datematchplayed = (uint)local_timestamp;
 
-			if (!aMessage->ReadUInt(statCount) || !aMessage->ReadUInt64(mapHash))
+			if (!aMessage->ReadUInt(statCount) ||
+				!aMessage->ReadUInt64(mapHash))
 				return false;
 
 			DebugLog(L_INFO, "Number of player statistics to read from packet: %u", statCount);
@@ -253,33 +261,39 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 				return false;
 
 			// Request to "connect" the active game server
-			if (ConnectServer(server, aClient->GetIPAddress(), &startupVars))
+			std::lock_guard<std::recursive_mutex> guard(m_Mutex);
 			{
-				// Tell SvClientManager
-				aClient->SetIsServer(true);
-				aClient->SetLoginStatus(true);
-				aClient->SetTimeout(WIC_HEARTBEAT_NET_TIMEOUT);
+				auto server = FindServer(aClient);
 
-				// Send back the assigned public ID
-				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_PUBLIC_ID);
-				responseMessage.WriteUInt(server->m_PublicId);// ServerId
+				if (ConnectServer(server, aClient->GetIPAddress(), &startupVars))
+				{
+					// Tell SvClientManager
+					aClient->SetIsServer(true);
+					aClient->SetLoginStatus(true);
+					aClient->SetTimeout(WIC_HEARTBEAT_NET_TIMEOUT);
 
-				if (!aClient->SendData(&responseMessage))
-					return false;
+					// Send back the assigned public ID
+					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_PUBLIC_ID);
+					responseMessage.WriteUInt(server->m_PublicId);// ServerId
 
-				// Send back the connection cookie
-				responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_INTERNAL_AUTHTOKEN);
-				responseMessage.WriteRawData(&server->m_Cookie, sizeof(server->m_Cookie));// myCookie
-				responseMessage.WriteUInt(10000);// myConnectCookieBase
+					if (!aClient->SendData(&responseMessage))
+						return false;
 
-				if (!aClient->SendData(&responseMessage))
-					return false;
+					// Send back the connection cookie
+					responseMessage.WriteDelimiter(MMG_ProtocolDelimiters::SERVERTRACKER_SERVER_INTERNAL_AUTHTOKEN);
+					responseMessage.WriteRawData(&server->m_Cookie, sizeof(server->m_Cookie));// myCookie
+					responseMessage.WriteUInt(10000);// myConnectCookieBase
+
+					if (!aClient->SendData(&responseMessage))
+						return false;
+				}
+				else
+				{
+					DebugLog(L_INFO, "Failed to connect server");
+					DisconnectServer(aClient);
+				}
 			}
-			else
-			{
-				DebugLog(L_INFO, "Failed to connect server");
-				DisconnectServer(aClient);
-			}
+			guard.~lock_guard();
 		}
 		break;
 
@@ -292,8 +306,14 @@ bool MMG_TrackableServer::HandleMessage(SvClient *aClient, MN_ReadMessage *aMess
 			if (!heartbeat.FromStream(aMessage))
 				return false;
 
-			if (!UpdateServer(server, &heartbeat))
-				return false;
+			std::lock_guard<std::recursive_mutex> guard(m_Mutex);
+			{
+				auto server = FindServer(aClient);
+
+				if (!UpdateServer(server, &heartbeat))
+					return false;
+			}
+			guard.~lock_guard();
 		}
 		break;
 
@@ -333,6 +353,8 @@ bool MMG_TrackableServer::GetServerListInfo(MMG_ServerFilter *aFilters, std::vec
 		return false;
 
 	// Reset any initial data
+	std::lock_guard<std::recursive_mutex> guard(m_Mutex);
+
 	if (aFullInfo)
 		aFullInfo->clear();
 
@@ -360,7 +382,7 @@ bool MMG_TrackableServer::GetServerListInfo(MMG_ServerFilter *aFilters, std::vec
 			fullInfo.m_ProtocolVersion		= server.m_Info.m_ProtocolVersion;
 			fullInfo.m_CurrentMapHash		= server.m_Heartbeat.m_CurrentMapHash;
 			fullInfo.m_CycleHash			= 0;// TODO
-			wcscpy_s(fullInfo.m_ServerName, (const wchar_t *)server.m_Info.m_ServerName);
+			wcscpy_s(fullInfo.m_ServerName, server.m_Info.m_ServerName);
 			fullInfo.m_ServerReliablePort	= server.m_Info.m_ServerReliablePort;
 
 			fullInfo.bf_MaxPlayers			= server.m_Heartbeat.m_MaxNumPlayers;
@@ -391,7 +413,7 @@ bool MMG_TrackableServer::GetServerListInfo(MMG_ServerFilter *aFilters, std::vec
 		{
 			MMG_TrackableServerBriefInfo briefInfo;
 
-			wcscpy_s(briefInfo.m_GameName, (const wchar_t *)server.m_Info.m_ServerName);
+			wcscpy_s(briefInfo.m_GameName, server.m_Info.m_ServerName);
 			briefInfo.m_IP					= server.m_Info.m_Ip;
 			briefInfo.m_ModId				= server.m_Info.m_ModId;
 			briefInfo.m_ServerId			= server.m_PublicId;
@@ -407,14 +429,25 @@ bool MMG_TrackableServer::GetServerListInfo(MMG_ServerFilter *aFilters, std::vec
 	return true;
 }
 
+void MMG_TrackableServer::DisconnectServer(SvClient *aClient)
+{
+	std::lock_guard<std::recursive_mutex> guard(m_Mutex);
+
+	m_ServerList.erase(std::remove_if(m_ServerList.begin(), m_ServerList.end(), [aClient](Server& s)
+	{
+		return s.TestIPHash(aClient->GetIPAddress(), aClient->GetPort());
+	}),
+	m_ServerList.end());
+}
+
 MMG_TrackableServer::Server *MMG_TrackableServer::FindServer(SvClient *aClient)
 {
-	auto itr = std::find_if(this->m_ServerList.begin(), this->m_ServerList.end(), [aClient](Server& s)
+	auto itr = std::find_if(m_ServerList.begin(), m_ServerList.end(), [aClient](Server& s)
 	{
 		return s.TestIPHash(aClient->GetIPAddress(), aClient->GetPort());
 	});
 
-	if (itr != this->m_ServerList.end())
+	if (itr != m_ServerList.end())
 		return &(*itr);
 
 	return nullptr;
@@ -446,8 +479,8 @@ bool MMG_TrackableServer::AuthServer(SvClient *aClient, uint aKeySequence, ushor
 				masterEntry.m_KeyAuthenticated = true;
 
 			// TODO: Generate quiz answer
-			masterEntry.m_KeySequence	= aKeySequence;
-			masterEntry.m_QuizAnswer	= 0;
+			masterEntry.m_KeySequence = aKeySequence;
+			masterEntry.m_QuizAnswer = 0;
 		}
 
 		this->m_ServerList.push_back(masterEntry);
@@ -469,7 +502,6 @@ bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, ui
 	if (aStartupVars->m_GameVersion != WIC_DS_CURRENT_VERSION)
 		return false;
 
-	// License validation
 	if (aStartupVars->somebits.Ranked)
 	{
 		// If ranked and mod, drop
@@ -506,9 +538,9 @@ bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, ui
 		MC_MTwister().Random());
 
 	// Mark server list entry as valid and copy information over
-	aServer->m_PublicId			= MC_Misc::HashSDBM(data);
-	aServer->m_Info				= *aStartupVars;
-	aServer->m_Info.m_Ip		= serverAddr.s_addr;
+	aServer->m_PublicId = MC_Misc::HashSDBM(data);
+	aServer->m_Info = *aStartupVars;
+	aServer->m_Info.m_Ip = serverAddr.s_addr;
 
 	DebugLog(L_INFO, "ConnectServer: %ws %s %s %d %d %d",
 		aStartupVars->m_ServerName,
@@ -522,28 +554,15 @@ bool MMG_TrackableServer::ConnectServer(MMG_TrackableServer::Server *aServer, ui
 
 bool MMG_TrackableServer::UpdateServer(MMG_TrackableServer::Server *aServer, MMG_TrackableServerHeartbeat *aHeartbeat)
 {
-	// Compare connection cookies
 	if (aServer->m_Cookie.hash != aHeartbeat->m_Cookie.hash ||
 		aServer->m_Cookie.trackid != aHeartbeat->m_Cookie.trackid)
 		return false;
 
 	// Copy heartbeat variables over to the startup info structure
-	aServer->m_Info.m_CurrentMapHash	= aHeartbeat->m_CurrentMapHash;
+	aServer->m_Info.m_CurrentMapHash = aHeartbeat->m_CurrentMapHash;
 	aServer->m_Info.somebits.MaxPlayers = aHeartbeat->m_MaxNumPlayers;
-	aServer->m_Heartbeat				= *aHeartbeat;
+	aServer->m_Heartbeat = *aHeartbeat;
 	return true;
-}
-
-void MMG_TrackableServer::DisconnectServer(SvClient *aClient)
-{
-	auto& list = this->m_ServerList;
-
-	list.erase(
-		std::remove_if(list.begin(), list.end(), [aClient](Server& s)
-		{
-			return s.TestIPHash(aClient->GetIPAddress(), aClient->GetPort());
-		}),
-	list.end());
 }
 
 bool MMG_TrackableServer::FilterCheck(MMG_ServerFilter *filters, Server *aServer)
