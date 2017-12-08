@@ -396,13 +396,20 @@ bool MMG_Messaging::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessage, M
 			DebugLog(L_INFO, "MESSAGING_IM_SEND");
 			
 			MMG_InstantMessageListener::InstantMessage myInstantMessage;
+			uint padZero;
+
 			if(!myInstantMessage.FromStream(aMessage))
 				return false;
 			
-			//handle padding
-			uint padZero;
 			if (!aMessage->ReadUInt(padZero))
 				return false;
+
+			// Drop invalid messages: 0 length or system only
+			if (wcslen(myInstantMessage.m_Message) <= 0 ||
+				_wcsicmp(myInstantMessage.m_Message, L"|sysm|") == 0 ||
+				_wcsicmp(myInstantMessage.m_Message, L"|clan|") == 0 ||
+				_wcsicmp(myInstantMessage.m_Message, L"|clms|") == 0)
+				return true;
 
 			if (!SendInstantMessage(&myInstantMessage))
 				return false;
