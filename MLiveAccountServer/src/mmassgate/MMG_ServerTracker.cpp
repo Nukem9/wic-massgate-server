@@ -90,6 +90,9 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 
 				// Must be zero (protocol verification only)
 				responseMessage.WriteUInt(0);
+
+				if (!aClient->SendData(&responseMessage))
+					return false;
 			}
 
 			//send "no more server info" delimiter
@@ -111,11 +114,11 @@ bool MMG_ServerTracker::HandleMessage(SvClient *aClient, MN_ReadMessage *aMessag
 			filters.gameVersion = gameVersion;
 			filters.protocolVersion = protocolVersion;
 			
-			uint serverCount, matchedCount;
+			uint matchedCount;
 			std::vector<MMG_TrackableServerFullInfo> serverFullInfo;
 			std::vector<MMG_TrackableServerBriefInfo> serverBriefInfo;
 
-			MMG_TrackableServer::ourInstance->GetServerListInfo(&filters, &serverFullInfo, &serverBriefInfo, &serverCount);
+			MMG_TrackableServer::ourInstance->GetServerListInfo(&filters, &serverFullInfo, &serverBriefInfo, nullptr);
 			matchedCount = serverFullInfo.size();
 
 			for (uint i = 0; i < matchedCount; i++)
