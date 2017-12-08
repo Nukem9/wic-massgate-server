@@ -3442,6 +3442,9 @@ bool MySQLDatabase::QueryProfileGuestbook(const uint profileId, uint *dstEntryCo
 
 			while(query.StmtFetch())
 			{
+				if (i >= 30)
+					break;
+
 				guestbook->m_Entries[i].m_MessageId = id;
 				guestbook->m_Entries[i].m_Timestamp = timestamp;
 				guestbook->m_Entries[i].m_ProfileId = posterid;
@@ -3451,7 +3454,7 @@ bool MySQLDatabase::QueryProfileGuestbook(const uint profileId, uint *dstEntryCo
 				i++;
 			}
 
-			*dstEntryCount = count;
+			*dstEntryCount = i;
 		}
 	}
 
