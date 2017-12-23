@@ -1,3 +1,5 @@
+# DEPRECATED - New development at https://github.com/Nukem9/massgate
+
 WIC-MassgateServer
 ==================
 
